@@ -38,7 +38,7 @@ const supplierSchema = z.object({
   contactEmail: z.string().email('Veuillez saisir une adresse e-mail valide.'),
   contactPhone: z.string().min(10, 'Veuillez saisir un numéro de téléphone valide.'),
   address: z.string().min(5, "L'adresse doit contenir au moins 5 caractères."),
-  ice: z.string().min(5, "L'ICE doit contenir au moins 5 caractères."),
+  ice: z.string().regex(/^[0-9]{15}$/, "L'ICE doit contenir exactement 15 chiffres."),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -208,5 +208,3 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
     </Dialog>
   );
 }
-
-    
