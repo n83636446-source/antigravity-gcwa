@@ -1,0 +1,243 @@
+{
+  "entities": {
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product in the inventory.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the product."
+        },
+        "price": {
+          "type": "number",
+          "description": "Selling price of the product."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to Supplier. (Relationship: Supplier 1:N Product)"
+        },
+        "stockLevel": {
+          "type": "number",
+          "description": "Current stock level of the product."
+        },
+        "reorderThreshold": {
+          "type": "number",
+          "description": "Threshold at which a reorder alert is triggered."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "price",
+        "supplierId",
+        "stockLevel",
+        "reorderThreshold"
+      ]
+    },
+    "Supplier": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Supplier",
+      "type": "object",
+      "description": "Represents a supplier of products.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the supplier."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the supplier."
+        },
+        "contactName": {
+          "type": "string",
+          "description": "Contact name for the supplier."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "Contact email for the supplier.",
+          "format": "email"
+        },
+        "contactPhone": {
+          "type": "string",
+          "description": "Contact phone number for the supplier."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "contactName",
+        "contactEmail",
+        "contactPhone"
+      ]
+    },
+    "StockAlert": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StockAlert",
+      "type": "object",
+      "description": "Represents a stock alert notification.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the stock alert."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to Product. (Relationship: Product 1:N StockAlert)"
+        },
+        "alertDate": {
+          "type": "string",
+          "description": "Date and time when the alert was triggered.",
+          "format": "date-time"
+        },
+        "currentStockLevel": {
+          "type": "number",
+          "description": "Stock level at the time the alert was triggered."
+        },
+        "reorderThreshold": {
+          "type": "number",
+          "description": "Reorder threshold that triggered the alert."
+        },
+        "expectedNeedEstimate": {
+          "type": "number",
+          "description": "AI estimated quantity needed for reorder."
+        }
+      },
+      "required": [
+        "id",
+        "productId",
+        "alertDate",
+        "currentStockLevel",
+        "reorderThreshold"
+      ]
+    },
+    "Report": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Report",
+      "type": "object",
+      "description": "Represents a report on stock levels, sales trends, and inventory turnover rates.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the report."
+        },
+        "reportType": {
+          "type": "string",
+          "description": "Type of the report (e.g., Stock Level, Sales Trend, Inventory Turnover)."
+        },
+        "generatedDate": {
+          "type": "string",
+          "description": "Date and time when the report was generated.",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "string",
+          "description": "The stringified JSON data of the report."
+        }
+      },
+      "required": [
+        "id",
+        "reportType",
+        "generatedDate",
+        "data"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/suppliers/{supplierId}",
+        "definition": {
+          "entityName": "Supplier",
+          "schema": {
+            "$ref": "#/backend/entities/Supplier"
+          },
+          "description": "Stores supplier information.  `supplierId` is the unique identifier for the supplier.",
+          "params": [
+            {
+              "name": "supplierId",
+              "description": "Unique identifier for the supplier."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/suppliers/{supplierId}/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product information for each supplier. `supplierId` identifies the supplier, and `productId` is the unique identifier for the product.",
+          "params": [
+            {
+              "name": "supplierId",
+              "description": "Unique identifier for the supplier."
+            },
+            {
+              "name": "productId",
+              "description": "Unique identifier for the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId}",
+        "definition": {
+          "entityName": "StockAlert",
+          "schema": {
+            "$ref": "#/backend/entities/StockAlert"
+          },
+          "description": "Stores stock alert information for each product. `supplierId` identifies the supplier, `productId` identifies the product, and `stockAlertId` is the unique identifier for the stock alert.",
+          "params": [
+            {
+              "name": "supplierId",
+              "description": "Unique identifier for the supplier."
+            },
+            {
+              "name": "productId",
+              "description": "Unique identifier for the product."
+            },
+            {
+              "name": "stockAlertId",
+              "description": "Unique identifier for the stock alert."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/reports/{reportId}",
+        "definition": {
+          "entityName": "Report",
+          "schema": {
+            "$ref": "#/backend/entities/Report"
+          },
+          "description": "Stores report data. `reportId` is the unique identifier for the report.",
+          "params": [
+            {
+              "name": "reportId",
+              "description": "Unique identifier for the report."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
+  }
+}

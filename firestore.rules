@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Core Philosophy: This ruleset establishes a baseline security model for an
+     * internal inventory management tool. The primary goal during this prototyping
+     * phase is to ensure that only authenticated users can interact with the
+     * data, preventing any public or anonymous access. It assumes all signed-in
+     * users are trusted operators with full permissions.
+     *
+     * Data Structure: The data is organized hierarchically to represent business
+     * relationships:
+     * - /suppliers/{supplierId} (Top-level suppliers)
+     *   - /products/{productId} (Products nested under their supplier)
+     *     - /stockAlerts/{stockAlertId} (Alerts nested under a specific product)
+     * - /reports/{reportId} (A separate top-level collection for generated reports)
+     *
+     * Key Security Decisions:
+     * - Authenticated Access Only: All read and write operations across all
+     *   collections require the user to be signed in. This provides a fundamental
+     *   layer of security.
+     * - No User-Specific Ownership (Prototype Limitation): The current data models
+     *   (e.g., Supplier) do not contain a reference to a user (e.g., an `ownerId`
+     *   or `memberIds` field). Therefore, the rules cannot enforce user-specific
+     *   ownership. The current implementation grants access to ANY authenticated
+     *   user. For production, denormalizing user IDs onto documents is critical.
+     * - Flexible Schema: In line with the prototyping philosophy, these rules do
+     *   not enforce the shape or data types of documents. Validation is limited
+     *   strictly to fields required for maintaining relational integrity (e.g.,
+     *   ensuring a product's `supplierId` field matches its path).
+     */
+
+    // --------------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if a document exists. Used to protect update/delete operations
+     * from acting on non-existent data.
+     */
+    function resourceExists() {
+      return resource != null;
+    }
+
+    // --------------------------------------------------------------------------
+    // Collection Rules
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Manages access to supplier documents. Any authenticated user
+     * can create, read, update, and delete supplier information.
+     * @path /suppliers/{supplierId}
+     * @allow (get) An authenticated user reads a supplier document.
+     * @deny (get) An unauthenticated (anonymous) user tries to read a supplier.
+     * @principle Establishes a baseline security posture where all data interaction
+     * requires user authentication, suitable for an internal application prototype.
+     */
+    match /suppliers/{supplierId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resourceExists();
+      allow delete: if isSignedIn() && resourceExists();
+    }
+
+    /**
+     * @description Manages products, which are nested under a specific supplier.
+     * Any authenticated user can manage products.
+     * @path /suppliers/{supplierId}/products/{productId}
+     * @allow (create) An authenticated user creates a new product under a supplier.
+     * @deny (create) An unauthenticated user tries to create a product.
+     * @principle Enforces relational integrity by ensuring a product's internal
+     * `supplierId` field matches its parent document in the path.
+     */
+    match /suppliers/{supplierId}/products/{productId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.supplierId == supplierId;
+      allow update: if isSignedIn() && resourceExists() && request.resource.data.supplierId == resource.data.supplierId;
+      allow delete: if isSignedIn() && resourceExists();
+    }
+
+    /**
+     * @description Manages stock alerts, nested under a specific product. Any
+     * authenticated user can manage stock alerts.
+     * @path /suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId}
+     * @allow (get) An authenticated user retrieves a specific stock alert.
+     * @deny (list) An unauthenticated user tries to list alerts for a product.
+     * @principle Enforces relational integrity by ensuring an alert's internal
+     * `productId` field is immutable and matches its parent document in the path.
+     */
+    match /suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.productId == productId;
+      allow update: if isSignedIn() && resourceExists() && request.resource.data.productId == resource.data.productId;
+      allow delete: if isSignedIn() && resourceExists();
+    }
+
+    /**
+     * @description Manages top-level report documents. Access is restricted to
+     * authenticated users for all operations.
+     * @path /reports/{reportId}
+     * @allow (create) An authenticated user saves a new report.
+     * @deny (delete) An unauthenticated user tries to delete a report.
+     * @principle Provides a secure default for a collection with sensitive business
+     * data, requiring authentication for any interaction.
+     */
+    match /reports/{reportId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resourceExists();
+      allow delete: if isSignedIn() && resourceExists();
+    }
+  }
+}
