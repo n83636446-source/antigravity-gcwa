@@ -4,6 +4,8 @@ export type Supplier = {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  address: string;
+  ice: string;
 };
 
 export type Product = {
@@ -44,3 +46,5 @@ export type Client = {
   email: string;
   phone: string;
 };
+
+    

@@ -30,12 +30,15 @@ import {
   updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import type { Supplier } from '@/lib/types';
+import { Textarea } from './ui/textarea';
 
 const supplierSchema = z.object({
   name: z.string().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères."),
   contactName: z.string().min(2, 'Le nom du contact est requis.'),
   contactEmail: z.string().email('Veuillez saisir une adresse e-mail valide.'),
   contactPhone: z.string().min(10, 'Veuillez saisir un numéro de téléphone valide.'),
+  address: z.string().min(5, "L'adresse doit contenir au moins 5 caractères."),
+  ice: z.string().min(5, "L'ICE doit contenir au moins 5 caractères."),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -64,6 +67,8 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
         contactName: '',
         contactEmail: '',
         contactPhone: '',
+        address: '',
+        ice: '',
       });
     }
   }, [supplier, form, isOpen]);
@@ -123,6 +128,34 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
 
             <FormField
               control={form.control}
+              name="ice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ICE</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Identifiant Commun de l'Entreprise" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Adresse</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Adresse complète du fournisseur" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="contactName"
               render={({ field }) => (
                 <FormItem>
@@ -135,33 +168,35 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="contactEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email du contact</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="ex: jean.dupont@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contactEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email du contact</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="ex: jean.dupont@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="contactPhone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone du contact</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="ex: 01-23-45-67-89" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="contactPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Téléphone du contact</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="ex: 01-23-45-67-89" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
@@ -173,3 +208,5 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
     </Dialog>
   );
 }
+
+    

@@ -30,6 +30,8 @@ export function SuppliersTable({
           <TableHeader>
             <TableRow>
               <TableHead>Nom de l'entreprise</TableHead>
+              <TableHead>ICE</TableHead>
+              <TableHead>Adresse</TableHead>
               <TableHead>Personne à contacter</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Téléphone</TableHead>
@@ -43,6 +45,8 @@ export function SuppliersTable({
                 className="cursor-pointer"
               >
                 <TableCell className="font-medium">{supplier.name}</TableCell>
+                <TableCell>{supplier.ice}</TableCell>
+                <TableCell>{supplier.address}</TableCell>
                 <TableCell>{supplier.contactName}</TableCell>
                 <TableCell>{supplier.contactEmail}</TableCell>
                 <TableCell>{supplier.contactPhone}</TableCell>
@@ -54,3 +58,5 @@ export function SuppliersTable({
     </Card>
   );
 }
+
+    

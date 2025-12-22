@@ -71,6 +71,14 @@
         "contactPhone": {
           "type": "string",
           "description": "Contact phone number for the supplier."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the supplier."
+        },
+        "ice": {
+          "type": "string",
+          "description": "ICE number of the supplier."
         }
       },
       "required": [
@@ -78,7 +86,9 @@
         "name",
         "contactName",
         "contactEmail",
-        "contactPhone"
+        "contactPhone",
+        "address",
+        "ice"
       ]
     },
     "StockAlert": {
@@ -288,3 +298,4 @@
     "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
   }
 }
+    
