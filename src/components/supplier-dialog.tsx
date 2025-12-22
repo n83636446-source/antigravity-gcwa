@@ -25,6 +25,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const supplierSchema = z.object({
   name: z.string().min(2, 'Le nom de l\'entreprise doit contenir au moins 2 caractères.'),
@@ -38,6 +41,7 @@ type SupplierFormValues = z.infer<typeof supplierSchema>;
 export function SupplierDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -50,8 +54,11 @@ export function SupplierDialog() {
   });
 
   const onSubmit = (data: SupplierFormValues) => {
-    // In a real app, you would send this data to your API
-    console.log(data);
+    if (!firestore) return;
+
+    const suppliersRef = collection(firestore, 'suppliers');
+    addDocumentNonBlocking(suppliersRef, data);
+
     toast({
       title: 'Fournisseur ajouté',
       description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
