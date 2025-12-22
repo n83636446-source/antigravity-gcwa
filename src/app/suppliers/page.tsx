@@ -7,8 +7,8 @@ export default function SuppliersPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Suppliers"
-        description="Manage your list of suppliers."
+        title="Fournisseurs"
+        description="Gérez votre liste de fournisseurs."
       >
         <SupplierDialog />
       </PageHeader>

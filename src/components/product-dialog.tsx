@@ -36,12 +36,12 @@ import { useToast } from '@/hooks/use-toast';
 import type { Supplier } from '@/lib/types';
 
 const productSchema = z.object({
-  name: z.string().min(2, 'Product name must be at least 2 characters.'),
+  name: z.string().min(2, 'Le nom du produit doit contenir au moins 2 caractères.'),
   description: z.string().optional(),
-  price: z.coerce.number().min(0, 'Price must be a positive number.'),
-  stock: z.coerce.number().int().min(0, 'Stock must be a non-negative integer.'),
-  lowStockThreshold: z.coerce.number().int().min(0, 'Threshold must be a non-negative integer.'),
-  supplierId: z.string().nonempty('A supplier must be selected.'),
+  price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
+  stock: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
+  lowStockThreshold: z.coerce.number().int().min(0, 'Le seuil doit être un entier non négatif.'),
+  supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -70,8 +70,8 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
     // In a real app, you would send this data to your API
     console.log(data);
     toast({
-      title: 'Product Created',
-      description: `The product "${data.name}" has been successfully created.`,
+      title: 'Produit créé',
+      description: `Le produit "${data.name}" a été créé avec succès.`,
     });
     setOpen(false);
     form.reset();
@@ -82,16 +82,16 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Product
+          Ajouter un produit
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
+              <DialogTitle>Ajouter un nouveau produit</DialogTitle>
               <DialogDescription>
-                Fill in the details below to add a new product to your inventory.
+                Remplissez les détails ci-dessous pour ajouter un nouveau produit à votre inventaire.
               </DialogDescription>
             </DialogHeader>
 
@@ -100,9 +100,9 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Product Name</FormLabel>
+                  <FormLabel>Nom du produit</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Wireless Mouse" {...field} />
+                    <Input placeholder="ex: Souris sans fil" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -114,11 +114,11 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
               name="supplierId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Supplier</FormLabel>
+                  <FormLabel>Fournisseur</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a supplier" />
+                        <SelectValue placeholder="Sélectionnez un fournisseur" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -140,7 +140,7 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
+                    <FormLabel>Prix (€)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -168,7 +168,7 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
               name="lowStockThreshold"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Low Stock Threshold</FormLabel>
+                  <FormLabel>Seuil de stock bas</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -184,7 +184,7 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="A brief description of the product." {...field} />
+                    <Textarea placeholder="Une brève description du produit." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -192,7 +192,7 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
             />
 
             <DialogFooter>
-              <Button type="submit">Create Product</Button>
+              <Button type="submit">Créer le produit</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -19,16 +19,16 @@ export function SuppliersTable({ suppliers }: SuppliersTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>All Suppliers</CardTitle>
+        <CardTitle>Tous les fournisseurs</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Company Name</TableHead>
-              <TableHead>Contact Person</TableHead>
+              <TableHead>Nom de l'entreprise</TableHead>
+              <TableHead>Personne à contacter</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
+              <TableHead>Téléphone</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

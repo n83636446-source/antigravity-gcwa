@@ -19,7 +19,7 @@ const chartConfig = {
     color: 'hsl(var(--primary))',
   },
   threshold: {
-    label: 'Low Stock Threshold',
+    label: 'Seuil de stock bas',
     color: 'hsl(var(--destructive))',
   },
 } satisfies ChartConfig;

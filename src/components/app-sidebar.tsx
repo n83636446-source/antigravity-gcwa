@@ -20,10 +20,10 @@ import {
 import { cn } from '@/lib/utils';
 
 const menuItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/products', label: 'Products', icon: Boxes },
-  { href: '/suppliers', label: 'Suppliers', icon: Users },
-  { href: '/reports', label: 'Reports', icon: LineChart },
+  { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
+  { href: '/products', label: 'Produits', icon: Boxes },
+  { href: '/suppliers', label: 'Fournisseurs', icon: Users },
+  { href: '/reports', label: 'Rapports', icon: LineChart },
 ];
 
 export function AppSidebar() {
@@ -37,7 +37,7 @@ export function AppSidebar() {
             <Warehouse className="size-5" />
           </div>
           <span className="text-lg font-semibold text-sidebar-foreground">
-            StockPilot
+            GérerStock
           </span>
         </div>
       </SidebarHeader>

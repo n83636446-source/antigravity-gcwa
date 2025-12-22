@@ -11,8 +11,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'StockPilot',
-  description: 'A stock management app similar to Ciel Gestion Commerciale',
+  title: 'GérerStock',
+  description: 'Une application de gestion de stock similaire à Ciel Gestion Commerciale',
 };
 
 export default function RootLayout({
@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="fr" className={inter.variable} suppressHydrationWarning>
        <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

@@ -18,6 +18,6 @@ export type Product = {
 
 export type SalesData = {
   month: string;
-  "Last Year": number;
-  "This Year": number;
+  "Année Dernière": number;
+  "Cette Année": number;
 };

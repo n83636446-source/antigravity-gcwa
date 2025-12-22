@@ -15,12 +15,12 @@ type SalesTrendsChartProps = {
 };
 
 const chartConfig = {
-  'This Year': {
-    label: 'This Year',
+  'Cette Année': {
+    label: 'Cette Année',
     color: 'hsl(var(--primary))',
   },
-  'Last Year': {
-    label: 'Last Year',
+  'Année Dernière': {
+    label: 'Année Dernière',
     color: 'hsl(var(--secondary-foreground) / 0.5)',
   },
 } satisfies ChartConfig;
@@ -37,15 +37,15 @@ export function SalesTrendsChart({ data }: SalesTrendsChartProps) {
             <Legend content={<ChartLegendContent />} />
             <Line
               type="monotone"
-              dataKey="This Year"
-              stroke="var(--color-This Year)"
+              dataKey="Cette Année"
+              stroke="var(--color-Cette Année)"
               strokeWidth={2}
               dot={true}
             />
             <Line
               type="monotone"
-              dataKey="Last Year"
-              stroke="var(--color-Last Year)"
+              dataKey="Année Dernière"
+              stroke="var(--color-Année Dernière)"
               strokeWidth={2}
               strokeDasharray="3 3"
               dot={false}

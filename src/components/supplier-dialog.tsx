@@ -27,10 +27,10 @@ import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const supplierSchema = z.object({
-  name: z.string().min(2, 'Company name must be at least 2 characters.'),
-  contactName: z.string().min(2, 'Contact name is required.'),
-  contactEmail: z.string().email('Please enter a valid email address.'),
-  contactPhone: z.string().min(10, 'Please enter a valid phone number.'),
+  name: z.string().min(2, 'Le nom de l\'entreprise doit contenir au moins 2 caractères.'),
+  contactName: z.string().min(2, 'Le nom du contact est requis.'),
+  contactEmail: z.string().email('Veuillez saisir une adresse e-mail valide.'),
+  contactPhone: z.string().min(10, 'Veuillez saisir un numéro de téléphone valide.'),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -53,8 +53,8 @@ export function SupplierDialog() {
     // In a real app, you would send this data to your API
     console.log(data);
     toast({
-      title: 'Supplier Added',
-      description: `The supplier "${data.name}" has been successfully added.`,
+      title: 'Fournisseur ajouté',
+      description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
     });
     setOpen(false);
     form.reset();
@@ -65,16 +65,16 @@ export function SupplierDialog() {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Supplier
+          Ajouter un fournisseur
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Add New Supplier</DialogTitle>
+              <DialogTitle>Ajouter un nouveau fournisseur</DialogTitle>
               <DialogDescription>
-                Fill in the details for the new supplier.
+                Remplissez les détails du nouveau fournisseur.
               </DialogDescription>
             </DialogHeader>
 
@@ -83,9 +83,9 @@ export function SupplierDialog() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name</FormLabel>
+                  <FormLabel>Nom de l'entreprise</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Global Electronics" {...field} />
+                    <Input placeholder="ex: Global Electronics" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -97,9 +97,9 @@ export function SupplierDialog() {
               name="contactName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contact Person</FormLabel>
+                  <FormLabel>Personne à contacter</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., John Doe" {...field} />
+                    <Input placeholder="ex: Jean Dupont" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,9 +111,9 @@ export function SupplierDialog() {
               name="contactEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contact Email</FormLabel>
+                  <FormLabel>Email du contact</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                    <Input type="email" placeholder="ex: jean.dupont@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,9 +125,9 @@ export function SupplierDialog() {
               name="contactPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contact Phone</FormLabel>
+                  <FormLabel>Téléphone du contact</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="e.g., 123-456-7890" {...field} />
+                    <Input type="tel" placeholder="ex: 01-23-45-67-89" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,7 +135,7 @@ export function SupplierDialog() {
             />
             
             <DialogFooter>
-              <Button type="submit">Add Supplier</Button>
+              <Button type="submit">Ajouter le fournisseur</Button>
             </DialogFooter>
           </form>
         </Form>

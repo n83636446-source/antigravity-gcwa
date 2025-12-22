@@ -7,8 +7,8 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Products"
-        description="Manage your product inventory."
+        title="Produits"
+        description="Gérez votre inventaire de produits."
       >
         <ProductDialog suppliers={suppliers} />
       </PageHeader>

@@ -18,22 +18,22 @@ type ProductsTableProps = {
 
 export function ProductsTable({ products, suppliers }: ProductsTableProps) {
   const getSupplierName = (supplierId: string) => {
-    return suppliers.find((s) => s.id === supplierId)?.name || 'Unknown';
+    return suppliers.find((s) => s.id === supplierId)?.name || 'Inconnu';
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>All Products</CardTitle>
+        <CardTitle>Tous les produits</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Supplier</TableHead>
+              <TableHead>Nom</TableHead>
+              <TableHead>Fournisseur</TableHead>
               <TableHead className="text-right">Stock</TableHead>
-              <TableHead className="text-right">Price</TableHead>
+              <TableHead className="text-right">Prix</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -43,9 +43,9 @@ export function ProductsTable({ products, suppliers }: ProductsTableProps) {
                 <TableCell>{getSupplierName(product.supplierId)}</TableCell>
                 <TableCell className="text-right">{product.stock}</TableCell>
                 <TableCell className="text-right">
-                  {new Intl.NumberFormat('en-US', {
+                  {new Intl.NumberFormat('fr-FR', {
                     style: 'currency',
-                    currency: 'USD',
+                    currency: 'EUR',
                   }).format(product.price)}
                 </TableCell>
               </TableRow>

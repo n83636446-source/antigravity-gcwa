@@ -45,8 +45,8 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
     } else {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: response.error || 'An unknown error occurred.',
+        title: 'Erreur',
+        description: response.error || 'Une erreur inconnue est survenue.',
       });
     }
     setLoading(false);
@@ -57,21 +57,21 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Bot className="mr-2 h-4 w-4" />
-          Estimate Need
+          Estimer le besoin
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>AI Stock Estimation</DialogTitle>
+            <DialogTitle>Estimation de stock par IA</DialogTitle>
             <DialogDescription>
-              Estimate restocking needs for '{product.name}' using AI.
+              Estimez les besoins de réapprovisionnement pour '{product.name}' en utilisant l'IA.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="safetyStockLevel" className="text-right">
-                Safety Stock
+                Stock de sécurité
               </Label>
               <Input
                 id="safetyStockLevel"
@@ -84,7 +84,7 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="leadTimeDays" className="text-right">
-                Lead Time (Days)
+                Délai (Jours)
               </Label>
               <Input
                 id="leadTimeDays"
@@ -97,12 +97,12 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
               <Label htmlFor="upcomingTrends" className="text-right pt-2">
-                Trends
+                Tendances
               </Label>
               <Textarea
                 id="upcomingTrends"
                 name="upcomingTrends"
-                placeholder="e.g., Upcoming holiday sale, new marketing campaign"
+                placeholder="ex: Soldes à venir, nouvelle campagne marketing"
                 className="col-span-3"
               />
             </div>
@@ -114,7 +114,7 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
               ) : (
                 <Bot className="mr-2 h-4 w-4" />
               )}
-              Estimate
+              Estimer
             </Button>
           </DialogFooter>
         </form>
@@ -122,24 +122,24 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
           <div className="mt-4">
             <Alert>
               <HelpCircle className="h-4 w-4" />
-              <AlertTitle>Estimation Result</AlertTitle>
+              <AlertTitle>Résultat de l'estimation</AlertTitle>
               <AlertDescription>
                 <div className="mt-2 space-y-4 text-sm">
                   <p>{result.reasoning}</p>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center">
                       <BarChartBig className="mr-2 h-5 w-5 text-muted-foreground" />
-                      <span className="font-medium">Estimated Need</span>
+                      <span className="font-medium">Besoin Estimé</span>
                     </div>
-                    <span className="font-bold text-lg">{result.estimatedNeed} units</span>
+                    <span className="font-bold text-lg">{result.estimatedNeed} unités</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border bg-secondary p-3">
                     <div className="flex items-center">
                       <ShoppingCart className="mr-2 h-5 w-5 text-primary" />
-                      <span className="font-medium">Suggested Order</span>
+                      <span className="font-medium">Commande Suggérée</span>
                     </div>
                     <span className="font-bold text-lg text-primary">
-                      {result.suggestedOrderQuantity} units
+                      {result.suggestedOrderQuantity} unités
                     </span>
                   </div>
                 </div>

@@ -24,42 +24,42 @@ export function StatsCards({ products }: StatsCardsProps) {
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Inventory Value</CardTitle>
+          <CardTitle className="text-sm font-medium">Valeur totale de l'inventaire</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {new Intl.NumberFormat('en-US', {
+            {new Intl.NumberFormat('fr-FR', {
               style: 'currency',
-              currency: 'USD',
+              currency: 'EUR',
             }).format(stats.totalValue)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Estimated value of all items in stock
+            Valeur estimée de tous les articles en stock
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+          <CardTitle className="text-sm font-medium">Produits totaux</CardTitle>
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalProducts}</div>
           <p className="text-xs text-muted-foreground">
-            Number of unique products
+            Nombre de produits uniques
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+          <CardTitle className="text-sm font-medium">Articles en stock faible</CardTitle>
           <AlertCircle className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.lowStockItems}</div>
           <p className="text-xs text-muted-foreground">
-            Items that need restocking soon
+            Articles nécessitant un réapprovisionnement bientôt
           </p>
         </CardContent>
       </Card>

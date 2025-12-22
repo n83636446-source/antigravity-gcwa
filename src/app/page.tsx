@@ -7,8 +7,8 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Dashboard"
-        description="An overview of your inventory and stock levels."
+        title="Tableau de bord"
+        description="Un aperçu de votre inventaire et de vos niveaux de stock."
       />
       <StatsCards products={products} />
       <InventoryTable products={products} suppliers={suppliers} />

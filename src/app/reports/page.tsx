@@ -8,15 +8,15 @@ export default function ReportsPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Reports & Analytics"
-        description="Visualize your inventory and sales data."
+        title="Rapports & Analyses"
+        description="Visualisez vos données d'inventaire et de ventes."
       />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Sales Trends</CardTitle>
+            <CardTitle>Tendances des ventes</CardTitle>
             <CardDescription>
-              Comparison of sales between this year and last year.
+              Comparaison des ventes entre cette année et l'année dernière.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -25,9 +25,9 @@ export default function ReportsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Stock Levels</CardTitle>
+            <CardTitle>Niveaux de stock</CardTitle>
             <CardDescription>
-              Current stock levels of all products.
+              Niveaux de stock actuels de tous les produits.
             </CardDescription>
           </CardHeader>
           <CardContent>
