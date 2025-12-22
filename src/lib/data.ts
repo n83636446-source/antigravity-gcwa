@@ -1,4 +1,4 @@
-import type { Supplier, Product, SalesData } from './types';
+import type { Supplier, Product, SalesData, PurchaseOrder } from './types';
 
 export const suppliers: Supplier[] = [
   {
@@ -99,3 +99,5 @@ export const salesData: SalesData[] = [
   { month: 'Juin', 'Cette Année': 4390, 'Année Dernière': 3800 },
   { month: 'Juil', 'Cette Année': 5490, 'Année Dernière': 4300 },
 ];
+
+export const purchaseOrders: PurchaseOrder[] = [];

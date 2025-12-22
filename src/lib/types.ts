@@ -21,3 +21,19 @@ export type SalesData = {
   "Année Dernière": number;
   "Cette Année": number;
 };
+
+export type PurchaseOrderItem = {
+  productId: string;
+  quantity: number;
+  price: number; // Price at the time of order
+};
+
+export type PurchaseOrder = {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  orderDate: string; // ISO string
+  totalAmount: number;
+  status: 'Brouillon' | 'Envoyé' | 'Reçu' | 'Annulé';
+  items: PurchaseOrderItem[];
+};
