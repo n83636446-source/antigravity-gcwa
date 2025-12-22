@@ -22,7 +22,7 @@ import {
   ShoppingCart,
   ChevronDown,
   Contact,
-  List,
+  ListFilter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -41,8 +41,8 @@ const menuItems = [
 
 const achatSubMenuItems = [
     { href: '/purchases/orders', label: 'Bon de commande' },
-    { href: '/purchrases/receipts', label: 'Bon de réception' },
-    { href: '/purchrases/invoices', label: 'Facture' },
+    { href: '/purchases/receipts', label: 'Bon de réception' },
+    { href: '/purchases/invoices', label: 'Facture' },
 ];
 
 export function AppSidebar() {
@@ -91,7 +91,7 @@ export function AppSidebar() {
                   <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
                       <ShoppingCart className="size-4" />
                       <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achat</span>
-                      <ChevronDown className="size-4 group-data-[collapsible=icon]:hidden transition-transform duration-200 data-[state=open]:rotate-180" />
+                      <ListFilter className="size-4 group-data-[collapsible=icon]:hidden" />
                   </Button>
               </CollapsibleTrigger>
             </SidebarMenuItem>
