@@ -37,3 +37,10 @@ export type PurchaseOrder = {
   status: 'Brouillon' | 'Envoyé' | 'Reçu' | 'Annulé';
   items: PurchaseOrderItem[];
 };
+
+export type Client = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+};

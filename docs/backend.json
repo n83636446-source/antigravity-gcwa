@@ -151,6 +151,37 @@
         "generatedDate",
         "data"
       ]
+    },
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client or customer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the client."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the client."
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email for the client.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number for the client."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "phone"
+      ]
     }
   },
   "auth": {
@@ -236,8 +267,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client information. `clientId` is the unique identifier for the client.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "Unique identifier for the client."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
   }
 }

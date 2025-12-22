@@ -21,6 +21,7 @@ import {
   Warehouse,
   ShoppingCart,
   ChevronDown,
+  Contact,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -34,6 +35,7 @@ const menuItems = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/products', label: 'Produits', icon: Boxes },
   { href: '/suppliers', label: 'Fournisseurs', icon: Users },
+  { href: '/clients', label: 'Clients', icon: Contact },
 ];
 
 const achatSubMenuItems = [
