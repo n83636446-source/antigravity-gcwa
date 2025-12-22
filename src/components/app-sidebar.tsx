@@ -33,14 +33,16 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <div className="flex items-center gap-2 p-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Warehouse className="size-5" />
+        <div className="flex items-center gap-2 p-2 justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <Warehouse className="size-5" />
+            </div>
+            <span className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+              GérerStock
+            </span>
           </div>
-          <span className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-            GérerStock
-          </span>
-          <SidebarTrigger className="ml-auto hidden md:flex" />
+          <SidebarTrigger className="hidden md:flex" />
         </div>
       </SidebarHeader>
       <SidebarContent>
