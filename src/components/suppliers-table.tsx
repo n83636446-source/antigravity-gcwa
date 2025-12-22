@@ -13,9 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 type SuppliersTableProps = {
   suppliers: Supplier[];
+  onRowDoubleClick: (supplier: Supplier) => void;
 };
 
-export function SuppliersTable({ suppliers }: SuppliersTableProps) {
+export function SuppliersTable({
+  suppliers,
+  onRowDoubleClick,
+}: SuppliersTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -33,7 +37,11 @@ export function SuppliersTable({ suppliers }: SuppliersTableProps) {
           </TableHeader>
           <TableBody>
             {suppliers.map((supplier) => (
-              <TableRow key={supplier.id}>
+              <TableRow
+                key={supplier.id}
+                onDoubleClick={() => onRowDoubleClick(supplier)}
+                className="cursor-pointer"
+              >
                 <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell>{supplier.contactName}</TableCell>
                 <TableCell>{supplier.contactEmail}</TableCell>

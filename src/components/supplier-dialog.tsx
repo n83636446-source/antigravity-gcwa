@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -23,14 +22,17 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
+import {
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
+import type { Supplier } from '@/lib/types';
 
 const supplierSchema = z.object({
-  name: z.string().min(2, 'Le nom de l\'entreprise doit contenir au moins 2 caractères.'),
+  name: z.string().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères."),
   contactName: z.string().min(2, 'Le nom du contact est requis.'),
   contactEmail: z.string().email('Veuillez saisir une adresse e-mail valide.'),
   contactPhone: z.string().min(10, 'Veuillez saisir un numéro de téléphone valide.'),
@@ -38,50 +40,70 @@ const supplierSchema = z.object({
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
-export function SupplierDialog() {
-  const [open, setOpen] = useState(false);
+type SupplierDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  supplier?: Supplier;
+};
+
+export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const isEditMode = !!supplier;
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
-    defaultValues: {
-      name: '',
-      contactName: '',
-      contactEmail: '',
-      contactPhone: '',
-    },
   });
+
+  useEffect(() => {
+    if (supplier) {
+      form.reset(supplier);
+    } else {
+      form.reset({
+        name: '',
+        contactName: '',
+        contactEmail: '',
+        contactPhone: '',
+      });
+    }
+  }, [supplier, form, isOpen]);
 
   const onSubmit = (data: SupplierFormValues) => {
     if (!firestore) return;
+    
+    if (isEditMode && supplier) {
+      const supplierDocRef = doc(firestore, 'suppliers', supplier.id);
+      updateDocumentNonBlocking(supplierDocRef, data);
+      toast({
+        title: 'Fournisseur modifié',
+        description: `Le fournisseur "${data.name}" a été mis à jour.`,
+      });
+    } else {
+      const suppliersRef = collection(firestore, 'suppliers');
+      addDocumentNonBlocking(suppliersRef, data);
+      toast({
+        title: 'Fournisseur ajouté',
+        description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
+      });
+    }
 
-    const suppliersRef = collection(firestore, 'suppliers');
-    addDocumentNonBlocking(suppliersRef, data);
-
-    toast({
-      title: 'Fournisseur ajouté',
-      description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
-    });
-    setOpen(false);
-    form.reset();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Ajouter un fournisseur
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Ajouter un nouveau fournisseur</DialogTitle>
+              <DialogTitle>
+                {isEditMode ? 'Modifier le fournisseur' : 'Ajouter un nouveau fournisseur'}
+              </DialogTitle>
               <DialogDescription>
-                Remplissez les détails du nouveau fournisseur.
+                {isEditMode
+                  ? "Modifiez les informations du fournisseur."
+                  : "Remplissez les détails du nouveau fournisseur."
+                }
               </DialogDescription>
             </DialogHeader>
 
@@ -142,7 +164,8 @@ export function SupplierDialog() {
             />
             
             <DialogFooter>
-              <Button type="submit">Ajouter le fournisseur</Button>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
+              <Button type="submit">{isEditMode ? 'Enregistrer les modifications' : 'Ajouter le fournisseur'}</Button>
             </DialogFooter>
           </form>
         </Form>
