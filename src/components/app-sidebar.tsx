@@ -65,7 +65,7 @@ export function AppSidebar() {
           </div>
           <div className="flex items-center">
             <SidebarTrigger className="hidden md:flex">
-              <Menu />
+              <List />
             </SidebarTrigger>
           </div>
         </div>
