@@ -37,7 +37,9 @@ const supplierSchema = z.object({
   contactName: z.string().min(2, 'Le nom du contact est requis.'),
   contactEmail: z.string().email('Veuillez saisir une adresse e-mail valide.'),
   contactPhone: z.string().min(10, 'Veuillez saisir un numéro de téléphone valide.'),
-  address: z.string().min(5, "L'adresse doit contenir au moins 5 caractères."),
+  street: z.string().min(5, "La rue doit contenir au moins 5 caractères."),
+  city: z.string().min(2, "La ville doit contenir au moins 2 caractères."),
+  country: z.string().min(2, "Le pays doit contenir au moins 2 caractères."),
   ice: z.string().regex(/^[0-9]{15}$/, "L'ICE doit contenir exactement 15 chiffres."),
 });
 
@@ -67,7 +69,9 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
         contactName: '',
         contactEmail: '',
         contactPhone: '',
-        address: '',
+        street: '',
+        city: '',
+        country: '',
         ice: '',
       });
     }
@@ -97,7 +101,7 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl">
+      <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
@@ -142,10 +146,10 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
 
             <FormField
               control={form.control}
-              name="address"
+              name="street"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Adresse</FormLabel>
+                  <FormLabel>Rue</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Adresse complète du fournisseur" {...field} />
                   </FormControl>
@@ -153,6 +157,35 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ville</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Casablanca" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pays</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Maroc" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

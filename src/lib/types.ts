@@ -4,7 +4,9 @@ export type Supplier = {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
-  address: string;
+  street: string;
+  city: string;
+  country: string;
   ice: string;
 };
 

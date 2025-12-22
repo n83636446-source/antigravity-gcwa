@@ -46,7 +46,7 @@ export function SuppliersTable({
               >
                 <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell>{supplier.ice}</TableCell>
-                <TableCell>{supplier.address}</TableCell>
+                <TableCell>{`${supplier.street}, ${supplier.city}, ${supplier.country}`}</TableCell>
                 <TableCell>{supplier.contactName}</TableCell>
                 <TableCell>{supplier.contactEmail}</TableCell>
                 <TableCell>{supplier.contactPhone}</TableCell>
@@ -58,5 +58,3 @@ export function SuppliersTable({
     </Card>
   );
 }
-
-    

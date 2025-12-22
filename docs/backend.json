@@ -72,9 +72,17 @@
           "type": "string",
           "description": "Contact phone number for the supplier."
         },
-        "address": {
+        "street": {
           "type": "string",
-          "description": "Address of the supplier."
+          "description": "Street address of the supplier."
+        },
+        "city": {
+          "type": "string",
+          "description": "City of the supplier."
+        },
+        "country": {
+          "type": "string",
+          "description": "Country of the supplier."
         },
         "ice": {
           "type": "string",
@@ -87,7 +95,9 @@
         "contactName",
         "contactEmail",
         "contactPhone",
-        "address",
+        "street",
+        "city",
+        "country",
         "ice"
       ]
     },
