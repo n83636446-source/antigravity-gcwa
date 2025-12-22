@@ -22,6 +22,7 @@ import {
   ShoppingCart,
   ChevronDown,
   Contact,
+  List,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -40,8 +41,8 @@ const menuItems = [
 
 const achatSubMenuItems = [
     { href: '/purchases/orders', label: 'Bon de commande' },
-    { href: '/purchases/receipts', label: 'Bon de réception' },
-    { href: '/purchases/invoices', label: 'Facture' },
+    { href: '/purchrases/receipts', label: 'Bon de réception' },
+    { href: '/purchrases/invoices', label: 'Facture' },
 ];
 
 export function AppSidebar() {
