@@ -9,6 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -36,9 +37,10 @@ export function AppSidebar() {
           <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Warehouse className="size-5" />
           </div>
-          <span className="text-lg font-semibold text-sidebar-foreground">
+          <span className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             GérerStock
           </span>
+          <SidebarTrigger className="ml-auto hidden md:flex" />
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -49,10 +51,11 @@ export function AppSidebar() {
                 asChild
                 isActive={pathname === item.href}
                 className="justify-start"
+                tooltip={item.label}
               >
                 <Link href={item.href}>
                   <item.icon className="size-4" />
-                  <span>{item.label}</span>
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
