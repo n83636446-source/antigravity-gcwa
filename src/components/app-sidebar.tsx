@@ -10,6 +10,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -17,18 +19,34 @@ import {
   Users,
   LineChart,
   Warehouse,
+  ShoppingCart,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Button } from './ui/button';
 
 const menuItems = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/products', label: 'Produits', icon: Boxes },
   { href: '/suppliers', label: 'Fournisseurs', icon: Users },
-  { href: '/reports', label: 'Rapports', icon: LineChart },
+];
+
+const achatSubMenuItems = [
+    { href: '/purchases/orders', label: 'Bon de commande' },
+    { href: '/purchases/receipts', label: 'Bon de réception' },
+    { href: '/purchases/invoices', label: 'Facture' },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [isAchatOpen, setIsAchatOpen] = React.useState(
+    achatSubMenuItems.some(item => pathname.startsWith(item.href))
+  );
 
   return (
     <>
@@ -42,7 +60,9 @@ export function AppSidebar() {
               GérerStock
             </span>
           </div>
-          <SidebarTrigger className="hidden md:flex" />
+          <div className="flex items-center">
+            <SidebarTrigger className="hidden md:flex" />
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -62,6 +82,43 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <Collapsible open={isAchatOpen} onOpenChange={setIsAchatOpen}>
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
+                      <ShoppingCart className="size-4" />
+                      <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achat</span>
+                      <ChevronDown className="size-4 group-data-[collapsible=icon]:hidden transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </Button>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+             <CollapsibleContent>
+                <SidebarMenuSub>
+                    {achatSubMenuItems.map(subItem => (
+                        <SidebarMenuItem key={subItem.href}>
+                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                <Link href={subItem.href}>
+                                    {subItem.label}
+                                </Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenuSub>
+            </CollapsibleContent>
+          </Collapsible>
+          <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/reports'}
+                className="justify-start"
+                tooltip={'Rapports'}
+              >
+                <Link href={'/reports'}>
+                  <LineChart className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden">Rapports</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
     </>
