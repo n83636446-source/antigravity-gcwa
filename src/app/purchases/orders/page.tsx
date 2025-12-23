@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
 import type { PurchaseOrder, Supplier, Product, PurchaseReceipt } from '@/lib/types';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -77,6 +77,25 @@ export default function PurchaseOrdersPage() {
   
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    try {
+      const savedColumns = localStorage.getItem('purchaseOrderColumns');
+      if (savedColumns) {
+        const parsedColumns: Column[] = JSON.parse(savedColumns);
+        const savedColumnIds = new Set(parsedColumns.map(c => c.id));
+        const initialColumnIds = new Set(initialColumns.map(c => c.id));
+        
+        // Basic validation to ensure saved columns are valid
+        if (parsedColumns.length === initialColumns.length && [...savedColumnIds].every(id => initialColumnIds.has(id))) {
+          setColumns(parsedColumns);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load or parse columns from localStorage", error);
+      // Silently fail and use initialColumns
+    }
+  }, []);
+
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
 
   const sensors = useSensors(
@@ -92,7 +111,13 @@ export default function PurchaseOrdersPage() {
       setColumns((items) => {
         const oldIndex = columnIds.indexOf(active.id as any);
         const newIndex = columnIds.indexOf(over.id as any);
-        return arrayMove(items, oldIndex, newIndex);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        try {
+          localStorage.setItem('purchaseOrderColumns', JSON.stringify(newOrder));
+        } catch (error) {
+          console.error("Failed to save columns to localStorage", error);
+        }
+        return newOrder;
       });
     }
   }
@@ -173,7 +198,6 @@ export default function PurchaseOrdersPage() {
       clearTimeout(clickTimeoutRef.current);
       clickTimeoutRef.current = null;
     }
-    setSelectedOrder(order);
     handleEdit(order);
   };
 
