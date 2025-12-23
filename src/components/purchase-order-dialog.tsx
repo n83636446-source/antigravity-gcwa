@@ -319,26 +319,25 @@ export function PurchaseOrderDialog({
                 </span>
             </div>
 
-
             <DialogFooter className="sm:justify-between">
-                <div>
-                {isEditMode && (
-                    <Button type="button" variant="outline" onClick={handleTransferClick}>
-                        Transférer en BR
-                    </Button>
+              <div>
+                {isEditMode ? (
+                  <Button type="button" variant="outline" onClick={handleTransferClick}>
+                    Transférer en BR
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Annuler
+                  </Button>
                 )}
-                </div>
-
-                <div className="flex gap-2">
-                     {!isEditMode && (
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                            Annuler
-                        </Button>
-                    )}
-                    <Button type="submit">
-                        {isEditMode ? 'Enregistrer les modifications' : 'Créer le bon de commande'}
-                    </Button>
-                </div>
+              </div>
+              <Button type="submit">
+                {isEditMode ? 'Enregistrer' : 'Créer le bon de commande'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
