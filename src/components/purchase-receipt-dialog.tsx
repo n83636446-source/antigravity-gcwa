@@ -40,14 +40,6 @@ import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { ArticleDialog } from './article-dialog';
 import { SupplierDialog } from './supplier-dialog';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
 
 
 const receiptItemSchema = z.object({
@@ -172,6 +164,11 @@ export function PurchaseReceiptDialog({
   const watchedItems = useWatch({ control: form.control, name: 'items' });
   const watchedOrderId = form.watch('purchaseOrderId');
   const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
+  
+  const gridLayout = fromBC 
+    ? "grid-cols-[1fr_120px_120px_100px] gap-2 items-end"
+    : "grid-cols-[1fr_120px_100px_44px] gap-2 items-end";
+
 
   const liveTotal = useMemo(() => {
     if (!watchedItems || !products) return 0;
@@ -245,7 +242,7 @@ export function PurchaseReceiptDialog({
          });
       }
     }
-  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace, form.setValue]);
+  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace]);
 
 
   const getProductName = (productId: string) => {
@@ -478,108 +475,91 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-2">
-              <FormLabel>Articles</FormLabel>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40%]">Article</TableHead>
-                    {fromBC && <TableHead className="w-[120px] text-center">Qté Cmdée</TableHead>}
-                    <TableHead className="w-[120px] text-center">Qté Reçue</TableHead>
-                    <TableHead className="w-[100px] text-right">Prix</TableHead>
-                    {!fromBC && !readOnly && <TableHead className="w-[44px]"></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="p-1">
-                        {fromBC ? (
-                          <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
-                        ) : (
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.productId`}
-                            render={({ field: itemField }) => (
-                              <FormItem>
-                                <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Article" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
-                                      <div className="flex items-center gap-2">
-                                        <PlusCircle className="h-4 w-4" />
-                                        <span>Créer un article</span>
-                                      </div>
-                                    </SelectItem>
-                                    <Separator />
-                                    {products?.map((product) => (
-                                      <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                      </TableCell>
-
-                      {fromBC && (
-                        <TableCell className="p-1">
-                          <Input
-                            type="number"
-                            readOnly
-                            disabled
-                            value={field.quantityOrdered}
-                            className="w-full text-center"
-                          />
-                        </TableCell>
+               <div className={cn('grid text-sm font-medium', gridLayout)}>
+                  <Label>Article</Label>
+                  {fromBC && <Label className="text-center">Qté Cmdée</Label>}
+                  <Label className="text-center">Qté Reçue</Label>
+                  <Label className="text-right">Prix</Label>
+                  {!fromBC && <div></div>}
+                </div>
+              {fields.map((field, index) => (
+                <div key={field.id} className={cn('grid', gridLayout)}>
+                  {fromBC ? (
+                    <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.productId`}
+                      render={({ field: itemField }) => (
+                        <FormItem>
+                          <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Article" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                <div className="flex items-center gap-2">
+                                  <PlusCircle className="h-4 w-4" />
+                                  <span>Créer un article</span>
+                                </div>
+                              </SelectItem>
+                              <Separator />
+                              {products?.map((product) => (
+                                <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
                       )}
+                    />
+                  )}
 
-                      <TableCell className="p-1">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.quantityReceived`}
-                          render={({ field: itemField }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input type="number" placeholder="Qté reçue" className="w-full text-center" disabled={readOnly} {...itemField} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </TableCell>
+                  {fromBC && (
+                      <Input
+                        type="number"
+                        readOnly
+                        disabled
+                        value={field.quantityOrdered}
+                        className="w-full text-center"
+                      />
+                  )}
 
-                      <TableCell className="p-1">
-                         <FormField
-                            control={form.control}
-                            name={`items.${index}.price`}
-                            render={({ field: itemField }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input type="number" placeholder="Prix" className="w-full text-right" disabled value={itemField.value ?? ''} />
-                                </FormControl>
-                                 <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                      </TableCell>
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.quantityReceived`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="number" placeholder="Qté reçue" className="w-full text-center" disabled={readOnly} {...itemField} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                      {!fromBC && !readOnly && (
-                        <TableCell className="p-1">
-                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                   <FormField
+                      control={form.control}
+                      name={`items.${index}.price`}
+                      render={({ field: itemField }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input type="number" placeholder="Prix" className="w-full text-right" disabled value={itemField.value ?? ''} />
+                          </FormControl>
+                           <FormMessage />
+                        </FormItem>
                       )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    />
+
+                  {!fromBC && !readOnly && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                  )}
+                </div>
+              ))}
               {!fromBC && !readOnly && (
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
