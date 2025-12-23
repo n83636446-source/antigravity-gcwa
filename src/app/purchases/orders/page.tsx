@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
-import type { PurchaseOrder, Supplier, Product } from '@/lib/types';
+import type { PurchaseOrder, Supplier, Product, PurchaseReceipt } from '@/lib/types';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -179,9 +179,11 @@ export default function PurchaseOrdersPage() {
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('tr')) {
+    // If the click is on a row or a button, do nothing.
+    if ((e.target as HTMLElement).closest('tr, button')) {
       return;
     }
+    // Otherwise, the click was outside a selectable/actionable area, so deselect.
     setSelectedOrder(null);
   };
 

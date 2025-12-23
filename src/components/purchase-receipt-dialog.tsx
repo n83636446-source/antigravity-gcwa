@@ -103,32 +103,37 @@ export function PurchaseReceiptDialog({
     name: 'items',
   });
 
-  const purchaseOrderId = form.watch('purchaseOrderId');
+  const watchedOrderId = form.watch('purchaseOrderId');
 
   useEffect(() => {
-    const orderToLoad = isTriggeredExternally ? purchaseOrder : purchaseOrders.find(o => o.id === purchaseOrderId);
+    // Determine which order to load based on context
+    const orderToLoad = isTriggeredExternally 
+      ? purchaseOrder 
+      : purchaseOrders.find(o => o.id === watchedOrderId);
     
     if (isOpen && orderToLoad) {
-        form.setValue('purchaseOrderId', orderToLoad.id);
-        const orderItems = orderToLoad.items.map((item) => ({
-            productId: item.productId,
-            supplierId: orderToLoad.supplierId,
-            quantityOrdered: item.quantity,
-            quantityReceived: item.quantity,
-        }));
-        replace(orderItems);
-    }
-
-    if (!isOpen) {
+      // Set the values in the form
+      form.reset({
+        purchaseOrderId: orderToLoad.id,
+        receiptDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        items: orderToLoad.items.map((item) => ({
+          productId: item.productId,
+          supplierId: orderToLoad.supplierId,
+          quantityOrdered: item.quantity,
+          quantityReceived: item.quantity,
+        })),
+      });
+    } else if (!isOpen) {
+      // Reset form when dialog closes
       form.reset({
         purchaseOrderId: '',
         receiptDate: new Date().toISOString().split('T')[0],
         notes: '',
         items: [],
-      })
-      replace([]);
+      });
     }
-  }, [isOpen, isTriggeredExternally, purchaseOrder, purchaseOrderId, purchaseOrders, form, replace]);
+  }, [isOpen, purchaseOrder, watchedOrderId, purchaseOrders, form, isTriggeredExternally, replace]);
 
 
   const getProductName = (productId: string) => {
