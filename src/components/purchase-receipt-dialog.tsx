@@ -41,7 +41,6 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
@@ -114,7 +113,8 @@ export function PurchaseReceiptDialog({
   }, [purchaseOrderId, purchaseOrders, replace]);
 
   const getProductName = (productId: string) => {
-    return products.find((p) => p.id === productId)?.name || 'Inconnu';
+    const product = products.find((p) => p.id === productId);
+    return product ? product.name : 'Inconnu';
   };
 
   const onSubmit = async (data: PurchaseReceiptFormValues) => {
@@ -135,29 +135,13 @@ export function PurchaseReceiptDialog({
     const receiptRef = collection(firestore, 'purchaseReceipts');
     const orderRef = doc(firestore, 'purchaseOrders', data.purchaseOrderId);
     
-    // In a real app, you would use a transaction or a batch write
-    // to ensure data consistency.
     const batch = writeBatch(firestore);
     
-    // 1. Create the receipt
-    // Since addDocumentNonBlocking is not designed for batches, we'll add it manually
-    const newReceiptDocRef = doc(receiptRef); // Create a new doc with a generated id
+    const newReceiptDocRef = doc(receiptRef);
     batch.set(newReceiptDocRef, newReceiptData);
 
-    // 2. Update the purchase order status
     batch.update(orderRef, { status: 'Reçu' });
     
-    // 3. Update product stock levels
-    data.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        if(product) {
-            // This is not ideal as products are nested under suppliers.
-            // A better structure would be a top-level products collection.
-            // For now, we assume a simple update. This will likely fail with current rules/structure.
-            console.warn("Stock update logic needs to be adjusted for the nested product structure.")
-        }
-    });
-
     try {
         await batch.commit();
         toast({
