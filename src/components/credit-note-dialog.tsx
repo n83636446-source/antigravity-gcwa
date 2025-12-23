@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -64,13 +64,18 @@ export function CreditNoteDialog({
 
   const form = useForm<CreditNoteFormValues>({
     resolver: zodResolver(creditNoteSchema),
-    defaultValues: {
-      supplierId: '',
-      creditNoteDate: new Date().toISOString().split('T')[0],
-      amount: 0,
-      reason: '',
-    },
   });
+
+  useEffect(() => {
+    if (open) {
+        form.reset({
+            supplierId: '',
+            creditNoteDate: new Date().toISOString().split('T')[0],
+            amount: 0,
+            reason: '',
+        });
+    }
+  }, [open, form]);
 
   const onSubmit = (data: CreditNoteFormValues) => {
     if (!firestore) return;
@@ -99,12 +104,6 @@ export function CreditNoteDialog({
     onCreditNoteCreated?.(newCreditNoteData as CreditNote);
 
     setOpen(false);
-    form.reset({
-      supplierId: '',
-      creditNoteDate: new Date().toISOString().split('T')[0],
-      amount: 0,
-      reason: '',
-    });
   };
 
   return (

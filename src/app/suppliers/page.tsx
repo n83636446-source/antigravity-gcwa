@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Supplier, Product, PurchaseOrder, CreditNote } from '@/lib/types';
+import type { Supplier, PurchaseOrder, CreditNote, PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { SuppliersTable } from '@/components/suppliers-table';
 import { SupplierDialog } from '@/components/supplier-dialog';
@@ -117,23 +117,29 @@ export default function SuppliersPage() {
   );
   const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
 
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
-  );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
-
   const purchaseOrdersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseOrders') : null),
     [firestore]
   );
-  const { data: purchaseOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
+  const { data: purchaseOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
 
   const creditNotesRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'creditNotes') : null),
     [firestore]
   );
-  const { data: creditNotes, isLoading: isLoadingCreditNotes } = useCollection<CreditNote>(creditNotesRef);
+  const { data: creditNotes } = useCollection<CreditNote>(creditNotesRef);
+  
+  const purchaseReceiptsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
+    [firestore]
+  );
+  const { data: purchaseReceipts } = useCollection<PurchaseReceipt>(purchaseReceiptsRef);
+  
+  const purchaseInvoicesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
+    [firestore]
+  );
+  const { data: purchaseInvoices } = useCollection<PurchaseInvoice>(purchaseInvoicesRef);
 
 
   const lastSupplierCodeNumber = useMemo(() => {
@@ -172,26 +178,17 @@ export default function SuppliersPage() {
   const handleDeleteConfirm = () => {
     if (!firestore || !supplierToDelete) return;
   
-    // We only check for usage in orders and credit notes now.
-    // A supplier can exist without having products directly linked to them.
-    const isUsedInOrders = (purchaseOrders || []).some(
-      (order) => order.supplierId === supplierToDelete.id
-    );
-  
-    const isUsedInCreditNotes = (creditNotes || []).some(
-      (note) => note.supplierId === supplierToDelete.id
-    );
-  
-    let usedInMessage = '';
-    if (isUsedInOrders) usedInMessage = 'des bons de commande';
-    else if (isUsedInCreditNotes) usedInMessage = 'des avoirs';
-  
-    if (usedInMessage) {
+    const isUsedInOrders = (purchaseOrders || []).some(o => o.supplierId === supplierToDelete.id);
+    const isUsedInReceipts = (purchaseReceipts || []).some(r => r.supplierId === supplierToDelete.id);
+    const isUsedInInvoices = (purchaseInvoices || []).some(i => i.supplierId === supplierToDelete.id);
+    const isUsedInCreditNotes = (creditNotes || []).some(n => n.supplierId === supplierToDelete.id);
+
+    if (isUsedInOrders || isUsedInReceipts || isUsedInInvoices || isUsedInCreditNotes) {
       toast({
         variant: 'destructive',
         title: 'Suppression impossible',
-        description: `Le fournisseur "${supplierToDelete.name}" est lié à ${usedInMessage} et ne peut pas être supprimé.`,
-        duration: 5000,
+        description: `Le fournisseur "${supplierToDelete.name}" est lié à des documents d'achat (commandes, réceptions, factures, ou avoirs) et ne peut pas être supprimé.`,
+        duration: 6000,
       });
       setDeleteDialogOpen(false);
       return;
@@ -208,7 +205,7 @@ export default function SuppliersPage() {
     setSelectedSupplier(null);
   };
 
-  const isLoading = isLoadingSuppliers || isLoadingProducts || isLoadingOrders || isLoadingCreditNotes;
+  const isLoading = isLoadingSuppliers || !purchaseOrders || !creditNotes || !purchaseReceipts || !purchaseInvoices;
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">

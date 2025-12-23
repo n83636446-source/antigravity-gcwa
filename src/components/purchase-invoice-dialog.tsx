@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseInvoice, Supplier, Product } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { Input } from './ui/input';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Separator } from './ui/separator';
@@ -78,7 +78,7 @@ const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 export function PurchaseInvoiceDialog({
   purchaseOrders,
   suppliers,
-  products,
+  products: initialProducts,
   onInvoiceCreated,
   lastInvoiceNumber,
   isOpen: openProp,
@@ -92,13 +92,19 @@ export function PurchaseInvoiceDialog({
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
+
+  const isTriggeredExternally = openProp !== undefined;
+  const isEditMode = !!invoice;
+  const isOpen = openProp !== undefined ? openProp : internalOpen;
+  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
   
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
-  );
+  const suppliersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'suppliers') : null), [firestore]);
   const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
 
+  const productsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'products') : null), [firestore]);
+  const { data: allProducts, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
+
+  const products = allProducts || initialProducts;
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!allSuppliers || allSuppliers.length === 0) return 0;
@@ -108,18 +114,22 @@ export function PurchaseInvoiceDialog({
     }, 0);
   }, [allSuppliers]);
 
-
-  const isTriggeredExternally = openProp !== undefined;
-  const isEditMode = !!invoice;
-  const isOpen = openProp !== undefined ? openProp : internalOpen;
-  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
+  const lastArticleCodeNumber = useMemo(() => {
+    if (!products || products.length === 0) {
+      return 0;
+    }
+    return products.reduce((max, s) => {
+      const codeNumber = parseInt((s.code || 'ART0').replace('ART', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [products]);
 
 
   const form = useForm<PurchaseInvoiceFormValues>({
     resolver: zodResolver(purchaseInvoiceSchema),
   });
   
-  const { fields, append, remove, replace, update } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'items',
   });
@@ -251,7 +261,10 @@ export function PurchaseInvoiceDialog({
 
   const handleSupplierCreated = (newSupplier: Supplier) => {
     if(newSupplier && newSupplier.id) {
-        form.setValue('supplierId', newSupplier.id);
+        // We need a slight delay to allow the `allSuppliers` collection to update
+        setTimeout(() => {
+          form.setValue('supplierId', newSupplier.id);
+        }, 100);
     }
     setSupplierDialogOpen(false);
   };
@@ -261,13 +274,16 @@ export function PurchaseInvoiceDialog({
       articleCreationIndex.current = index;
       setArticleDialogOpen(true);
     } else {
-      update(index, { ...fields[index], productId: value });
+      update(index, { ...watchedItems[index], productId: value });
     }
   };
 
   const handleArticleCreated = (newArticle: Product) => {
     if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
-      update(articleCreationIndex.current, { ...fields[articleCreationIndex.current], productId: newArticle.id });
+      // We need a slight delay to allow the `allProducts` collection to update
+      setTimeout(() => {
+        update(articleCreationIndex.current!, { ...watchedItems[articleCreationIndex.current!], productId: newArticle.id });
+      }, 100);
     }
     articleCreationIndex.current = null;
     setArticleDialogOpen(false);
@@ -441,7 +457,7 @@ export function PurchaseInvoiceDialog({
                    )}
                 </div>
               ))}
-               {(!products || products.length === 0) && (
+               {(!products || products.length === 0) && !isLoadingProducts && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
                     Aucun article trouvé.
                     <Button type="button" variant="link" className="p-1 h-auto" onClick={() => setArticleDialogOpen(true)}>Créer un article</Button>
@@ -482,6 +498,7 @@ export function PurchaseInvoiceDialog({
         isOpen={isArticleDialogOpen}
         onOpenChange={setArticleDialogOpen}
         onArticleCreated={handleArticleCreated}
+        lastArticleCodeNumber={lastArticleCodeNumber}
     />
      <SupplierDialog
         isOpen={isSupplierDialogOpen}

@@ -30,12 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, CheckCircle, FileText, XCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt, Supplier } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
-import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { ArticleDialog } from './article-dialog';
@@ -71,9 +71,6 @@ type PurchaseReceiptDialogProps = {
   onOpenChange?: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
   receipt?: PurchaseReceipt | null;
-  onValidate?: () => void;
-  onTransferToInvoice?: () => void;
-  onCancelValidation?: () => void;
 };
 
 const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
@@ -83,17 +80,14 @@ const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 export function PurchaseReceiptDialog({
   purchaseOrders,
   receipts,
-  products,
-  suppliers,
+  products: initialProducts,
+  suppliers: initialSuppliers,
   lastReceiptNumber,
   onReceiptCreated,
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
   purchaseOrder,
   receipt,
-  onValidate,
-  onTransferToInvoice,
-  onCancelValidation,
 }: PurchaseReceiptDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -105,6 +99,19 @@ export function PurchaseReceiptDialog({
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
 
+  const isOpen = openProp !== undefined ? openProp : internalOpen;
+  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
+  
+  const suppliersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'suppliers') : null), [firestore]);
+  const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
+
+  const productsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'products') : null), [firestore]);
+  const { data: allProducts } = useCollection<Product>(productsRef);
+
+  const products = allProducts || initialProducts;
+  const suppliers = allSuppliers || initialSuppliers;
+
+
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
     return suppliers.reduce((max, s) => {
@@ -112,16 +119,27 @@ export function PurchaseReceiptDialog({
       return codeNumber > max ? codeNumber : max;
     }, 0);
   }, [suppliers]);
+  
+  const lastArticleCodeNumber = useMemo(() => {
+    if (!products || products.length === 0) {
+      return 0;
+    }
+    return products.reduce((max, s) => {
+      const codeNumber = parseInt((s.code || 'ART0').replace('ART', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [products]);
 
-
-  const isOpen = openProp !== undefined ? openProp : internalOpen;
-  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
 
   // Filter out purchase orders that already have a receipt
   const availablePurchaseOrders = useMemo(() => {
     const receivedOrderIds = new Set(receipts.map(r => r.purchaseOrderId));
+    // When editing, allow the current receipt's PO to be in the list
+    if (isEditMode && receipt?.purchaseOrderId) {
+        receivedOrderIds.delete(receipt.purchaseOrderId);
+    }
     return purchaseOrders.filter(o => !receivedOrderIds.has(o.id));
-  }, [purchaseOrders, receipts]);
+  }, [purchaseOrders, receipts, isEditMode, receipt]);
 
 
   const form = useForm<PurchaseReceiptFormValues>({
@@ -135,12 +153,13 @@ export function PurchaseReceiptDialog({
     },
   });
 
-  const { fields, replace, append, remove } = useFieldArray({
+  const { fields, replace, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'items',
   });
 
   const watchedOrderId = form.watch('purchaseOrderId');
+  const watchedItems = form.watch('items');
   const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
 
   useEffect(() => {
@@ -185,17 +204,12 @@ export function PurchaseReceiptDialog({
       // Case: Creating a new BR from scratch or after selecting a PO in dialog
       const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
-        form.reset({
-          purchaseOrderId: selectedPO.id,
-          supplierId: selectedPO.supplierId,
-          receiptDate: new Date().toISOString().split('T')[0],
-          notes: '',
-          items: selectedPO.items.map(item => ({
+        form.setValue('supplierId', selectedPO.supplierId);
+        replace(selectedPO.items.map(item => ({
             productId: item.productId,
             quantityOrdered: item.quantity,
             quantityReceived: item.quantity,
-          })),
-        });
+        })));
       } else {
          // Reset for manual creation
          form.reset({
@@ -207,7 +221,7 @@ export function PurchaseReceiptDialog({
          });
       }
     }
-  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form]);
+  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace, form.setValue]);
 
 
   const getProductName = (productId: string) => {
@@ -284,7 +298,9 @@ export function PurchaseReceiptDialog({
 
   const handleSupplierCreated = (newSupplier: Supplier) => {
     if(newSupplier && newSupplier.id) {
-        form.setValue('supplierId', newSupplier.id);
+        setTimeout(() => {
+            form.setValue('supplierId', newSupplier.id);
+        }, 100);
     }
     setSupplierDialogOpen(false);
   };
@@ -294,18 +310,16 @@ export function PurchaseReceiptDialog({
       articleCreationIndex.current = index;
       setArticleDialogOpen(true);
     } else {
-      const field = fields[index];
-      field.productId = value;
-      replace(fields);
+      update(index, { ...watchedItems[index], productId: value });
     }
   };
 
   const handleArticleCreated = (newArticle: Product) => {
     if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
       const index = articleCreationIndex.current;
-      const field = fields[index];
-      field.productId = newArticle.id;
-      replace(fields);
+      setTimeout(() => {
+        update(index, { ...watchedItems[index], productId: newArticle.id });
+      }, 100);
     }
     articleCreationIndex.current = null;
     setArticleDialogOpen(false);
@@ -527,28 +541,7 @@ export function PurchaseReceiptDialog({
               )}
             />
 
-            <DialogFooter className="sm:justify-between">
-              <div className="flex gap-2">
-                {isEditMode && receipt?.status === 'Brouillon' && onValidate && (
-                  <Button type="button" variant="outline" onClick={onValidate}>
-                    <CheckCircle className="mr-2 h-4 w-4" /> Valider
-                  </Button>
-                )}
-                 {isEditMode && receipt?.status === 'Validé' && (
-                   <>
-                    {onCancelValidation && (
-                        <Button type="button" variant="outline" onClick={onCancelValidation}>
-                            <XCircle className="mr-2 h-4 w-4" /> Annuler la validation
-                        </Button>
-                    )}
-                    {onTransferToInvoice && (
-                        <Button type="button" variant="outline" onClick={onTransferToInvoice}>
-                            <FileText className="mr-2 h-4 w-4" /> Transférer en facture
-                        </Button>
-                    )}
-                   </>
-                )}
-              </div>
+            <DialogFooter className="sm:justify-end">
               <div className='flex gap-2'>
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                   {readOnly ? 'Fermer' : 'Annuler'}
@@ -566,6 +559,7 @@ export function PurchaseReceiptDialog({
       isOpen={isArticleDialogOpen}
       onOpenChange={setArticleDialogOpen}
       onArticleCreated={handleArticleCreated}
+      lastArticleCodeNumber={lastArticleCodeNumber}
     />
     <SupplierDialog
       isOpen={isSupplierDialogOpen}

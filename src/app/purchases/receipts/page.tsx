@@ -70,6 +70,26 @@ export default function PurchaseReceiptsPage() {
   
   const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingProducts || isLoadingSuppliers || isLoadingInvoices;
 
+  const lastReceiptNumber = useMemo(() => {
+    if (!receipts || receipts.length === 0) {
+      return 0;
+    }
+    return receipts.reduce((max, rec) => {
+      const codeNumber = parseInt((rec.receiptNumber || 'BR-0000').replace('BR-', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [receipts]);
+  
+  const lastInvoiceNumber = useMemo(() => {
+    if (!invoices || invoices.length === 0) {
+      return 0;
+    }
+    return invoices.reduce((max, inv) => {
+      const codeNumber = parseInt((inv.invoiceNumber || 'FA-0000').replace('FA-', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [invoices]);
+
   const handleRowClick = (receipt: PurchaseReceipt) => {
     if (selectedReceipt?.id === receipt.id) {
       setSelectedReceipt(null);
@@ -135,9 +155,8 @@ export default function PurchaseReceiptsPage() {
   };
   
   const handleTransferToInvoice = () => {
-    const receiptToTransfer = editingReceipt || selectedReceipt;
-    if (receiptToTransfer) {
-       if (receiptToTransfer.status !== 'Validé') {
+    if (selectedReceipt) {
+       if (selectedReceipt.status !== 'Validé') {
         toast({
           variant: 'destructive',
           title: 'Action impossible',
@@ -146,7 +165,6 @@ export default function PurchaseReceiptsPage() {
         return;
       }
       setInvoiceDialogOpen(true);
-      setDialogOpen(false); // Close the receipt dialog
     }
   };
 
@@ -159,14 +177,13 @@ export default function PurchaseReceiptsPage() {
   }
   
   const selectedOrderForInvoice = useMemo(() => {
-    const receiptToTransfer = editingReceipt || selectedReceipt;
-    if (!receiptToTransfer || !allOrders) return undefined;
-    return allOrders.find(o => o.id === receiptToTransfer.purchaseOrderId);
-  }, [editingReceipt, selectedReceipt, allOrders]);
+    if (!selectedReceipt || !allOrders) return undefined;
+    return allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
+  }, [selectedReceipt, allOrders]);
 
   const handleValidateReceipt = async () => {
     if (!firestore) return;
-    const receiptToValidate = editingReceipt || selectedReceipt;
+    const receiptToValidate = selectedReceipt;
     if (!receiptToValidate || receiptToValidate.status === 'Validé') return;
     
     const batch = writeBatch(firestore);
@@ -189,9 +206,6 @@ export default function PurchaseReceiptsPage() {
       });
       const updatedReceipt = { ...receiptToValidate, status: 'Validé' as const };
       setSelectedReceipt(updatedReceipt);
-      if (editingReceipt) {
-        setEditingReceipt(updatedReceipt);
-      }
     } catch (error) {
       console.error("Validation failed: ", error);
       toast({
@@ -207,25 +221,27 @@ export default function PurchaseReceiptsPage() {
         toast({ variant: 'destructive', title: 'Erreur', description: 'Les données ne sont pas encore prêtes. Veuillez patienter.' });
         return;
     }
-    if (!firestore || !products || !invoices || !suppliers) {
+    if (!firestore || !products || !invoices) {
         toast({ variant: 'destructive', title: 'Erreur', description: 'Les données nécessaires ne sont pas chargées.' });
         return;
     }
 
-    const receiptToCancel = editingReceipt || selectedReceipt;
+    const receiptToCancel = selectedReceipt;
     if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
 
-    const isFactured = invoices.some(
-        (invoice) => invoice.purchaseOrderId && invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
-    );
+    if (receiptToCancel.purchaseOrderId) {
+        const isFactured = invoices.some(
+            (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
+        );
 
-    if (isFactured) {
-        toast({
-            variant: 'destructive',
-            title: 'Action impossible',
-            description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
-        });
-        return;
+        if (isFactured) {
+            toast({
+                variant: 'destructive',
+                title: 'Action impossible',
+                description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
+            });
+            return;
+        }
     }
 
     for (const item of receiptToCancel.items) {
@@ -269,9 +285,6 @@ export default function PurchaseReceiptsPage() {
         });
         const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
         setSelectedReceipt(updatedReceipt);
-        if (editingReceipt) {
-            setEditingReceipt(updatedReceipt);
-        }
     } catch (error) {
         console.error("Validation cancellation failed: ", error);
         toast({
@@ -293,7 +306,7 @@ export default function PurchaseReceiptsPage() {
           receipts={receipts || []}
           products={products || []}
           suppliers={suppliers || []}
-          lastReceiptNumber={receipts?.length || 0}
+          lastReceiptNumber={lastReceiptNumber}
         />
       </PageHeader>
        {isLoading ? (
@@ -377,11 +390,8 @@ export default function PurchaseReceiptsPage() {
           receipts={receipts || []}
           products={products || []}
           suppliers={suppliers || []}
-          lastReceiptNumber={receipts?.length || 0}
+          lastReceiptNumber={lastReceiptNumber}
           receipt={editingReceipt}
-          onValidate={handleValidateReceipt}
-          onCancelValidation={handleCancelValidation}
-          onTransferToInvoice={handleTransferToInvoice}
       />
       {selectedOrderForInvoice && (
           <PurchaseInvoiceDialog
@@ -390,7 +400,7 @@ export default function PurchaseReceiptsPage() {
             purchaseOrders={allOrders || []}
             suppliers={suppliers || []}
             products={products || []}
-            lastInvoiceNumber={invoices?.length || 0}
+            lastInvoiceNumber={lastInvoiceNumber}
             purchaseOrder={selectedOrderForInvoice}
           />
       )}

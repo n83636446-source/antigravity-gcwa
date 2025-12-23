@@ -136,6 +136,16 @@ export default function PurchaseInvoicesPage() {
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
   
   const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
+  
+  const lastInvoiceNumber = useMemo(() => {
+    if (!invoices || invoices.length === 0) {
+      return 0;
+    }
+    return invoices.reduce((max, inv) => {
+      const codeNumber = parseInt((inv.invoiceNumber || 'FA-0000').replace('FA-', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [invoices]);
 
   const handleRowClick = (invoice: PurchaseInvoice) => {
     if (selectedInvoice?.id === invoice.id) {
@@ -258,7 +268,7 @@ export default function PurchaseInvoicesPage() {
             purchaseOrders={purchaseOrders || []}
             suppliers={suppliers || []}
             products={products || []}
-            lastInvoiceNumber={invoices?.length || 0}
+            lastInvoiceNumber={lastInvoiceNumber}
         />
       </PageHeader>
       {isLoading ? (
@@ -342,7 +352,7 @@ export default function PurchaseInvoicesPage() {
           purchaseOrders={purchaseOrders || []}
           suppliers={suppliers || []}
           products={products || []}
-          lastInvoiceNumber={invoices?.length || 0}
+          lastInvoiceNumber={lastInvoiceNumber}
           invoice={editingInvoice}
         />
 
