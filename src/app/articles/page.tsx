@@ -94,12 +94,13 @@ export default function ArticlesPage() {
   };
   
   const handleContainerClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    // Si l'élément cliqué (ou l'un de ses parents) n'est pas une ligne de tableau,
-    // alors on désélectionne l'article.
-    if (!target.closest('tr')) {
-      setSelectedArticle(null);
+    // If the click target or its parents up to the current target is a table row, do nothing.
+    // This allows the row's own click handler to manage selection.
+    if ((e.target as HTMLElement).closest('tr')) {
+      return;
     }
+    // Otherwise, the click was outside a table row, so deselect.
+    setSelectedArticle(null);
   };
 
   const handleDeleteConfirm = () => {
