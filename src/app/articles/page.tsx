@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { collection, collectionGroup, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Product as Article, Supplier } from '@/lib/types';
@@ -53,6 +53,17 @@ export default function ArticlesPage() {
   );
   const { data: articles, isLoading: isLoadingArticles } =
     useCollection<Article>(articlesQuery);
+    
+  const lastArticleCodeNumber = useMemo(() => {
+    if (!articles || articles.length === 0) {
+      return 0;
+    }
+    return articles.reduce((max, s) => {
+      const codeNumber = parseInt((s.code || 'ART0').replace('ART', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [articles]);
+
 
   const isLoading = isLoadingSuppliers || isLoadingArticles;
 
@@ -123,6 +134,7 @@ export default function ArticlesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead>Fournisseur</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
@@ -137,7 +149,8 @@ export default function ArticlesPage() {
                     onDoubleClick={() => handleEdit(article)}
                     className="cursor-pointer"
                   >
-                    <TableCell className="font-medium">{article.name}</TableCell>
+                    <TableCell className="font-medium">{article.code}</TableCell>
+                    <TableCell>{article.name}</TableCell>
                     <TableCell>{getSupplierName(article.supplierId)}</TableCell>
                     <TableCell className="text-right">
                       {article.stockLevel}
@@ -171,6 +184,7 @@ export default function ArticlesPage() {
         onOpenChange={setDialogOpen}
         suppliers={suppliers || []}
         article={editingArticle}
+        lastArticleCodeNumber={lastArticleCodeNumber}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -195,3 +209,5 @@ export default function ArticlesPage() {
     </div>
   );
 }
+
+    

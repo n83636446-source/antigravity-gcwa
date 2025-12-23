@@ -14,6 +14,7 @@ export type Supplier = {
 
 export type Product = {
   id: string;
+  code: string;
   name: string;
   description: string;
   price: number;
@@ -88,3 +89,5 @@ export type CreditNote = {
 };
 
 export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote;
+
+    

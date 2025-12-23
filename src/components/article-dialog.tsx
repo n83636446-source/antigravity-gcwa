@@ -38,6 +38,7 @@ import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const articleSchema = z.object({
+  code: z.string().min(1, "Le code de l'article est requis."),
   name: z.string().min(2, "Le nom de l'article doit contenir au moins 2 caractères."),
   description: z.string().optional(),
   price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
@@ -55,6 +56,7 @@ type ArticleDialogProps = {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   article?: Article;
+  lastArticleCodeNumber?: number;
 };
 
 export function ArticleDialog({ 
@@ -63,7 +65,8 @@ export function ArticleDialog({
   children,
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
-  article
+  article,
+  lastArticleCodeNumber = 0
  }: ArticleDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -77,6 +80,7 @@ export function ArticleDialog({
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
     defaultValues: {
+      code: '',
       name: '',
       description: '',
       price: 0,
@@ -90,6 +94,7 @@ export function ArticleDialog({
     if (isOpen) {
       if (isEditMode && article) {
         form.reset({
+            code: article.code,
             name: article.name,
             description: article.description,
             price: article.price,
@@ -98,7 +103,9 @@ export function ArticleDialog({
             supplierId: article.supplierId,
         });
       } else {
+        const nextCode = `ART${(lastArticleCodeNumber + 1).toString().padStart(3, '0')}`;
         form.reset({
+          code: nextCode,
           name: '',
           description: '',
           price: 0,
@@ -108,13 +115,14 @@ export function ArticleDialog({
         });
       }
     }
-  }, [article, isEditMode, isOpen, form, suppliers]);
+  }, [article, isEditMode, isOpen, form, suppliers, lastArticleCodeNumber]);
 
 
   const onSubmit = (data: ArticleFormValues) => {
     if (!firestore) return;
 
     const articleData = {
+        code: data.code,
         name: data.name,
         description: data.description || '',
         price: data.price,
@@ -159,20 +167,35 @@ export function ArticleDialog({
                 {isEditMode ? "Modifiez les informations de l'article." : "Remplissez les détails ci-dessous pour ajouter un nouvel article à votre inventaire."}
               </DialogDescription>
             </DialogHeader>
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom de l'article</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ex: Souris sans fil" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code Article</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: ART001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom de l'article</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Souris sans fil" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -266,3 +289,5 @@ export function ArticleDialog({
     </Dialog>
   );
 }
+
+    
