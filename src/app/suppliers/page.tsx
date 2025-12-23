@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { collection, doc, collectionGroup, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Supplier, Product } from '@/lib/types';
+import type { Supplier, Product, PurchaseOrder, CreditNote } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { SuppliersTable } from '@/components/suppliers-table';
 import { SupplierDialog } from '@/components/supplier-dialog';
@@ -123,6 +123,19 @@ export default function SuppliersPage() {
   );
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
+  const purchaseOrdersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
+    [firestore]
+  );
+  const { data: purchaseOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
+
+  const creditNotesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'creditNotes') : null),
+    [firestore]
+  );
+  const { data: creditNotes, isLoading: isLoadingCreditNotes } = useCollection<CreditNote>(creditNotesRef);
+
+
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) {
       return 0;
@@ -158,21 +171,35 @@ export default function SuppliersPage() {
 
   const handleDeleteConfirm = () => {
     if (!firestore || !supplierToDelete) return;
-
-    const isSupplierUsed = (products || []).some(
+  
+    const isUsedInProducts = (products || []).some(
       (product) => product.supplierId === supplierToDelete.id
     );
-
-    if (isSupplierUsed) {
+  
+    const isUsedInOrders = (purchaseOrders || []).some(
+      (order) => order.supplierId === supplierToDelete.id
+    );
+  
+    const isUsedInCreditNotes = (creditNotes || []).some(
+      (note) => note.supplierId === supplierToDelete.id
+    );
+  
+    let usedInMessage = '';
+    if (isUsedInProducts) usedInMessage = 'des articles';
+    else if (isUsedInOrders) usedInMessage = 'des bons de commande';
+    else if (isUsedInCreditNotes) usedInMessage = 'des avoirs';
+  
+    if (usedInMessage) {
       toast({
         variant: 'destructive',
         title: 'Suppression impossible',
-        description: `Le fournisseur "${supplierToDelete.name}" est lié à des articles et ne peut pas être supprimé.`,
+        description: `Le fournisseur "${supplierToDelete.name}" est lié à ${usedInMessage} et ne peut pas être supprimé.`,
+        duration: 5000,
       });
       setDeleteDialogOpen(false);
       return;
     }
-
+  
     const supplierDocRef = doc(firestore, 'suppliers', supplierToDelete.id);
     deleteDocumentNonBlocking(supplierDocRef);
     toast({
@@ -184,7 +211,7 @@ export default function SuppliersPage() {
     setSelectedSupplier(null);
   };
 
-  const isLoading = isLoadingSuppliers || isLoadingProducts;
+  const isLoading = isLoadingSuppliers || isLoadingProducts || isLoadingOrders || isLoadingCreditNotes;
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
