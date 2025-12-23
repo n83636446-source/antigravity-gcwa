@@ -51,9 +51,16 @@ type SupplierDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   supplier?: Supplier;
   lastSupplierCodeNumber?: number;
+  onSupplierCreated?: (supplier: Supplier) => void;
 };
 
-export function SupplierDialog({ isOpen, onOpenChange, supplier, lastSupplierCodeNumber = 0 }: SupplierDialogProps) {
+export function SupplierDialog({ 
+    isOpen, 
+    onOpenChange, 
+    supplier, 
+    lastSupplierCodeNumber = 0,
+    onSupplierCreated 
+}: SupplierDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const isEditMode = !!supplier;
@@ -83,7 +90,7 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier, lastSupplierCod
     }
   }, [supplier, isEditMode, isOpen, form, lastSupplierCodeNumber]);
 
-  const onSubmit = (data: SupplierFormValues) => {
+  const onSubmit = async (data: SupplierFormValues) => {
     if (!firestore) return;
     
     if (isEditMode && supplier) {
@@ -93,13 +100,17 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier, lastSupplierCod
         title: 'Fournisseur modifié',
         description: `Le fournisseur "${data.name}" a été mis à jour.`,
       });
+      onSupplierCreated?.({ ...data, id: supplier.id });
     } else {
       const suppliersRef = collection(firestore, 'suppliers');
-      addDocumentNonBlocking(suppliersRef, data);
+      const docRef = await addDocumentNonBlocking(suppliersRef, data);
       toast({
         title: 'Fournisseur ajouté',
         description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
       });
+      if (docRef) {
+        onSupplierCreated?.({ ...data, id: docRef.id });
+      }
     }
 
     onOpenChange(false);

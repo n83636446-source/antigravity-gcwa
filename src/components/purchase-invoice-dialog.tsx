@@ -34,11 +34,12 @@ import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseInvoice, Supplier, Product } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { Input } from './ui/input';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Separator } from './ui/separator';
 import { ArticleDialog } from './article-dialog';
+import { SupplierDialog } from './supplier-dialog';
 
 const invoiceItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
@@ -71,6 +72,8 @@ type PurchaseInvoiceDialogProps = {
   invoice?: PurchaseInvoice | null;
 };
 
+const CREATE_NEW_SUPPLIER_VALUE = '--create-new--';
+
 export function PurchaseInvoiceDialog({
   purchaseOrders,
   suppliers,
@@ -86,7 +89,21 @@ export function PurchaseInvoiceDialog({
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
+  const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   
+  const { data: allSuppliers } = useCollection<Supplier>(
+    firestore ? collection(firestore, 'suppliers') : null
+  );
+
+  const lastSupplierCodeNumber = useMemo(() => {
+    if (!allSuppliers || allSuppliers.length === 0) return 0;
+    return allSuppliers.reduce((max, s) => {
+      const codeNumber = parseInt((s.code || 'FOU0').replace('FOU', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [allSuppliers]);
+
+
   const isTriggeredExternally = openProp !== undefined;
   const isEditMode = !!invoice;
   const isOpen = openProp !== undefined ? openProp : internalOpen;
@@ -224,6 +241,22 @@ export function PurchaseInvoiceDialog({
     onOpenChange(false);
   };
   
+  const handleSupplierChange = (value: string) => {
+    if (value === CREATE_NEW_SUPPLIER_VALUE) {
+      setSupplierDialogOpen(true);
+      form.setValue('supplierId', supplierId || '');
+    } else {
+      form.setValue('supplierId', value);
+    }
+  };
+
+  const handleSupplierCreated = (newSupplier: Supplier) => {
+    if(newSupplier && newSupplier.id) {
+        form.setValue('supplierId', newSupplier.id);
+    }
+    setSupplierDialogOpen(false);
+  };
+
   const Trigger = !isTriggeredExternally ? (
      <DialogTrigger asChild>
         <Button>
@@ -257,19 +290,19 @@ export function PurchaseInvoiceDialog({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Bon de commande (Optionnel)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={isEditMode || !suppliers.length}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez un bon de commande" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {purchaseOrders.map((order) => (
-                            <SelectItem key={order.id} value={order.id}>
-                                {order.orderNumber}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
+                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={readOnly}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez un bon de commande" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {purchaseOrders.map((order) => (
+                                <SelectItem key={order.id} value={order.id}>
+                                    {order.orderNumber}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
                         </Select>
                         <FormMessage />
                     </FormItem>
@@ -281,13 +314,20 @@ export function PurchaseInvoiceDialog({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Fournisseur</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={readOnly || fromBC}>
+                        <Select onValueChange={handleSupplierChange} value={field.value} disabled={readOnly || fromBC}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Sélectionnez un fournisseur" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                           <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                <div className="flex items-center gap-2">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span>Créer un nouveau fournisseur</span>
+                                </div>
+                            </SelectItem>
+                            <Separator />
                             {suppliers.map((supplier) => (
                             <SelectItem key={supplier.id} value={supplier.id}>
                                 {supplier.name}
@@ -421,6 +461,12 @@ export function PurchaseInvoiceDialog({
             suppliers={suppliers.filter(s => s.id === supplierId)}
         />
     )}
+     <SupplierDialog
+        isOpen={isSupplierDialogOpen}
+        onOpenChange={setSupplierDialogOpen}
+        lastSupplierCodeNumber={lastSupplierCodeNumber}
+        onSupplierCreated={handleSupplierCreated}
+    />
     </>
   );
 }
