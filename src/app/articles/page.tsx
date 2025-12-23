@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Table,
@@ -20,12 +20,25 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function ArticlesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
+
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -54,20 +67,27 @@ export default function ArticlesPage() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (article: Article) => {
-    if (!firestore) return;
+  const handleDeleteRequest = (article: Article) => {
+    setArticleToDelete(article);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!firestore || !articleToDelete) return;
     const articleDocRef = doc(
       firestore,
       'suppliers',
-      article.supplierId,
+      articleToDelete.supplierId,
       'products',
-      article.id
+      articleToDelete.id
     );
     deleteDocumentNonBlocking(articleDocRef);
     toast({
       title: 'Article supprimé',
-      description: `L'article "${article.name}" a été supprimé.`,
+      description: `L'article "${articleToDelete.name}" a été supprimé.`,
     });
+    setDeleteDialogOpen(false);
+    setArticleToDelete(null);
   };
 
   const getSupplierName = (supplierId: string) => {
@@ -85,11 +105,16 @@ export default function ArticlesPage() {
           Ajouter un article
         </Button>
       </PageHeader>
+      
       {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
+        <Card>
+          <CardHeader><CardTitle>Tous les articles</CardTitle></CardHeader>
+          <CardContent className='space-y-2'>
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardHeader>
@@ -125,9 +150,13 @@ export default function ArticlesPage() {
                       }).format(article.price)}
                     </TableCell>
                     <TableCell className="text-right">
-                       <Button variant="ghost" size="icon" onClick={() => handleEdit(article)}>
+                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(article);}}>
                             <Pencil className="h-4 w-4" />
                             <span className="sr-only">Modifier</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDeleteRequest(article);}}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <span className="sr-only">Supprimer</span>
                         </Button>
                     </TableCell>
                   </TableRow>
@@ -137,12 +166,33 @@ export default function ArticlesPage() {
           </CardContent>
         </Card>
       )}
+
       <ArticleDialog
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         suppliers={suppliers || []}
         article={editingArticle}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer cet article ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. L'article "{articleToDelete?.name}" sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
