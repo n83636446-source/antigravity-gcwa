@@ -127,8 +127,9 @@ export default function PurchaseReceiptsPage() {
   };
   
   const handleTransferToInvoice = () => {
-    if (selectedReceipt) {
-       if (selectedReceipt.status !== 'Validé') {
+    const receiptToTransfer = editingReceipt || selectedReceipt;
+    if (receiptToTransfer) {
+       if (receiptToTransfer.status !== 'Validé') {
         toast({
           variant: 'destructive',
           title: 'Action impossible',
@@ -137,6 +138,7 @@ export default function PurchaseReceiptsPage() {
         return;
       }
       setInvoiceDialogOpen(true);
+      setDialogOpen(false); // Close the receipt dialog
     }
   };
 
@@ -149,15 +151,17 @@ export default function PurchaseReceiptsPage() {
   }
   
   const selectedOrderForInvoice = useMemo(() => {
-    if (!selectedReceipt || !allOrders) return undefined;
-    return allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
-  }, [selectedReceipt, allOrders]);
+    const receiptToTransfer = editingReceipt || selectedReceipt;
+    if (!receiptToTransfer || !allOrders) return undefined;
+    return allOrders.find(o => o.id === receiptToTransfer.purchaseOrderId);
+  }, [editingReceipt, selectedReceipt, allOrders]);
 
   const handleValidateReceipt = async () => {
-    if (!firestore || !selectedReceipt) return;
-    if (selectedReceipt.status === 'Validé') return;
+    if (!firestore) return;
+    const receiptToValidate = editingReceipt || selectedReceipt;
+    if (!receiptToValidate || receiptToValidate.status === 'Validé') return;
     
-    const order = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
+    const order = allOrders?.find(o => o.id === receiptToValidate.purchaseOrderId);
     if (!order) {
         toast({
             variant: 'destructive',
@@ -169,10 +173,10 @@ export default function PurchaseReceiptsPage() {
 
     const batch = writeBatch(firestore);
 
-    const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
+    const receiptRef = doc(firestore, 'purchaseReceipts', receiptToValidate.id);
     batch.update(receiptRef, { status: 'Validé' });
 
-    selectedReceipt.items.forEach(item => {
+    receiptToValidate.items.forEach(item => {
       if (item.quantityReceived > 0) {
         const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(item.quantityReceived) });
@@ -185,7 +189,9 @@ export default function PurchaseReceiptsPage() {
         title: 'Bon de réception validé',
         description: 'Le stock a été mis à jour avec succès.',
       });
-      setSelectedReceipt(prev => prev ? { ...prev, status: 'Validé' } : null);
+      const updatedReceipt = { ...receiptToValidate, status: 'Validé' as const };
+      setSelectedReceipt(updatedReceipt);
+      setEditingReceipt(updatedReceipt);
     } catch (error) {
       console.error("Validation failed: ", error);
       toast({
@@ -197,11 +203,13 @@ export default function PurchaseReceiptsPage() {
   };
   
   const handleCancelValidation = async () => {
-    if (!firestore || !selectedReceipt) return;
-    if (selectedReceipt.status === 'Brouillon') return;
+    if (!firestore) return;
+
+    const receiptToCancel = editingReceipt || selectedReceipt;
+    if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
     
     const isFactured = (invoices || []).some(
-      (invoice) => invoice.purchaseOrderId === selectedReceipt.purchaseOrderId
+      (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
     );
 
     if (isFactured) {
@@ -215,18 +223,18 @@ export default function PurchaseReceiptsPage() {
   
     const batch = writeBatch(firestore);
     
-    const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
+    const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
     batch.update(receiptRef, { status: 'Brouillon' });
   
     let isDataMissing = false;
   
-    for (const item of selectedReceipt.items) {
+    for (const item of receiptToCancel.items) {
       let supplierId: string | undefined;
   
       supplierId = item.supplierId;
       
       if (!supplierId) {
-        const originalOrder = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
+        const originalOrder = allOrders?.find(o => o.id === receiptToCancel.purchaseOrderId);
         if (originalOrder) {
           supplierId = originalOrder.supplierId;
         }
@@ -265,7 +273,9 @@ export default function PurchaseReceiptsPage() {
         title: 'Validation annulée',
         description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
       });
-      setSelectedReceipt(prev => prev ? { ...prev, status: 'Brouillon' } : null);
+      const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
+      setSelectedReceipt(updatedReceipt);
+      setEditingReceipt(updatedReceipt);
     } catch (error) {
        console.error("Validation cancellation failed: ", error);
       toast({
@@ -369,6 +379,8 @@ export default function PurchaseReceiptsPage() {
           products={products || []}
           lastReceiptNumber={receipts?.length || 0}
           receipt={editingReceipt}
+          onValidate={handleValidateReceipt}
+          onTransferToInvoice={handleTransferToInvoice}
       />
       {selectedOrderForInvoice && (
           <PurchaseInvoiceDialog

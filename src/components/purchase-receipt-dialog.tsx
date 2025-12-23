@@ -30,13 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, CheckCircle, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
@@ -68,6 +69,8 @@ type PurchaseReceiptDialogProps = {
   onOpenChange?: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
   receipt?: PurchaseReceipt | null;
+  onValidate?: () => void;
+  onTransferToInvoice?: () => void;
 };
 
 export function PurchaseReceiptDialog({
@@ -79,6 +82,8 @@ export function PurchaseReceiptDialog({
   onOpenChange: onOpenChangeProp,
   purchaseOrder,
   receipt,
+  onValidate,
+  onTransferToInvoice,
 }: PurchaseReceiptDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -367,13 +372,27 @@ export function PurchaseReceiptDialog({
               )}
             />
 
-            <DialogFooter>
-               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                {isEditMode && receipt?.status === 'Validé' ? 'Fermer' : 'Annuler'}
-              </Button>
-              {!(isEditMode && receipt?.status === 'Validé') && (
-                <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
-              )}
+            <DialogFooter className="flex-row justify-between">
+              <div className="flex gap-2">
+                {isEditMode && receipt?.status === 'Brouillon' && onValidate && (
+                  <Button type="button" variant="outline" onClick={onValidate}>
+                    <CheckCircle className="mr-2 h-4 w-4" /> Valider
+                  </Button>
+                )}
+                 {isEditMode && receipt?.status === 'Validé' && onTransferToInvoice && (
+                  <Button type="button" variant="outline" onClick={onTransferToInvoice}>
+                    <FileText className="mr-2 h-4 w-4" /> Transférer en facture
+                  </Button>
+                )}
+              </div>
+              <div className='flex gap-2'>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                  {isEditMode && receipt?.status === 'Validé' ? 'Fermer' : 'Annuler'}
+                </Button>
+                {!(isEditMode && receipt?.status === 'Validé') && (
+                  <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
+                )}
+              </div>
             </DialogFooter>
           </form>
         </Form>
