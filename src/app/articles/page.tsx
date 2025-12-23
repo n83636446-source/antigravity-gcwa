@@ -78,6 +78,7 @@ export default function ArticlesPage() {
           suppliers={suppliers || []}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onRowDoubleClick={handleEdit}
         />
       )}
       <ArticleDialog
