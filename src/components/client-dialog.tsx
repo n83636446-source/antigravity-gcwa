@@ -25,11 +25,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from './ui/textarea';
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Le nom du client doit contenir au moins 2 caractères.'),
   email: z.string().email('Veuillez saisir une adresse e-mail valide.'),
   phone: z.string().min(10, 'Veuillez saisir un numéro de téléphone valide.'),
+  address: z.string().optional(),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -44,6 +46,7 @@ export function ClientDialog() {
       name: '',
       email: '',
       phone: '',
+      address: '',
     },
   });
 
@@ -112,6 +115,20 @@ export function ClientDialog() {
                   <FormLabel>Téléphone</FormLabel>
                   <FormControl>
                     <Input type="tel" placeholder="ex: 06-12-34-56-78" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Adresse</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Adresse complète du client" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
