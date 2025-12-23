@@ -1,3 +1,4 @@
+
 export type Supplier = {
   id: string;
   name: string;
@@ -62,4 +63,14 @@ export type PurchaseReceipt = {
   receiptDate: string; // ISO string
   notes?: string;
   items: PurchaseReceiptItem[];
+};
+
+export type PurchaseInvoice = {
+  id: string;
+  invoiceNumber: string;
+  purchaseOrderId: string;
+  invoiceDate: string; // ISO string
+  dueDate: string; // ISO string
+  totalAmount: number;
+  status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
 };

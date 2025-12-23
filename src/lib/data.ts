@@ -1,4 +1,4 @@
-import type { Supplier, Product, SalesData, PurchaseOrder, PurchaseReceipt } from './types';
+import type { Supplier, Product, SalesData, PurchaseOrder, PurchaseReceipt, PurchaseInvoice } from './types';
 
 export const suppliers: Supplier[] = [];
 
@@ -17,3 +17,5 @@ export const salesData: SalesData[] = [
 export const purchaseOrders: PurchaseOrder[] = [];
 
 export const purchaseReceipts: PurchaseReceipt[] = [];
+
+export const purchaseInvoices: PurchaseInvoice[] = [];
