@@ -371,7 +371,9 @@ export function PurchaseReceiptDialog({
                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 {isEditMode && receipt?.status === 'Validé' ? 'Fermer' : 'Annuler'}
               </Button>
-              <Button type="submit" disabled={isEditMode && receipt?.status === 'Validé'}>{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
+              {!(isEditMode && receipt?.status === 'Validé') && (
+                <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
+              )}
             </DialogFooter>
           </form>
         </Form>
@@ -379,5 +381,3 @@ export function PurchaseReceiptDialog({
     </Dialog>
   );
 }
-
-    
