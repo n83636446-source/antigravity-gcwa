@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { PlusCircle, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
@@ -66,7 +67,6 @@ export function PurchaseOrderDialog({
     lastOrderNumber 
 }: PurchaseOrderDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isCalendarOpen, setCalendarOpen] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<PurchaseOrderFormValues>({
@@ -190,27 +190,28 @@ export function PurchaseOrderDialog({
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Date de commande</FormLabel>
-                      <Button
-                          type="button"
-                          variant={'outline'}
-                          className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                          onClick={() => setCalendarOpen(!isCalendarOpen)}
-                      >
-                          {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisissez une date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                      {isCalendarOpen && (
+                       <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                            >
+                              {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisissez une date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={(date) => {
-                                  field.onChange(date);
-                                  setCalendarOpen(false);
-                              }}
-                              initialFocus
-                              locale={fr}
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                            locale={fr}
                           />
-                      )}
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
