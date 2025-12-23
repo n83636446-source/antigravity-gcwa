@@ -59,8 +59,8 @@ type PurchaseReceiptsTableProps = {
   receipts: PurchaseReceipt[];
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
-  onRowClick?: (receipt: PurchaseReceipt) => void;
-  onRowDoubleClick?: (receipt: PurchaseReceipt) => void;
+  onRowClick: (receipt: PurchaseReceipt) => void;
+  onRowDoubleClick: (receipt: PurchaseReceipt) => void;
   selectedReceiptId?: string | null;
 };
 
@@ -192,8 +192,8 @@ export function PurchaseReceiptsTable({
                   {enrichedReceipts.map((receipt) => (
                     <TableRow 
                       key={receipt.id}
-                      onClick={() => onRowClick?.(receipt)}
-                      onDoubleClick={() => onRowDoubleClick?.(receipt)}
+                      onClick={() => onRowClick(receipt)}
+                      onDoubleClick={() => onRowDoubleClick(receipt)}
                       className={cn("cursor-pointer", selectedReceiptId === receipt.id && 'bg-muted/50')}
                     >
                       {columnIds.map((columnId) => renderCellContent(receipt, columnId))}
