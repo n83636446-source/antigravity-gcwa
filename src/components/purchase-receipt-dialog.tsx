@@ -62,6 +62,7 @@ type PurchaseReceiptFormValues = z.infer<typeof purchaseReceiptSchema>;
 
 type PurchaseReceiptDialogProps = {
   purchaseOrders: PurchaseOrder[];
+  receipts: PurchaseReceipt[];
   products: Product[];
   lastReceiptNumber: number;
   onReceiptCreated?: () => void;
@@ -80,6 +81,7 @@ const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
 export function PurchaseReceiptDialog({
   purchaseOrders,
+  receipts,
   products,
   lastReceiptNumber,
   onReceiptCreated,
@@ -119,6 +121,12 @@ export function PurchaseReceiptDialog({
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
+
+  // Filter out purchase orders that already have a receipt
+  const availablePurchaseOrders = useMemo(() => {
+    const receivedOrderIds = new Set(receipts.map(r => r.purchaseOrderId));
+    return purchaseOrders.filter(o => !receivedOrderIds.has(o.id));
+  }, [purchaseOrders, receipts]);
 
 
   const form = useForm<PurchaseReceiptFormValues>({
@@ -352,7 +360,7 @@ export function PurchaseReceiptDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {purchaseOrders.map((order) => (
+                        {availablePurchaseOrders.map((order) => (
                           <SelectItem key={order.id} value={order.id}>
                             {order.orderNumber}
                           </SelectItem>

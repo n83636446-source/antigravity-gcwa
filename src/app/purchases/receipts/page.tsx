@@ -195,15 +195,15 @@ export default function PurchaseReceiptsPage() {
   };
   
   const handleCancelValidation = async () => {
-    if (!firestore) return;
-
+    if (!firestore || !products) return;
+  
     const receiptToCancel = editingReceipt || selectedReceipt;
     if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
-    
+  
     const isFactured = (invoices || []).some(
       (invoice) => invoice.purchaseOrderId && invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
     );
-
+  
     if (isFactured) {
       toast({
         variant: 'destructive',
@@ -213,8 +213,21 @@ export default function PurchaseReceiptsPage() {
       return;
     }
   
+    // Check if stock is sufficient for reversal
+    for (const item of receiptToCancel.items) {
+      const product = products.find(p => p.id === item.productId);
+      if (product && product.stockLevel < item.quantityReceived) {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: `Stock insuffisant pour l'article "${product.name}" pour annuler la réception. Stock actuel: ${product.stockLevel}, Quantité reçue: ${item.quantityReceived}.`,
+          duration: 7000,
+        });
+        return;
+      }
+    }
+  
     const batch = writeBatch(firestore);
-    
     const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
     batch.update(receiptRef, { status: 'Brouillon' });
   
@@ -224,7 +237,7 @@ export default function PurchaseReceiptsPage() {
         batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
       }
     }
-    
+  
     try {
       await batch.commit();
       toast({
@@ -237,7 +250,7 @@ export default function PurchaseReceiptsPage() {
         setEditingReceipt(updatedReceipt);
       }
     } catch (error) {
-       console.error("Validation cancellation failed: ", error);
+      console.error("Validation cancellation failed: ", error);
       toast({
         variant: 'destructive',
         title: 'Erreur d\'annulation',
@@ -254,6 +267,7 @@ export default function PurchaseReceiptsPage() {
       >
         <PurchaseReceiptDialog
           purchaseOrders={allOrders || []}
+          receipts={receipts || []}
           products={products || []}
           lastReceiptNumber={receipts?.length || 0}
         />
@@ -336,6 +350,7 @@ export default function PurchaseReceiptsPage() {
           isOpen={dialogOpen}
           onOpenChange={handleOpenChange}
           purchaseOrders={allOrders || []}
+          receipts={receipts || []}
           products={products || []}
           lastReceiptNumber={receipts?.length || 0}
           receipt={editingReceipt}
