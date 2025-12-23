@@ -33,6 +33,34 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { DraggableHeader } from '@/components/ui/DraggableHeader';
+
+type Column = {
+  id: keyof PurchaseOrder | 'supplierName' | 'formattedDate' | 'formattedAmount';
+  label: string;
+};
+
+const initialColumns: Column[] = [
+  { id: 'orderNumber', label: 'Numéro' },
+  { id: 'supplierName', label: 'Fournisseur' },
+  { id: 'formattedDate', label: 'Date' },
+  { id: 'formattedAmount', label: 'Montant' },
+];
 
 export default function PurchaseOrdersPage() {
   const firestore = useFirestore();
@@ -42,7 +70,27 @@ export default function PurchaseOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
+  const [columns, setColumns] = useState<Column[]>(initialColumns);
 
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setColumns((items) => {
+        const oldIndex = columnIds.indexOf(active.id as any);
+        const newIndex = columnIds.indexOf(over.id as any);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -67,6 +115,19 @@ export default function PurchaseOrdersPage() {
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
   };
+  
+  const enrichedOrders = useMemo(() => {
+    return (orders || []).map(order => ({
+      ...order,
+      supplierName: getSupplierName(order.supplierId),
+      formattedDate: format(new Date(order.orderDate), 'dd/MM/yyyy', { locale: fr }),
+      formattedAmount: new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(order.totalAmount),
+    }));
+  }, [orders, suppliers]);
+
 
   const handleAdd = () => {
     setEditingOrder(undefined);
@@ -112,6 +173,21 @@ export default function PurchaseOrdersPage() {
   };
 
   const isLoading = isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
+  
+  const renderCellContent = (order: any, columnId: Column['id']) => {
+    switch (columnId) {
+      case 'orderNumber':
+        return <TableCell className="font-medium">{order.orderNumber}</TableCell>;
+      case 'supplierName':
+        return <TableCell>{order.supplierName}</TableCell>;
+      case 'formattedDate':
+        return <TableCell>{order.formattedDate}</TableCell>;
+      case 'formattedAmount':
+        return <TableCell className="text-right">{order.formattedAmount}</TableCell>;
+      default:
+        return <TableCell></TableCell>;
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
@@ -147,36 +223,37 @@ export default function PurchaseOrdersPage() {
                 )}
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                          <TableHead>Numéro</TableHead>
-                          <TableHead>Fournisseur</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead className="text-right">Montant</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {orders.map(order => (
-                           <TableRow
-                            key={order.id}
-                            onClick={() => handleSelectOrder(order)}
-                            onDoubleClick={() => handleEdit(order)}
-                            className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
-                           >
-                             <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                             <TableCell>{getSupplierName(order.supplierId)}</TableCell>
-                             <TableCell>{format(new Date(order.orderDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                             <TableCell className="text-right">
-                                {new Intl.NumberFormat('fr-FR', {
-                                  style: 'currency',
-                                  currency: 'EUR',
-                                }).format(order.totalAmount)}
-                             </TableCell>
-                           </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+                    <Table>
+                      <TableHeader>
+                          <TableRow>
+                            {columns.map(({ id, label }) => (
+                              <DraggableHeader key={id} id={id} className={cn(id === 'formattedAmount' && 'text-right')}>
+                                {label}
+                              </DraggableHeader>
+                            ))}
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {enrichedOrders.map(order => (
+                             <TableRow
+                              key={order.id}
+                              onClick={() => handleSelectOrder(order)}
+                              onDoubleClick={() => handleEdit(order)}
+                              className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
+                             >
+                              {columnIds.map((columnId) => renderCellContent(order, columnId))}
+                             </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </SortableContext>
+                </DndContext>
             </CardContent>
         </Card>
       ) : (

@@ -1,17 +1,45 @@
 'use client';
 
 import * as React from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { TableHead } from '@/components/ui/table';
+import { GripVertical } from 'lucide-react';
 
-// Pour l'instant, ce composant est une simple enveloppe autour de TableHead.
-// Nous y ajouterons la logique de glisser-déposer dans les prochaines étapes.
 export const DraggableHeader = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ children, ...props }, ref) => {
+  React.ThHTMLAttributes<HTMLTableCellElement> & { id: string }
+>(({ children, id, className, style, ...props }, ref) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const combinedStyle: React.CSSProperties = {
+    ...style,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: 'move',
+  };
+
   return (
-    <TableHead ref={ref} {...props}>
-      {children}
+    <TableHead
+      ref={setNodeRef}
+      style={combinedStyle}
+      className={className}
+      {...props}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="flex items-center gap-2">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        {children}
+      </div>
     </TableHead>
   );
 });
