@@ -16,15 +16,33 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, collectionGroup } from 'firebase/firestore';
+import { collection, query, orderBy, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PurchaseOrdersPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<PurchaseOrder | undefined>();
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
+
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -60,10 +78,43 @@ export default function PurchaseOrdersPage() {
     setDialogOpen(true);
   };
 
+  const handleSelectOrder = (order: PurchaseOrder) => {
+    if (selectedOrder?.id === order.id) {
+      setSelectedOrder(null); // Deselect if clicking the same row
+    } else {
+      setSelectedOrder(order);
+    }
+  };
+
+  const handleDeleteRequest = (order: PurchaseOrder) => {
+    setOrderToDelete(order);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!firestore || !orderToDelete) return;
+    const orderDocRef = doc(firestore, 'purchaseOrders', orderToDelete.id);
+    deleteDocumentNonBlocking(orderDocRef);
+    toast({
+      title: 'Bon de commande supprimé',
+      description: `Le bon de commande "${orderToDelete.orderNumber}" a été supprimé.`,
+    });
+    setDeleteDialogOpen(false);
+    setOrderToDelete(null);
+    setSelectedOrder(null);
+  };
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('tr')) {
+      return;
+    }
+    setSelectedOrder(null);
+  };
+
   const isLoading = isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6">
+    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
       <PageHeader
         title="Bons de commande"
         description="Gérez vos bons de commande."
@@ -80,8 +131,20 @@ export default function PurchaseOrdersPage() {
         </div>
       ) : orders && orders.length > 0 ? (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Bons de commande récents</CardTitle>
+                {selectedOrder && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(selectedOrder)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Modifier
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteRequest(selectedOrder)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Supprimer
+                    </Button>
+                  </div>
+                )}
             </CardHeader>
             <CardContent>
                 <Table>
@@ -95,7 +158,12 @@ export default function PurchaseOrdersPage() {
                     </TableHeader>
                     <TableBody>
                         {orders.map(order => (
-                           <TableRow key={order.id} onDoubleClick={() => handleEdit(order)} className="cursor-pointer">
+                           <TableRow
+                            key={order.id}
+                            onClick={() => handleSelectOrder(order)}
+                            onDoubleClick={() => handleEdit(order)}
+                            className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
+                           >
                              <TableCell className="font-medium">{order.orderNumber}</TableCell>
                              <TableCell>{getSupplierName(order.supplierId)}</TableCell>
                              <TableCell>{format(new Date(order.orderDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
@@ -123,14 +191,33 @@ export default function PurchaseOrdersPage() {
           </div>
         </div>
       )}
-        <PurchaseOrderDialog
-          isOpen={dialogOpen}
-          onOpenChange={setDialogOpen}
-          suppliers={suppliers || []}
-          products={products || []}
-          order={editingOrder}
-          lastOrderNumber={orders?.length || 0}
-        />
+      <PurchaseOrderDialog
+        isOpen={dialogOpen}
+        onOpenChange={setDialogOpen}
+        suppliers={suppliers || []}
+        products={products || []}
+        order={editingOrder}
+        lastOrderNumber={orders?.length || 0}
+      />
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer ce bon de commande ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le bon de commande "{orderToDelete?.orderNumber}" sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
