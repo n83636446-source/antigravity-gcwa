@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowRightLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -321,19 +321,24 @@ export function PurchaseOrderDialog({
 
 
             <DialogFooter className="sm:justify-between">
-                {isEditMode && onTransfer ? (
+                <div>
+                {isEditMode && (
                     <Button type="button" variant="outline" onClick={handleTransferClick}>
-                        <ArrowRightLeft className="mr-2 h-4 w-4" />
                         Transférer en BR
                     </Button>
-                ) : (
-                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                        Annuler
-                    </Button>
                 )}
-                <Button type="submit">
-                    {isEditMode ? 'Enregistrer les modifications' : 'Créer le bon de commande'}
-                </Button>
+                </div>
+
+                <div className="flex gap-2">
+                     {!isEditMode && (
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                            Annuler
+                        </Button>
+                    )}
+                    <Button type="submit">
+                        {isEditMode ? 'Enregistrer les modifications' : 'Créer le bon de commande'}
+                    </Button>
+                </div>
             </DialogFooter>
           </form>
         </Form>
