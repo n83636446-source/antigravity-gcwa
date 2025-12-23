@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
 type PurchaseInvoicesTableProps = {
   invoices: PurchaseInvoice[];
@@ -62,13 +63,13 @@ export function PurchaseInvoicesTable({
     }
   };
 
+  const sortedInvoices = useMemo(() => {
+    return [...(invoices || [])].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
+  }, [invoices]);
+
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Factures d'achat récentes</CardTitle>
-      </CardHeader>
-      <CardContent>
+        <>
         {invoices.length > 0 ? (
           <Table>
             <TableHeader>
@@ -83,7 +84,7 @@ export function PurchaseInvoicesTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((invoice) => {
+              {sortedInvoices.map((invoice) => {
                 const { orderNumber, supplierName } = getOrderDetails(
                   invoice.purchaseOrderId
                 );
@@ -135,7 +136,6 @@ export function PurchaseInvoicesTable({
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </>
   );
 }
