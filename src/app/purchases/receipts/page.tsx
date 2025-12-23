@@ -221,8 +221,9 @@ export default function PurchaseReceiptsPage() {
         toast({ variant: 'destructive', title: 'Erreur', description: 'Les données ne sont pas encore prêtes. Veuillez patienter.' });
         return;
     }
+    // This is a critical guard. Do not proceed if collections are not loaded.
     if (!firestore || !products || !invoices) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Les données nécessaires ne sont pas chargées.' });
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Les données nécessaires ne sont pas chargées. Veuillez réessayer.' });
         return;
     }
 
@@ -244,6 +245,7 @@ export default function PurchaseReceiptsPage() {
         }
     }
 
+    // Defensive check: Ensure all products in the receipt exist in the main product list.
     for (const item of receiptToCancel.items) {
         const product = products.find(p => p.id === item.productId);
         if (!product) {
@@ -253,7 +255,7 @@ export default function PurchaseReceiptsPage() {
                 description: `L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible.`,
                 duration: 7000,
             });
-            return;
+            return; // Stop the entire operation
         }
         if (product.stockLevel < item.quantityReceived) {
             toast({
@@ -262,10 +264,11 @@ export default function PurchaseReceiptsPage() {
                 description: `Stock insuffisant pour l'article "${product.name}" pour annuler la réception. Stock actuel: ${product.stockLevel}, Quantité reçue: ${item.quantityReceived}.`,
                 duration: 7000,
             });
-            return;
+            return; // Stop the entire operation
         }
     }
 
+    // If all checks pass, proceed with the batch update.
     const batch = writeBatch(firestore);
     const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
     batch.update(receiptRef, { status: 'Brouillon' });
@@ -322,7 +325,7 @@ export default function PurchaseReceiptsPage() {
                 {selectedReceipt.status === 'Brouillon' && (
                    <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt}>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt} disabled={isLoading}>
                           <CheckCircle className="h-4 w-4 text-green-500" />
                           <span className="sr-only">Valider</span>
                         </Button>
@@ -333,7 +336,7 @@ export default function PurchaseReceiptsPage() {
                 {selectedReceipt.status === 'Validé' && (
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation} disabled={isLoading}>
                             <XCircle className="h-4 w-4 text-orange-500" />
                             <span className="sr-only">Annuler la validation</span>
                             </Button>
@@ -343,7 +346,7 @@ export default function PurchaseReceiptsPage() {
                 )}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice} disabled={selectedReceipt.status !== 'Validé' || !selectedReceipt.purchaseOrderId}>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice} disabled={selectedReceipt.status !== 'Validé' || !selectedReceipt.purchaseOrderId || isLoading}>
                       <FileText className="h-4 w-4" />
                       <span className="sr-only">Transférer en Facture</span>
                     </Button>
@@ -352,7 +355,7 @@ export default function PurchaseReceiptsPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick} disabled={selectedReceipt.status === 'Validé'}>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick} disabled={selectedReceipt.status === 'Validé' || isLoading}>
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Modifier</span>
                     </Button>
@@ -361,7 +364,7 @@ export default function PurchaseReceiptsPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt.status === 'Validé'}>
+                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt.status === 'Validé' || isLoading}>
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Supprimer</span>
                     </Button>
