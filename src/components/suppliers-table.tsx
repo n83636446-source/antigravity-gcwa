@@ -29,6 +29,7 @@ export function SuppliersTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Code</TableHead>
               <TableHead>Nom de l'entreprise</TableHead>
               <TableHead>ICE</TableHead>
               <TableHead>Adresse</TableHead>
@@ -44,7 +45,8 @@ export function SuppliersTable({
                 onDoubleClick={() => onRowDoubleClick(supplier)}
                 className="cursor-pointer"
               >
-                <TableCell className="font-medium">{supplier.name}</TableCell>
+                <TableCell className="font-medium">{supplier.code}</TableCell>
+                <TableCell>{supplier.name}</TableCell>
                 <TableCell>{supplier.ice}</TableCell>
                 <TableCell>{`${supplier.street}, ${supplier.city}, ${supplier.country}`}</TableCell>
                 <TableCell>{supplier.contactName}</TableCell>

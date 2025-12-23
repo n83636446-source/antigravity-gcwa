@@ -33,6 +33,7 @@ import type { Supplier } from '@/lib/types';
 import { Textarea } from './ui/textarea';
 
 const supplierSchema = z.object({
+  code: z.string().min(1, "Le code fournisseur est requis."),
   name: z.string().min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères."),
   contactName: z.string().min(2, 'Le nom du contact est requis.'),
   contactEmail: z.string().email('Veuillez saisir une adresse e-mail valide.'),
@@ -65,6 +66,7 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
       form.reset(supplier);
     } else {
       form.reset({
+        code: '',
         name: '',
         contactName: '',
         contactEmail: '',
@@ -116,20 +118,35 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
               </DialogDescription>
             </DialogHeader>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom de l'entreprise</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ex: Global Electronics" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            <div className="grid grid-cols-2 gap-4">
+               <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code Fournisseur</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: FOU001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom de l'entreprise</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Global Electronics" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <FormField
               control={form.control}
               name="ice"

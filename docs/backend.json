@@ -55,6 +55,10 @@
           "type": "string",
           "description": "Unique identifier for the supplier."
         },
+        "code": {
+          "type": "string",
+          "description": "Unique code for the supplier."
+        },
         "name": {
           "type": "string",
           "description": "Name of the supplier."
@@ -91,6 +95,7 @@
       },
       "required": [
         "id",
+        "code",
         "name",
         "contactName",
         "contactEmail",

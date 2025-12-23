@@ -2,6 +2,7 @@
 export type Supplier = {
   id: string;
   name: string;
+  code: string;
   contactName: string;
   contactEmail: string;
   contactPhone: string;
