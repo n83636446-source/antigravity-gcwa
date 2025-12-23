@@ -205,32 +205,42 @@ export default function PurchaseReceiptsPage() {
   const handleCancelValidation = async () => {
     if (!firestore || !selectedReceipt) return;
     if (selectedReceipt.status === 'Brouillon') return;
-
+  
     const batch = writeBatch(firestore);
     
     const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
     batch.update(receiptRef, { status: 'Brouillon' });
-
+  
     let isDataMissing = false;
-    
-    // Find the original purchase order for fallback.
-    const originalOrder = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
-
+  
     for (const item of selectedReceipt.items) {
-      // Prioritize supplierId from the item (new data structure)
-      let supplierId = item.supplierId;
+      let supplierId: string | undefined;
+  
+      // 1. Preferred method: Use supplierId from the receipt item (new data structure)
+      supplierId = item.supplierId;
       
-      // Fallback for old data: if supplierId is not on the item, get it from the original order.
-      if (!supplierId && originalOrder) {
-        supplierId = originalOrder.supplierId;
+      // 2. Fallback for older receipts: Find the supplierId from the original purchase order
+      if (!supplierId) {
+        const originalOrder = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
+        if (originalOrder) {
+          supplierId = originalOrder.supplierId;
+        }
+      }
+  
+      // 3. Last resort fallback: Find the supplierId from the product itself
+      if (!supplierId) {
+        const product = products?.find(p => p.id === item.productId);
+        if (product) {
+          supplierId = product.supplierId;
+        }
       }
       
-      // If we still don't have a supplierId, we can't proceed.
+      // If we still don't have a supplierId after all fallbacks, we can't proceed for this item.
       if (!supplierId) {
         isDataMissing = true;
-        break; // Exit the loop early
+        break; 
       }
-
+  
       if (item.quantityReceived > 0) {
         const productRef = doc(firestore, 'suppliers', supplierId, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
@@ -245,8 +255,7 @@ export default function PurchaseReceiptsPage() {
         });
         return;
     }
-
-
+  
     try {
       await batch.commit();
       toast({
@@ -263,7 +272,6 @@ export default function PurchaseReceiptsPage() {
       });
     }
   };
-
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
