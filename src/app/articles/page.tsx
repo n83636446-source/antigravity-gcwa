@@ -85,12 +85,20 @@ export default function ArticlesPage() {
     setDeleteDialogOpen(true);
   };
   
-  const handleSelectArticle = (e: React.MouseEvent, article: Article) => {
-    e.stopPropagation();
+  const handleSelectArticle = (article: Article) => {
     if (selectedArticle?.id === article.id) {
       setSelectedArticle(null); // Deselect if clicking the same row
     } else {
       setSelectedArticle(article);
+    }
+  };
+  
+  const handleContainerClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Si l'élément cliqué (ou l'un de ses parents) n'est pas une ligne de tableau,
+    // alors on désélectionne l'article.
+    if (!target.closest('tr')) {
+      setSelectedArticle(null);
     }
   };
 
@@ -118,7 +126,7 @@ export default function ArticlesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={() => setSelectedArticle(null)}>
+    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
       <PageHeader
         title="Articles"
         description="Gérez votre inventaire d'articles."
@@ -139,7 +147,7 @@ export default function ArticlesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card onClick={(e) => e.stopPropagation()}>
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Tous les articles</CardTitle>
             {selectedArticle ? (
@@ -170,7 +178,7 @@ export default function ArticlesPage() {
                 {(articles || []).map((article) => (
                   <TableRow
                     key={article.id}
-                    onClick={(e) => handleSelectArticle(e, article)}
+                    onClick={() => handleSelectArticle(article)}
                     onDoubleClick={() => handleEdit(article)}
                     className={cn("cursor-pointer", selectedArticle?.id === article.id && 'bg-muted/50')}
                   >
