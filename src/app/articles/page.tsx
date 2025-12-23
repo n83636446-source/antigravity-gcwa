@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { collection, collectionGroup, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Product as Article, Supplier } from '@/lib/types';
+import type { Product as Article, Supplier, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,7 +47,6 @@ export default function ArticlesPage() {
     () => (firestore ? collection(firestore, 'suppliers') : null),
     [firestore]
   );
-
   const { data: suppliers, isLoading: isLoadingSuppliers } =
     useCollection<Supplier>(suppliersRef);
 
@@ -57,7 +56,19 @@ export default function ArticlesPage() {
   );
   const { data: articles, isLoading: isLoadingArticles } =
     useCollection<Article>(articlesQuery);
+
+  const purchaseOrdersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
+    [firestore]
+  );
+  const { data: purchaseOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
     
+  const purchaseReceiptsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
+    [firestore]
+  );
+  const { data: purchaseReceipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(purchaseReceiptsRef);
+
   const lastArticleCodeNumber = useMemo(() => {
     if (!articles || articles.length === 0) {
       return 0;
@@ -69,7 +80,7 @@ export default function ArticlesPage() {
   }, [articles]);
 
 
-  const isLoading = isLoadingSuppliers || isLoadingArticles;
+  const isLoading = isLoadingSuppliers || isLoadingArticles || isLoadingOrders || isLoadingReceipts;
 
   const handleAdd = () => {
     setEditingArticle(undefined);
@@ -105,6 +116,25 @@ export default function ArticlesPage() {
 
   const handleDeleteConfirm = () => {
     if (!firestore || !articleToDelete) return;
+
+    const isArticleInPurchaseOrder = (purchaseOrders || []).some(order =>
+      order.items.some(item => item.productId === articleToDelete.id)
+    );
+
+    const isArticleInPurchaseReceipt = (purchaseReceipts || []).some(receipt =>
+      receipt.items.some(item => item.productId === articleToDelete.id)
+    );
+
+    if (isArticleInPurchaseOrder || isArticleInPurchaseReceipt) {
+      toast({
+        variant: 'destructive',
+        title: 'Suppression impossible',
+        description: `L'article "${articleToDelete.name}" est utilisé dans des bons de commande ou de réception et ne peut pas être supprimé.`,
+      });
+      setDeleteDialogOpen(false);
+      return;
+    }
+
     const articleDocRef = doc(
       firestore,
       'suppliers',
