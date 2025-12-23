@@ -76,22 +76,23 @@ export function PurchaseReceiptsTable({
 
   useEffect(() => {
     try {
-      const savedColumns = localStorage.getItem('purchaseReceiptsColumns');
-      if (savedColumns) {
-        const parsedColumns: Column[] = JSON.parse(savedColumns);
-        const columnIds = new Set(parsedColumns.map(c => c.id));
-        if (!columnIds.has('status')) {
-          parsedColumns.push({ id: 'status', label: 'Statut' });
-        }
-        if (parsedColumns.length > 0) {
-            setColumns(parsedColumns);
+      const savedColumnsJSON = localStorage.getItem('purchaseReceiptsColumns');
+      if (savedColumnsJSON) {
+        const savedColumns = JSON.parse(savedColumnsJSON) as Column[];
+        // Basic validation: check if it's an array and has the same columns as the initial configuration.
+        // This prevents errors if the column definition changes in a future update.
+        const savedIds = new Set(savedColumns.map(c => c.id));
+        const initialIds = new Set(initialColumns.map(c => c.id));
+        if (savedColumns.length === initialColumns.length && [...savedIds].every(id => initialIds.has(id))) {
+          setColumns(savedColumns);
         } else {
-            setColumns(initialColumns);
+          // If validation fails, reset to initial columns
+          setColumns(initialColumns);
         }
       }
     } catch (error) {
       console.error("Failed to load or parse columns from localStorage", error);
-      setColumns(initialColumns);
+      setColumns(initialColumns); // Fallback to initial columns on error
     }
   }, []);
 
