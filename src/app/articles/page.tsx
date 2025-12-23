@@ -105,14 +105,6 @@ export default function ArticlesPage() {
     }
   };
   
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // If the click was on a button or inside a dialog/menu, do nothing.
-    if ((e.target as HTMLElement).closest('tr, button, [role="dialog"], [role="menu"]')) {
-      return;
-    }
-    // Otherwise, the click was outside an interactive element, so deselect.
-    setSelectedArticle(null);
-  };
 
   const handleDeleteConfirm = () => {
     if (!firestore || !articleToDelete) return;
@@ -157,7 +149,7 @@ export default function ArticlesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
+    <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
         title="Articles"
         description="Gérez votre inventaire d'articles."

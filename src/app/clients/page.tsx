@@ -47,15 +47,8 @@ export default function ClientsPage() {
     setSelectedClient(null);
   };
 
-  const handleContainerClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('tr, button, [role="dialog"], [role="menu"]')) {
-      return;
-    }
-    setSelectedClient(null);
-  };
-
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
+    <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
         title="Clients"
         description="Gérez votre liste de clients."
