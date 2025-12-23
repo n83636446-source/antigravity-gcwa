@@ -67,7 +67,7 @@ type PurchaseReceiptDialogProps = {
   // For opening from another component with a pre-selected order
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  purchaseOrder?: PurchaseOrder;
+  purchaseOrder?: PurchaseOrder | null;
 };
 
 export function PurchaseReceiptDialog({
@@ -106,9 +106,17 @@ export function PurchaseReceiptDialog({
   const purchaseOrderId = form.watch('purchaseOrderId');
 
   useEffect(() => {
-    // If dialog is controlled externally and a specific purchaseOrder is passed
-    if (isOpen && isTriggeredExternally && purchaseOrder) {
-        form.setValue('purchaseOrderId', purchaseOrder.id);
+    const orderToLoad = isTriggeredExternally ? purchaseOrder : purchaseOrders.find(o => o.id === purchaseOrderId);
+    
+    if (isOpen && orderToLoad) {
+        form.setValue('purchaseOrderId', orderToLoad.id);
+        const orderItems = orderToLoad.items.map((item) => ({
+            productId: item.productId,
+            supplierId: orderToLoad.supplierId,
+            quantityOrdered: item.quantity,
+            quantityReceived: item.quantity,
+        }));
+        replace(orderItems);
     }
 
     if (!isOpen) {
@@ -118,26 +126,10 @@ export function PurchaseReceiptDialog({
         notes: '',
         items: [],
       })
-    }
-  }, [isOpen, isTriggeredExternally, purchaseOrder, form]);
-
-
-  useEffect(() => {
-    if (purchaseOrderId) {
-      const order = purchaseOrders.find((o) => o.id === purchaseOrderId);
-      if (order) {
-        const orderItems = order.items.map((item) => ({
-          productId: item.productId,
-          supplierId: order.supplierId,
-          quantityOrdered: item.quantity,
-          quantityReceived: item.quantity,
-        }));
-        replace(orderItems);
-      }
-    } else {
       replace([]);
     }
-  }, [purchaseOrderId, purchaseOrders, replace]);
+  }, [isOpen, isTriggeredExternally, purchaseOrder, purchaseOrderId, purchaseOrders, form, replace]);
+
 
   const getProductName = (productId: string) => {
     const product = products.find((p) => p.id === productId);
