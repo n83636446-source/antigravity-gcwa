@@ -75,8 +75,6 @@ export default function PurchaseOrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     try {
       const savedColumns = localStorage.getItem('purchaseOrderColumns');
@@ -147,7 +145,6 @@ export default function PurchaseOrdersPage() {
   );
   const { data: receipts } = useCollection<PurchaseReceipt>(receiptsRef);
 
-
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
   };
@@ -180,26 +177,16 @@ export default function PurchaseOrdersPage() {
       setReceiptDialogOpen(true);
     }
   };
-  
-  const handleSingleClick = (order: PurchaseOrder) => {
-     if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
+
+  const handleRowClick = (order: PurchaseOrder) => {
+    if (selectedOrder?.id === order.id) {
+      setSelectedOrder(null);
+    } else {
+      setSelectedOrder(order);
     }
-    clickTimeoutRef.current = setTimeout(() => {
-      if (selectedOrder?.id === order.id) {
-        setSelectedOrder(null);
-      } else {
-        setSelectedOrder(order);
-      }
-    }, 200); // 200ms delay to wait for a potential double click
   };
 
   const handleDoubleClick = (order: PurchaseOrder) => {
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-    }
     handleEdit(order);
   };
 
@@ -218,6 +205,12 @@ export default function PurchaseOrdersPage() {
     });
     setDeleteDialogOpen(false);
     setOrderToDelete(null);
+    setSelectedOrder(null);
+  };
+  
+  const handleReceiptCreated = () => {
+    // This will trigger a re-fetch of the receipts collection implicitly
+    // and ensures the UI is up-to-date.
     setSelectedOrder(null);
   };
 
@@ -319,7 +312,7 @@ export default function PurchaseOrdersPage() {
                           {enrichedOrders.map(order => (
                              <TableRow
                               key={order.id}
-                              onClick={() => handleSingleClick(order)}
+                              onClick={() => handleRowClick(order)}
                               onDoubleClick={() => handleDoubleClick(order)}
                               className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
                              >
@@ -360,6 +353,7 @@ export default function PurchaseOrdersPage() {
           purchaseOrder={selectedOrder}
           products={products || []}
           lastReceiptNumber={receipts?.length || 0}
+          onReceiptCreated={handleReceiptCreated}
         />
       )}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

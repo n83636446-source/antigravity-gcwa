@@ -63,7 +63,7 @@ type PurchaseReceiptDialogProps = {
   purchaseOrders: PurchaseOrder[];
   products: Product[];
   lastReceiptNumber: number;
-  onReceiptCreated?: (receipt: PurchaseReceipt) => void;
+  onReceiptCreated?: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
@@ -219,7 +219,7 @@ export function PurchaseReceiptDialog({
               title: 'Bon de réception créé',
               description: `Le BR "${newReceiptNumber}" est enregistré en brouillon.`,
             });
-            onReceiptCreated?.({ ...newReceiptData, id: docRef.id } as PurchaseReceipt);
+            onReceiptCreated?.();
           })
           .catch((e) => {
              console.error(e);
