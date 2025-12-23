@@ -1,0 +1,67 @@
+'use client';
+
+import type { Article, Supplier } from '@/lib/types';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+
+type ArticlesTableProps = {
+  articles: Article[];
+  suppliers: Supplier[];
+  onRowDoubleClick: (article: Article) => void;
+};
+
+export function ArticlesTable({
+  articles,
+  suppliers,
+  onRowDoubleClick,
+}: ArticlesTableProps) {
+  const getSupplierName = (supplierId: string) => {
+    return suppliers.find((s) => s.id === supplierId)?.name || 'Inconnu';
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Tous les articles</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nom</TableHead>
+              <TableHead>Fournisseur</TableHead>
+              <TableHead className="text-right">Stock</TableHead>
+              <TableHead className="text-right">Prix</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {articles.map((article) => (
+              <TableRow
+                key={article.id}
+                onDoubleClick={() => onRowDoubleClick(article)}
+                className="cursor-pointer"
+              >
+                <TableCell className="font-medium">{article.name}</TableCell>
+                <TableCell>{getSupplierName(article.supplierId)}</TableCell>
+                <TableCell className="text-right">{article.stock}</TableCell>
+                <TableCell className="text-right">
+                  {new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR',
+                  }).format(article.price)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
