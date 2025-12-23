@@ -22,7 +22,6 @@ import {
   ShoppingCart,
   Menu,
   Contact,
-  List,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -89,7 +88,7 @@ export function AppSidebar() {
                   <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
                       <ShoppingCart className="size-4" />
                       <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achats</span>
-                      <List className="size-4 group-data-[collapsible=icon]:hidden" />
+                      <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
                   </Button>
               </CollapsibleTrigger>
             </SidebarMenuItem>
