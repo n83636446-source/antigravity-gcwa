@@ -96,7 +96,17 @@ export function PurchaseOrderDialog({
   });
   
   const watchedItems = form.watch('items');
-  const [total, setTotal] = useState(0);
+
+  const total = useMemo(() => {
+    if (!watchedItems || !products) return 0;
+    return watchedItems.reduce((acc, item) => {
+        if(item && item.productId && item.quantity > 0) {
+            const product = products.find(p => p.id === item.productId);
+            return acc + (product ? product.price * item.quantity : 0);
+        }
+        return acc;
+    }, 0);
+  }, [watchedItems, products]);
 
   useEffect(() => {
     if (isOpen) {
@@ -115,17 +125,6 @@ export function PurchaseOrderDialog({
         }
     }
   }, [order, isOpen, form]);
-
-  useEffect(() => {
-    const newTotal = watchedItems?.reduce((acc, item) => {
-        if(item && item.productId && item.quantity > 0) {
-            const product = products?.find(p => p.id === item.productId);
-            return acc + (product ? product.price * item.quantity : 0);
-        }
-        return acc;
-    }, 0) || 0;
-    setTotal(newTotal);
-  }, [watchedItems, products]);
 
 
   const onSubmit = async (data: PurchaseOrderFormValues) => {
