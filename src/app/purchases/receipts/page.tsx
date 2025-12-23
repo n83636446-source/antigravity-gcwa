@@ -52,7 +52,7 @@ export default function PurchaseReceiptsPage() {
     () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
     [firestore]
   );
-  const { data: invoices } = useCollection<PurchaseInvoice>(invoicesRef);
+  const { data: invoices, isLoading: isLoadingInvoices } = useCollection<PurchaseInvoice>(invoicesRef);
 
 
   const productsRef = useMemoFirebase(
@@ -68,7 +68,7 @@ export default function PurchaseReceiptsPage() {
   );
   const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
   
-  const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingProducts || isLoadingSuppliers;
+  const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingProducts || isLoadingSuppliers || isLoadingInvoices;
 
   const handleRowClick = (receipt: PurchaseReceipt) => {
     if (selectedReceipt?.id === receipt.id) {
@@ -201,7 +201,7 @@ export default function PurchaseReceiptsPage() {
     if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
     
     const isFactured = (invoices || []).some(
-      (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId && receiptToCancel.purchaseOrderId // Check only if PO id exists
+      (invoice) => invoice.purchaseOrderId && invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
     );
 
     if (isFactured) {

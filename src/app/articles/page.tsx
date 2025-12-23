@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Product as Article, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
+import type { Product as Article, PurchaseOrder, PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,6 +62,13 @@ export default function ArticlesPage() {
     [firestore]
   );
   const { data: purchaseReceipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(purchaseReceiptsRef);
+  
+  const purchaseInvoicesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
+    [firestore]
+  );
+  const { data: purchaseInvoices, isLoading: isLoadingInvoices } = useCollection<PurchaseInvoice>(purchaseInvoicesRef);
+
 
   const lastArticleCodeNumber = useMemo(() => {
     if (!articles || articles.length === 0) {
@@ -74,7 +81,7 @@ export default function ArticlesPage() {
   }, [articles]);
 
 
-  const isLoading = isLoadingArticles || isLoadingOrders || isLoadingReceipts;
+  const isLoading = isLoadingArticles || isLoadingOrders || isLoadingReceipts || isLoadingInvoices;
 
   const handleAdd = () => {
     setEditingArticle(undefined);
@@ -106,16 +113,18 @@ export default function ArticlesPage() {
     const isArticleInPurchaseOrder = (purchaseOrders || []).some(order =>
       order.items.some(item => item.productId === articleToDelete.id)
     );
-
     const isArticleInPurchaseReceipt = (purchaseReceipts || []).some(receipt =>
-      receipt.items.some(item => item.productId === articleToDelete.id)
+        receipt.items.some(item => item.productId === articleToDelete.id)
+    );
+    const isArticleInPurchaseInvoice = (purchaseInvoices || []).some(invoice =>
+        invoice.items.some(item => item.productId === articleToDelete.id)
     );
 
-    if (isArticleInPurchaseOrder || isArticleInPurchaseReceipt) {
+    if (isArticleInPurchaseOrder || isArticleInPurchaseReceipt || isArticleInPurchaseInvoice) {
       toast({
         variant: 'destructive',
         title: 'Suppression impossible',
-        description: `L'article "${articleToDelete.name}" est utilisé dans des bons de commande ou de réception et ne peut pas être supprimé.`,
+        description: `L'article "${articleToDelete.name}" est utilisé dans des bons de commande, de réception ou des factures et ne peut pas être supprimé.`,
       });
       setDeleteDialogOpen(false);
       return;
