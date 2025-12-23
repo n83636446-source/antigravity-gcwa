@@ -79,12 +79,6 @@ export default function PurchaseReceiptsPage() {
   };
 
   const handleRowDoubleClick = (receipt: PurchaseReceipt) => {
-    if (receipt.status === 'Validé') {
-      toast({
-        title: 'Bon de réception validé',
-        description: 'Ce document est en lecture seule car il a été validé.',
-      });
-    }
     setEditingReceipt(receipt);
     setDialogOpen(true);
   };
