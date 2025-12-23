@@ -197,6 +197,21 @@ export default function PurchaseOrdersPage() {
 
   const handleDeleteConfirm = () => {
     if (!firestore || !orderToDelete) return;
+
+    const isOrderInReceipt = (receipts || []).some(
+      (receipt) => receipt.purchaseOrderId === orderToDelete.id
+    );
+
+    if (isOrderInReceipt) {
+      toast({
+        variant: 'destructive',
+        title: 'Suppression impossible',
+        description: `Le bon de commande "${orderToDelete.orderNumber}" a déjà été transféré en bon de réception.`,
+      });
+      setDeleteDialogOpen(false);
+      return;
+    }
+
     const orderDocRef = doc(firestore, 'purchaseOrders', orderToDelete.id);
     deleteDocumentNonBlocking(orderDocRef);
     toast({
