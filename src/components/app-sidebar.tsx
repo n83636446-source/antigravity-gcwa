@@ -20,7 +20,7 @@ import {
   LineChart,
   Warehouse,
   ShoppingCart,
-  Menu,
+  List,
   Contact,
   PanelLeft,
 } from 'lucide-react';
@@ -54,7 +54,7 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <div className="flex items-center gap-2 p-2 justify-between">
+        <div className="flex items-center gap-2 p-2 justify-between group-data-[collapsible=icon]:justify-center">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
               <Warehouse className="size-5" />
@@ -63,7 +63,7 @@ export function AppSidebar() {
               GérerStock
             </span>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center group-data-[collapsible=icon]:hidden">
             <SidebarTrigger className="hidden md:flex">
               <PanelLeft />
             </SidebarTrigger>
@@ -93,7 +93,7 @@ export function AppSidebar() {
                   <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
                       <ShoppingCart className="size-4" />
                       <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achat</span>
-                      <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
+                      <List className="size-4 group-data-[collapsible=icon]:hidden" />
                   </Button>
               </CollapsibleTrigger>
             </SidebarMenuItem>
