@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { SidebarTrigger } from './ui/sidebar';
+import { List } from 'lucide-react';
 
 type PageHeaderProps = {
   title: string;
@@ -11,7 +12,9 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger className="md:hidden">
+            <List />
+        </SidebarTrigger>
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {title}

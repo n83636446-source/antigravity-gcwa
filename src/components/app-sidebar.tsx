@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarTrigger,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -22,7 +22,7 @@ import {
   ShoppingCart,
   Menu,
   Contact,
-  PanelLeft,
+  List,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -53,6 +53,7 @@ export function AppSidebar() {
 
   return (
     <>
+      <SidebarRail />
       <SidebarHeader>
         <div className="flex items-center gap-2 p-2 justify-between group-data-[collapsible=icon]:justify-center">
           <div className="flex items-center gap-2">
@@ -62,11 +63,6 @@ export function AppSidebar() {
             <span className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               GérerStock
             </span>
-          </div>
-          <div className="flex items-center group-data-[collapsible=icon]:hidden">
-            <SidebarTrigger className="hidden md:flex">
-              <PanelLeft />
-            </SidebarTrigger>
           </div>
         </div>
       </SidebarHeader>
