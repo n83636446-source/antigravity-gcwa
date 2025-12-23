@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DollarSign, Package, AlertCircle } from 'lucide-react';
-import type { Article } from '@/lib/types';
+import type { Product as Article } from '@/lib/types';
 
 type StatsCardsProps = {
   articles: Article[];
@@ -10,11 +10,11 @@ type StatsCardsProps = {
 export function StatsCards({ articles }: StatsCardsProps) {
   const stats = useMemo(() => {
     const totalValue = articles.reduce(
-      (acc, article) => acc + article.price * article.stock,
+      (acc, article) => acc + article.price * article.stockLevel,
       0
     );
     const lowStockItems = articles.filter(
-      (p) => p.stock <= p.lowStockThreshold && p.stock > 0
+      (p) => p.stockLevel <= p.reorderThreshold && p.stockLevel > 0
     ).length;
     const totalArticles = articles.length;
     return { totalValue, lowStockItems, totalArticles };

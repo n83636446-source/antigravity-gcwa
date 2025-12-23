@@ -1,6 +1,6 @@
 'use client';
 
-import type { Article, Supplier } from '@/lib/types';
+import type { Product as Article, Supplier } from '@/lib/types';
 import {
   Table,
   TableHeader,
@@ -17,7 +17,6 @@ type ArticlesTableProps = {
   suppliers: Supplier[];
   onEdit: (article: Article) => void;
   onDelete: (article: Article) => void;
-  onRowDoubleClick: (article: Article) => void;
 };
 
 export function ArticlesTable({
@@ -25,7 +24,6 @@ export function ArticlesTable({
   suppliers,
   onEdit,
   onDelete,
-  onRowDoubleClick,
 }: ArticlesTableProps) {
   const getSupplierName = (supplierId: string) => {
     return suppliers.find((s) => s.id === supplierId)?.name || 'Inconnu';
@@ -51,7 +49,7 @@ export function ArticlesTable({
             {articles.map((article) => (
               <TableRow
                 key={article.id}
-                onDoubleClick={() => onRowDoubleClick(article)}
+                onDoubleClick={() => onEdit(article)}
                 className="cursor-pointer"
               >
                 <TableCell className="font-medium">{article.name}</TableCell>

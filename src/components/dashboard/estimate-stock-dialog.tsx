@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Bot, Loader2, BarChartBig, ShoppingCart, HelpCircle } from 'lucide-react';
-import type { Article, Supplier } from '@/lib/types';
+import type { Product as Article, Supplier } from '@/lib/types';
 import { runStockEstimation } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { StockLevelEstimationOutput } from '@/ai/flows/stock-level-estimation';
@@ -38,7 +38,7 @@ export function EstimateStockDialog({ article, supplier }: EstimateStockDialogPr
     setResult(null);
 
     const formData = new FormData(event.currentTarget);
-    const response = await runStockEstimation(article.name, article.stock, formData);
+    const response = await runStockEstimation(article.name, article.stockLevel, formData);
 
     if (response.success && response.data) {
       setResult(response.data);
@@ -77,7 +77,7 @@ export function EstimateStockDialog({ article, supplier }: EstimateStockDialogPr
                 id="safetyStockLevel"
                 name="safetyStockLevel"
                 type="number"
-                defaultValue={article.lowStockThreshold}
+                defaultValue={article.reorderThreshold}
                 className="col-span-3"
                 required
               />

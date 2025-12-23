@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { collection, collectionGroup, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Article, Supplier } from '@/lib/types';
+import type { Product as Article, Supplier } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { ArticlesTable } from '@/components/articles-table';
 import { ArticleDialog } from '@/components/article-dialog';
@@ -78,7 +78,6 @@ export default function ArticlesPage() {
           suppliers={suppliers || []}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onRowDoubleClick={handleEdit}
         />
       )}
       <ArticleDialog

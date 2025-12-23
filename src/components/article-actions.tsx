@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import type { Article } from '@/lib/types';
+import type { Product as Article } from '@/lib/types';
 
 type ArticleActionsProps = {
   article: Article;

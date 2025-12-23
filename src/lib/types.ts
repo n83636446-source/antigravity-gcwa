@@ -17,8 +17,8 @@ export type Product = {
   name: string;
   description: string;
   price: number;
-  stock: number;
-  lowStockThreshold: number;
+  stockLevel: number;
+  reorderThreshold: number;
   supplierId: string;
 };
 

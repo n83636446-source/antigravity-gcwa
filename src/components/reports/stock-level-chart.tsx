@@ -14,11 +14,11 @@ type StockLevelChartProps = {
 };
 
 const chartConfig = {
-  stock: {
+  stockLevel: {
     label: 'Stock',
     color: 'hsl(var(--primary))',
   },
-  threshold: {
+  reorderThreshold: {
     label: 'Seuil de stock bas',
     color: 'hsl(var(--destructive))',
   },
@@ -28,8 +28,8 @@ export function StockLevelChart({ data }: StockLevelChartProps) {
   const chartData = useMemo(() => {
     return data.map(product => ({
       name: product.name,
-      stock: product.stock,
-      threshold: product.lowStockThreshold
+      stockLevel: product.stockLevel,
+      reorderThreshold: product.reorderThreshold
     }));
   }, [data]);
   
@@ -50,8 +50,8 @@ export function StockLevelChart({ data }: StockLevelChartProps) {
               cursor={false}
               content={<ChartTooltipContent indicator="dot" />}
             />
-            <Bar dataKey="stock" fill="var(--color-stock)" radius={4} />
-            <Bar dataKey="threshold" fill="var(--color-threshold)" radius={4} />
+            <Bar dataKey="stockLevel" fill="var(--color-stockLevel)" radius={4} />
+            <Bar dataKey="reorderThreshold" fill="var(--color-reorderThreshold)" radius={4} />
           </BarChart>
         </ResponsiveContainer>
       </ChartContainer>

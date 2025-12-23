@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Article, Supplier } from '@/lib/types';
+import type { Product as Article, Supplier } from '@/lib/types';
 import {
   Table,
   TableHeader,
@@ -23,14 +23,14 @@ type InventoryTableProps = {
 
 export function InventoryTable({ articles, suppliers, onRowDoubleClick }: InventoryTableProps) {
   const getStockStatus = (article: Article) => {
-    if (article.stock === 0) {
+    if (article.stockLevel === 0) {
       return {
         label: 'En rupture',
         variant: 'destructive',
         icon: <XCircle className="mr-2 h-4 w-4" />,
       } as const;
     }
-    if (article.stock <= article.lowStockThreshold) {
+    if (article.stockLevel <= article.reorderThreshold) {
       return {
         label: 'Stock faible',
         variant: 'secondary',
@@ -71,7 +71,7 @@ export function InventoryTable({ articles, suppliers, onRowDoubleClick }: Invent
                   className={onRowDoubleClick ? "cursor-pointer" : ""}
                 >
                   <TableCell className="font-medium">{article.name}</TableCell>
-                  <TableCell className="text-right">{article.stock}</TableCell>
+                  <TableCell className="text-right">{article.stockLevel}</TableCell>
                   <TableCell>
                     <Badge variant={status.variant} className="items-center">
                       {status.icon}
