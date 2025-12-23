@@ -49,4 +49,17 @@ export type Client = {
   phone: string;
 };
 
-    
+export type PurchaseReceiptItem = {
+  productId: string;
+  quantityOrdered: number;
+  quantityReceived: number;
+};
+
+export type PurchaseReceipt = {
+  id: string;
+  receiptNumber: string;
+  purchaseOrderId: string;
+  receiptDate: string; // ISO string
+  notes?: string;
+  items: PurchaseReceiptItem[];
+};
