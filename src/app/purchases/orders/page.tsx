@@ -49,6 +49,7 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { DraggableHeader } from '@/components/ui/DraggableHeader';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Column = {
   id: keyof PurchaseOrder | 'supplierName' | 'formattedDate' | 'formattedAmount';
@@ -212,14 +213,24 @@ export default function PurchaseOrdersPage() {
                 <CardTitle>Bons de commande récents</CardTitle>
                 {selectedOrder && (
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(selectedOrder)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Modifier
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteRequest(selectedOrder)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Supprimer
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(selectedOrder)}>
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Modifier</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Modifier</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteRequest(selectedOrder)}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Supprimer</TooltipContent>
+                    </Tooltip>
                   </div>
                 )}
             </CardHeader>

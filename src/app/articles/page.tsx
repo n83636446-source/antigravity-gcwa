@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function ArticlesPage() {
   const firestore = useFirestore();
@@ -153,14 +154,24 @@ export default function ArticlesPage() {
             <CardTitle>Tous les articles</CardTitle>
             {selectedArticle ? (
               <div className='flex items-center gap-2'>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(selectedArticle)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Modifier
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteRequest(selectedArticle)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Supprimer
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(selectedArticle)}>
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Modifier</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Modifier</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteRequest(selectedArticle)}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Supprimer</TooltipContent>
+                  </Tooltip>
               </div>
             ) : null}
           </CardHeader>
