@@ -22,6 +22,8 @@ import {
   ShoppingCart,
   Menu,
   Contact,
+  UserCheck,
+  UserPlus,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -33,8 +35,7 @@ import { Button } from './ui/button';
 const menuItems = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/articles', label: 'Articles', icon: Boxes },
-  { href: '/suppliers', label: 'Fournisseurs', icon: Users },
-  { href: '/clients', label: 'Clients', icon: Contact },
+  { href: '/suppliers', label: 'Fournisseurs', icon: Warehouse },
 ];
 
 const achatSubMenuItems = [
@@ -44,10 +45,19 @@ const achatSubMenuItems = [
     { href: '/purchases/credit-notes', label: 'Avoirs' },
 ];
 
+const tiersSubMenuItems = [
+    { href: '/clients', label: 'Clients', icon: Contact },
+    { href: '/prospects', label: 'Prospects', icon: UserPlus },
+    { href: '/representants', label: 'Représentants', icon: UserCheck },
+]
+
 export function AppSidebar() {
   const pathname = usePathname();
   const [isAchatOpen, setIsAchatOpen] = React.useState(
     achatSubMenuItems.some(item => pathname.startsWith(item.href))
+  );
+  const [isTiersOpen, setIsTiersOpen] = React.useState(
+    tiersSubMenuItems.some(item => pathname.startsWith(item.href))
   );
 
   return (
@@ -82,6 +92,30 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <Collapsible open={isTiersOpen} onOpenChange={setIsTiersOpen}>
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
+                      <Users className="size-4" />
+                      <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Tiers</span>
+                      <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
+                  </Button>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+             <CollapsibleContent>
+                <SidebarMenuSub>
+                    {tiersSubMenuItems.map(subItem => (
+                        <SidebarMenuItem key={subItem.href}>
+                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                <Link href={subItem.href}>
+                                    {subItem.label}
+                                </Link>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenuSub>
+            </CollapsibleContent>
+          </Collapsible>
           <Collapsible open={isAchatOpen} onOpenChange={setIsAchatOpen}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
