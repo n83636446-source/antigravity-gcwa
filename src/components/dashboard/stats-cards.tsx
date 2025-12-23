@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DollarSign, Package, AlertCircle } from 'lucide-react';
-import type { Product as Article } from '@/lib/types';
+import type { Product } from '@/lib/types';
 
 type StatsCardsProps = {
-  articles: Article[];
+  articles: Product[];
 };
 
 export function StatsCards({ articles }: StatsCardsProps) {

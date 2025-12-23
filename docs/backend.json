@@ -2,7 +2,7 @@
   "entities": {
     "Product": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Product",
+      "title": "Article",
       "type": "object",
       "description": "Represents an article in the inventory.",
       "properties": {
@@ -199,6 +199,10 @@
         "phone": {
           "type": "string",
           "description": "Contact phone number for the client."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the client."
         }
       },
       "required": [

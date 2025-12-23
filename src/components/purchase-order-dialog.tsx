@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,9 +33,9 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { Separator } from './ui/separator';
-import { ProductDialog } from './product-dialog';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { ArticleDialog } from './article-dialog';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
@@ -77,6 +77,7 @@ export function PurchaseOrderDialog({
   const { toast } = useToast();
   const firestore = useFirestore();
   const isEditMode = !!order;
+  const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -91,7 +92,7 @@ export function PurchaseOrderDialog({
   const watchedItems = form.watch('items');
   const [total, setTotal] = useState(0);
 
-  const filteredProducts = useMemoFirebase(
+  const filteredProducts = useMemo(
     () => products.filter(p => p.supplierId === supplierId),
     [products, supplierId]
   )
@@ -176,6 +177,7 @@ export function PurchaseOrderDialog({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
@@ -276,9 +278,7 @@ export function PurchaseOrderDialog({
                {supplierId && (!filteredProducts || filteredProducts.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
                     Aucun article trouvé pour ce fournisseur.
-                    <ProductDialog suppliers={suppliers.filter(s => s.id === supplierId)} isChild>
-                         <Button variant="link" className="p-1 h-auto">Créer un article</Button>
-                    </ProductDialog>
+                    <Button type="button" variant="link" className="p-1 h-auto" onClick={() => setArticleDialogOpen(true)}>Créer un article</Button>
                 </div>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })} disabled={!supplierId}>
@@ -307,5 +307,13 @@ export function PurchaseOrderDialog({
         </Form>
       </DialogContent>
     </Dialog>
+    {supplierId && (
+        <ArticleDialog
+            isOpen={isArticleDialogOpen}
+            onOpenChange={setArticleDialogOpen}
+            suppliers={suppliers.filter(s => s.id === supplierId)}
+        />
+    )}
+    </>
   );
 }

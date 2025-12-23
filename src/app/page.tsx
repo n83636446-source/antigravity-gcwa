@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query } from 'firebase/firestore';
-import type { Article, Supplier } from '@/lib/types';
+import type { Product, Supplier } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { InventoryTable } from '@/components/dashboard/inventory-table';
@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function DashboardPage() {
   const firestore = useFirestore();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingArticle, setEditingArticle] = useState<Article | undefined>();
+  const [editingArticle, setEditingArticle] = useState<Product | undefined>();
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -23,15 +23,15 @@ export default function DashboardPage() {
     useCollection<Supplier>(suppliersRef);
 
   const articlesQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'articles')) : null),
+    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
     [firestore]
   );
   const { data: articles, isLoading: isLoadingArticles } =
-    useCollection<Article>(articlesQuery);
+    useCollection<Product>(articlesQuery);
 
   const isLoading = isLoadingSuppliers || isLoadingArticles;
 
-  const handleEdit = (article: Article) => {
+  const handleEdit = (article: Product) => {
     setEditingArticle(article);
     setDialogOpen(true);
   };

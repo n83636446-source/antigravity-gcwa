@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Product as Article, Supplier } from '@/lib/types';
+import type { Product, Supplier } from '@/lib/types';
 import {
   Table,
   TableHeader,
@@ -16,13 +16,13 @@ import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 type InventoryTableProps = {
-  articles: Article[];
+  articles: Product[];
   suppliers: Supplier[];
-  onRowDoubleClick?: (article: Article) => void;
+  onRowDoubleClick?: (article: Product) => void;
 };
 
 export function InventoryTable({ articles, suppliers, onRowDoubleClick }: InventoryTableProps) {
-  const getStockStatus = (article: Article) => {
+  const getStockStatus = (article: Product) => {
     if (article.stockLevel === 0) {
       return {
         label: 'En rupture',

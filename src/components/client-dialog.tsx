@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -23,9 +22,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
+import type { Client } from '@/lib/types';
+import { useFirestore } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import {
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Le nom du client doit contenir au moins 2 caractères.'),
@@ -36,9 +41,20 @@ const clientSchema = z.object({
 
 type ClientFormValues = z.infer<typeof clientSchema>;
 
-export function ClientDialog() {
-  const [open, setOpen] = useState(false);
+type ClientDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  client?: Client;
+};
+
+export function ClientDialog({
+  isOpen,
+  onOpenChange,
+  client,
+}: ClientDialogProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const isEditMode = !!client;
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -50,32 +66,52 @@ export function ClientDialog() {
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditMode && client) {
+        form.reset(client);
+      } else {
+        form.reset({
+          name: '',
+          email: '',
+          phone: '',
+          address: '',
+        });
+      }
+    }
+  }, [client, isEditMode, isOpen, form]);
+
   const onSubmit = (data: ClientFormValues) => {
-    // In a real app, you would send this data to your API
-    console.log(data);
-    toast({
-      title: 'Client ajouté',
-      description: `Le client "${data.name}" a été ajouté avec succès.`,
-    });
-    setOpen(false);
-    form.reset();
+    if (!firestore) return;
+
+    if (isEditMode && client) {
+      const clientDocRef = doc(firestore, 'clients', client.id);
+      updateDocumentNonBlocking(clientDocRef, data);
+      toast({
+        title: 'Client modifié',
+        description: `Le client "${data.name}" a été mis à jour.`,
+      });
+    } else {
+      const clientsRef = collection(firestore, 'clients');
+      addDocumentNonBlocking(clientsRef, data);
+      toast({
+        title: 'Client ajouté',
+        description: `Le client "${data.name}" a été ajouté avec succès.`,
+      });
+    }
+
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Ajouter un client
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Ajouter un nouveau client</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Modifier le client' : 'Ajouter un nouveau client'}</DialogTitle>
               <DialogDescription>
-                Remplissez les détails du nouveau client.
+                Remplissez les détails du client.
               </DialogDescription>
             </DialogHeader>
 
@@ -134,9 +170,10 @@ export function ClientDialog() {
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
-              <Button type="submit">Ajouter le client</Button>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
+              <Button type="submit">{isEditMode ? 'Enregistrer' : 'Ajouter le client'}</Button>
             </DialogFooter>
           </form>
         </Form>
