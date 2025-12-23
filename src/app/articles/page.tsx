@@ -28,7 +28,7 @@ export default function ArticlesPage() {
     useCollection<Supplier>(suppliersRef);
 
   const articlesQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'articles')) : null),
+    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
     [firestore]
   );
   const { data: articles, isLoading: isLoadingArticles } =
@@ -48,7 +48,7 @@ export default function ArticlesPage() {
   
   const handleDelete = (article: Article) => {
       if(!firestore) return;
-      const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'articles', article.id);
+      const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'products', article.id);
       deleteDocumentNonBlocking(articleDocRef);
       toast({
           title: "Article supprimé",

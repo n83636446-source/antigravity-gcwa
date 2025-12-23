@@ -41,8 +41,8 @@ const articleSchema = z.object({
   name: z.string().min(2, "Le nom de l'article doit contenir au moins 2 caractères."),
   description: z.string().optional(),
   price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
-  stock: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
-  lowStockThreshold: z.coerce.number().int().min(0, 'Le seuil doit être un entier non négatif.'),
+  stockLevel: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
+  reorderThreshold: z.coerce.number().int().min(0, 'Le seuil doit être un entier non négatif.'),
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
 });
 
@@ -80,8 +80,8 @@ export function ArticleDialog({
       name: '',
       description: '',
       price: 0,
-      stock: 0,
-      lowStockThreshold: 10,
+      stockLevel: 0,
+      reorderThreshold: 10,
       supplierId: suppliers.length === 1 ? suppliers[0].id : '',
     },
   });
@@ -89,14 +89,21 @@ export function ArticleDialog({
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && article) {
-        form.reset(article);
+        form.reset({
+            name: article.name,
+            description: article.description,
+            price: article.price,
+            stockLevel: article.stockLevel,
+            reorderThreshold: article.reorderThreshold,
+            supplierId: article.supplierId,
+        });
       } else {
         form.reset({
           name: '',
           description: '',
           price: 0,
-          stock: 0,
-          lowStockThreshold: 10,
+          stockLevel: 0,
+          reorderThreshold: 10,
           supplierId: suppliers.length === 1 ? suppliers[0].id : '',
         });
       }
@@ -111,20 +118,20 @@ export function ArticleDialog({
         name: data.name,
         description: data.description || '',
         price: data.price,
-        stock: data.stock,
-        lowStockThreshold: data.lowStockThreshold,
+        stockLevel: data.stockLevel,
+        reorderThreshold: data.reorderThreshold,
         supplierId: data.supplierId,
     };
 
     if (isEditMode && article) {
-        const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'articles', article.id);
+        const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'products', article.id);
         updateDocumentNonBlocking(articleDocRef, articleData);
         toast({
             title: 'Article modifié',
             description: `L'article "${data.name}" a été mis à jour.`,
         });
     } else {
-        const articlesRef = collection(firestore, 'suppliers', data.supplierId, 'articles');
+        const articlesRef = collection(firestore, 'suppliers', data.supplierId, 'products');
         addDocumentNonBlocking(articlesRef, articleData);
 
         toast({
@@ -208,7 +215,7 @@ export function ArticleDialog({
               />
               <FormField
                 control={form.control}
-                name="stock"
+                name="stockLevel"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stock</FormLabel>
@@ -223,7 +230,7 @@ export function ArticleDialog({
 
             <FormField
               control={form.control}
-              name="lowStockThreshold"
+              name="reorderThreshold"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Seuil de stock bas</FormLabel>

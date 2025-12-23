@@ -56,7 +56,7 @@ export function ArticlesTable({
               >
                 <TableCell className="font-medium">{article.name}</TableCell>
                 <TableCell>{getSupplierName(article.supplierId)}</TableCell>
-                <TableCell className="text-right">{article.stock}</TableCell>
+                <TableCell className="text-right">{article.stockLevel}</TableCell>
                 <TableCell className="text-right">
                   {new Intl.NumberFormat('fr-FR', {
                     style: 'currency',
