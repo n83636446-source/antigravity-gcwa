@@ -9,9 +9,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
   SidebarMenuSub,
   SidebarMenuSubButton,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -22,7 +22,7 @@ import {
   ShoppingCart,
   Menu,
   Contact,
-  List,
+  PanelLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -65,7 +65,7 @@ export function AppSidebar() {
           </div>
           <div className="flex items-center">
             <SidebarTrigger className="hidden md:flex">
-              <List />
+              <PanelLeft />
             </SidebarTrigger>
           </div>
         </div>
