@@ -95,12 +95,11 @@ export default function ArticlesPage() {
   };
   
   const handleContainerClick = (e: React.MouseEvent) => {
-    // If the click target or its parents up to the current target is a table row, do nothing.
-    // This allows the row's own click handler to manage selection.
-    if ((e.target as HTMLElement).closest('tr')) {
+    // If the click was on a button or inside a dialog/menu, do nothing.
+    if ((e.target as HTMLElement).closest('tr, button, [role="dialog"], [role="menu"]')) {
       return;
     }
-    // Otherwise, the click was outside a table row, so deselect.
+    // Otherwise, the click was outside an interactive element, so deselect.
     setSelectedArticle(null);
   };
 

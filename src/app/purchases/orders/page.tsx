@@ -176,7 +176,9 @@ export default function PurchaseOrdersPage() {
   };
   
   const handleTransfer = () => {
-    setReceiptDialogOpen(true);
+    if (selectedOrder) {
+      setReceiptDialogOpen(true);
+    }
   };
   
   const handleSingleClick = (order: PurchaseOrder) => {
@@ -220,7 +222,7 @@ export default function PurchaseOrdersPage() {
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('tr, button')) {
+    if ((e.target as HTMLElement).closest('tr, button, [role="dialog"], [role="menu"]')) {
       return;
     }
     setSelectedOrder(null);

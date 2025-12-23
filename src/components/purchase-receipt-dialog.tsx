@@ -115,9 +115,8 @@ export function PurchaseReceiptDialog({
   }
 
   useEffect(() => {
+    const orderToLoad = getOrderForReceipt();
     if (isOpen) {
-      const orderToLoad = getOrderForReceipt();
-      
       if (isEditMode && receipt && orderToLoad) {
          form.reset({
             purchaseOrderId: receipt.purchaseOrderId,
@@ -144,6 +143,14 @@ export function PurchaseReceiptDialog({
               quantityReceived: item.quantity,
             })),
           });
+        } else {
+            // If no order is selected (e.g. creating from scratch), reset the form
+            form.reset({
+                purchaseOrderId: '',
+                receiptDate: new Date().toISOString().split('T')[0],
+                notes: '',
+                items: [],
+            });
         }
       }
     } else if (!isTriggeredExternally) {

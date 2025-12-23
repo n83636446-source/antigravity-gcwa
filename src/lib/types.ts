@@ -76,7 +76,7 @@ export type PurchaseInvoice = {
   invoiceDate: string; // ISO string
   dueDate: string; // ISO string
   totalAmount: number;
-  status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
+  status: 'Non payée' | 'Payée' | 'En retard';
 };
 
 export type CreditNote = {
@@ -90,5 +90,3 @@ export type CreditNote = {
 };
 
 export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote;
-
-    

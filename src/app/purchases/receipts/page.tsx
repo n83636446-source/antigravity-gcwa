@@ -159,7 +159,7 @@ export default function PurchaseReceiptsPage() {
   }
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('tr, button, [role=menu], [role=tooltip]')) {
+    if ((e.target as HTMLElement).closest('tr, button, [role="dialog"], [role="menu"], [role="tooltip"]')) {
       return;
     }
     setSelectedReceipt(null);

@@ -18,6 +18,7 @@ export default function ClientsPage() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | undefined>();
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const clientsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'clients') : null),
@@ -43,10 +44,18 @@ export default function ClientsPage() {
       title: 'Client supprimé',
       description: `Le client "${client.name}" a été supprimé.`,
     });
+    setSelectedClient(null);
+  };
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('tr, button, [role="dialog"], [role="menu"]')) {
+      return;
+    }
+    setSelectedClient(null);
   };
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6">
+    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={handleContainerClick}>
       <PageHeader
         title="Clients"
         description="Gérez votre liste de clients."
@@ -58,14 +67,15 @@ export default function ClientsPage() {
       </PageHeader>
       {isLoading ? (
         <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-48 w-full" />
         </div>
       ) : (
         <ClientsTable
           clients={clients || []}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          selectedClient={selectedClient}
+          onSetSelectedClient={setSelectedClient}
         />
       )}
       <ClientDialog

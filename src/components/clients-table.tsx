@@ -10,15 +10,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -30,27 +23,62 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 type ClientsTableProps = {
   clients: Client[];
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
+  selectedClient: Client | null;
+  onSetSelectedClient: (client: Client | null) => void;
 };
 
-export function ClientsTable({ clients, onEdit, onDelete }: ClientsTableProps) {
+export function ClientsTable({ clients, onEdit, onDelete, selectedClient, onSetSelectedClient }: ClientsTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
-  const handleDeleteClick = (client: Client) => {
+  const handleDeleteRequest = (client: Client) => {
     setClientToDelete(client);
     setDeleteDialogOpen(true);
   };
+  
+  const handleSelectClient = (client: Client) => {
+    if (selectedClient?.id === client.id) {
+        onSetSelectedClient(null);
+    } else {
+        onSetSelectedClient(client);
+    }
+  };
+
 
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Tous les clients</CardTitle>
+          {selectedClient && (
+             <div className='flex items-center gap-2'>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onEdit(selectedClient)}>
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Modifier</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Modifier</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteRequest(selectedClient)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Supprimer</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Supprimer</TooltipContent>
+                </Tooltip>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {clients.length > 0 ? (
@@ -61,44 +89,20 @@ export function ClientsTable({ clients, onEdit, onDelete }: ClientsTableProps) {
                   <TableHead>Email</TableHead>
                   <TableHead>Téléphone</TableHead>
                   <TableHead>Adresse</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {clients.map((client) => (
                   <TableRow
                     key={client.id}
+                    onClick={() => handleSelectClient(client)}
                     onDoubleClick={() => onEdit(client)}
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", selectedClient?.id === client.id && 'bg-muted/50')}
                   >
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.phone}</TableCell>
                     <TableCell>{client.address}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Ouvrir le menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit(client)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteClick(client)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
