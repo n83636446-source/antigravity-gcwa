@@ -79,8 +79,6 @@ type PurchaseReceiptDialogProps = {
 const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
-const gridLayout = "grid-cols-[1fr_120px_120px_100px_44px] gap-2 items-end";
-
 
 export function PurchaseReceiptDialog({
   purchaseOrders,
@@ -375,6 +373,7 @@ export function PurchaseReceiptDialog({
   ) : null;
   
   const readOnly = isEditMode && receipt?.status === 'Validé';
+  const gridLayout = "grid grid-cols-[1fr_100px_100px_100px_40px] gap-3 items-end";
 
 
   return (
@@ -473,15 +472,15 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-2">
-               <div className={cn('grid text-sm font-medium', gridLayout)}>
-                  <Label>Article</Label>
-                  {fromBC && <Label className="text-center">Qté Cmdée</Label>}
-                  <Label className="text-center">Qté Reçue</Label>
-                  <Label className="text-right">Prix</Label>
-                  {!fromBC && <div />}
-                </div>
+              <div className={cn('text-sm font-medium', gridLayout)}>
+                <Label>Article</Label>
+                {fromBC && <Label className="text-center">Qté Cmdée</Label>}
+                <Label className="text-center">Qté Reçue</Label>
+                <Label className="text-right">Prix</Label>
+                {!fromBC && <div className="w-[40px]"></div>}
+              </div>
               {fields.map((field, index) => (
-                <div key={field.id} className={cn('grid', gridLayout)}>
+                <div key={field.id} className={gridLayout}>
                   {fromBC ? (
                     <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
                   ) : (
@@ -552,7 +551,7 @@ export function PurchaseReceiptDialog({
                     />
 
                   {!fromBC && !readOnly && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                   )}
