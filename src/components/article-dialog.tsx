@@ -243,7 +243,7 @@ export function ArticleDialog({
                   <FormItem>
                     <FormLabel>Stock</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" {...field} disabled />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
