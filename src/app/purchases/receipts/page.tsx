@@ -37,7 +37,7 @@ export default function PurchaseReceiptsPage() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
   const receiptsRef = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'purchaseReceipts')) : null),
+    () => (firestore ? query(collection(firestore, 'purchaseReceipts'),) : null),
     [firestore]
   );
   const { data: receipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(receiptsRef);
@@ -238,7 +238,8 @@ export default function PurchaseReceiptsPage() {
         const productDoc = await getDoc(productRef);
 
         if (!productDoc.exists()) {
-          throw new Error(`L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible.`);
+          console.warn(`L'article avec l'ID "${item.productId}" est introuvable. Il sera ignoré lors de l'annulation.`);
+          continue; // Skip this item if the product doesn't exist
         }
         const productData = productDoc.data() as Product;
         if (productData.stockLevel < item.quantityReceived) {
