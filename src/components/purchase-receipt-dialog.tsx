@@ -372,7 +372,7 @@ export function PurchaseReceiptDialog({
               )}
             />
 
-            <DialogFooter className="flex-row justify-between">
+            <DialogFooter className="sm:justify-between">
               <div className="flex gap-2">
                 {isEditMode && receipt?.status === 'Brouillon' && onValidate && (
                   <Button type="button" variant="outline" onClick={onValidate}>
