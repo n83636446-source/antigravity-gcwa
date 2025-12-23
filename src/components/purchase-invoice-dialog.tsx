@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseInvoice, Supplier, Product } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { Input } from './ui/input';
-import { useFirestore, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Separator } from './ui/separator';
@@ -91,9 +91,12 @@ export function PurchaseInvoiceDialog({
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   
-  const { data: allSuppliers } = useCollection<Supplier>(
-    firestore ? collection(firestore, 'suppliers') : null
+  const suppliersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'suppliers') : null),
+    [firestore]
   );
+  const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
+
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!allSuppliers || allSuppliers.length === 0) return 0;
@@ -164,7 +167,7 @@ export function PurchaseInvoiceDialog({
     if (po) {
         form.setValue('supplierId', po.supplierId);
         form.setValue('items', po.items.map(item => ({ productId: item.productId, quantity: item.quantity })));
-    } else if (!isEditMode) {
+    } else if (!isEditMode && !purchaseOrderId) {
         // When PO is deselected, clear items if not in edit mode
         form.setValue('items', [{ productId: '', quantity: 1 }]);
     }
