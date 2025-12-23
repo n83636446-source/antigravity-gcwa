@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -37,6 +37,7 @@ import { ArticleDialog } from './article-dialog';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { PlusCircle } from 'lucide-react';
 
 
 const orderItemSchema = z.object({
@@ -61,7 +62,6 @@ type PurchaseOrderDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   suppliers: Supplier[];
-  products: Product[];
   order?: PurchaseOrder;
   lastOrderNumber: number;
   onTransfer?: (order: PurchaseOrder) => void;
@@ -73,7 +73,6 @@ export function PurchaseOrderDialog({
     isOpen,
     onOpenChange,
     suppliers,
-    products: initialProducts,
     order,
     lastOrderNumber,
     onTransfer
@@ -118,29 +117,26 @@ export function PurchaseOrderDialog({
   }, [order, isOpen, form]);
 
   useEffect(() => {
-    const currentProducts = products || initialProducts;
     const newTotal = watchedItems?.reduce((acc, item) => {
         if(item && item.productId && item.quantity > 0) {
-            const product = currentProducts?.find(p => p.id === item.productId);
+            const product = products?.find(p => p.id === item.productId);
             return acc + (product ? product.price * item.quantity : 0);
         }
         return acc;
     }, 0) || 0;
     setTotal(newTotal);
-  }, [watchedItems, products, initialProducts]);
+  }, [watchedItems, products]);
 
 
   const onSubmit = async (data: PurchaseOrderFormValues) => {
     if (!firestore) return;
     
-    const currentProducts = products || initialProducts;
-
     const orderData = {
         supplierId: data.supplierId,
         orderDate: new Date(data.orderDate).toISOString(),
         items: data.items.map(item => ({
             ...item,
-            price: currentProducts?.find(p => p.id === item.productId)?.price || 0
+            price: products?.find(p => p.id === item.productId)?.price || 0
         })),
         totalAmount: total,
     };
@@ -274,7 +270,7 @@ export function PurchaseOrderDialog({
                                 </div>
                             </SelectItem>
                             <Separator />
-                            {(products || initialProducts)?.map((product) => (
+                            {products?.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
                                   {product.name}
                               </SelectItem>
@@ -302,7 +298,7 @@ export function PurchaseOrderDialog({
                   </Button>
                 </div>
               ))}
-               {(!products && !initialProducts || (products || initialProducts).length === 0) && (
+               {(!products || products.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
                     Aucun article trouvé.
                     <Button type="button" variant="link" className="p-1 h-auto" onClick={() => setArticleDialogOpen(true)}>Créer un article</Button>

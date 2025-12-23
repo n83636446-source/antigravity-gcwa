@@ -356,7 +356,6 @@ export default function PurchaseOrdersPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         suppliers={suppliers || []}
-        products={products || []}
         order={editingOrder}
         lastOrderNumber={orders?.length || 0}
         onTransfer={handleTransferFromDialog}
