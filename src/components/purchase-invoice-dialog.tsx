@@ -29,19 +29,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseInvoice } from '@/lib/types';
-import { Calendar } from './ui/calendar';
-import { cn } from '@/lib/utils';
-import { format, addDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format, addDays, parseISO } from 'date-fns';
+import { Input } from './ui/input';
+
 
 const purchaseInvoiceSchema = z.object({
   purchaseOrderId: z.string().nonempty('Un bon de commande doit être sélectionné.'),
-  invoiceDate: z.date({ required_error: 'La date de facturation est requise.' }),
-  dueDate: z.date({ required_error: "La date d'échéance est requise." }),
+  invoiceDate: z.string().nonempty('La date de facturation est requise.'),
+  dueDate: z.string().nonempty("La date d'échéance est requise."),
 });
 
 type PurchaseInvoiceFormValues = z.infer<typeof purchaseInvoiceSchema>;
@@ -65,8 +63,8 @@ export function PurchaseInvoiceDialog({
     resolver: zodResolver(purchaseInvoiceSchema),
     defaultValues: {
       purchaseOrderId: '',
-      invoiceDate: new Date(),
-      dueDate: addDays(new Date(), 30),
+      invoiceDate: format(new Date(), 'yyyy-MM-dd'),
+      dueDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
     },
   });
 
@@ -95,8 +93,8 @@ export function PurchaseInvoiceDialog({
       id: `pi-${Date.now()}`,
       invoiceNumber: newInvoiceNumber,
       purchaseOrderId: data.purchaseOrderId,
-      invoiceDate: data.invoiceDate.toISOString(),
-      dueDate: data.dueDate.toISOString(),
+      invoiceDate: parseISO(data.invoiceDate).toISOString(),
+      dueDate: parseISO(data.dueDate).toISOString(),
       totalAmount: order.totalAmount,
       status: 'Non payée',
     };
@@ -110,8 +108,8 @@ export function PurchaseInvoiceDialog({
     setOpen(false);
     form.reset({
       purchaseOrderId: '',
-      invoiceDate: new Date(),
-      dueDate: addDays(new Date(), 30),
+      invoiceDate: format(new Date(), 'yyyy-MM-dd'),
+      dueDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
     });
   };
 
@@ -163,30 +161,11 @@ export function PurchaseInvoiceDialog({
                 control={form.control}
                 name="invoiceDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Date de facturation</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                          >
-                            {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisissez une date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          locale={fr}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -195,30 +174,11 @@ export function PurchaseInvoiceDialog({
                 control={form.control}
                 name="dueDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Date d'échéance</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                          >
-                            {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisissez une date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          locale={fr}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

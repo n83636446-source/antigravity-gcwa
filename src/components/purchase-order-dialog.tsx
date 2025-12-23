@@ -30,14 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { PlusCircle, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
-import { Calendar } from './ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format, parseISO } from 'date-fns';
 import { Separator } from './ui/separator';
 
 const orderItemSchema = z.object({
@@ -47,7 +43,7 @@ const orderItemSchema = z.object({
 
 const purchaseOrderSchema = z.object({
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
-  orderDate: z.date({ required_error: 'La date est requise.' }),
+  orderDate: z.string().nonempty('La date est requise.'),
   items: z.array(orderItemSchema).min(1, 'Le bon de commande doit contenir au moins un article.'),
 });
 
@@ -73,7 +69,7 @@ export function PurchaseOrderDialog({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: {
       supplierId: '',
-      orderDate: new Date(),
+      orderDate: format(new Date(), 'yyyy-MM-dd'),
       items: [{ productId: '', quantity: 1 }],
     },
   });
@@ -119,7 +115,7 @@ export function PurchaseOrderDialog({
         id: `po-${Date.now()}`,
         orderNumber: newOrderNumber,
         supplierId: data.supplierId,
-        orderDate: data.orderDate.toISOString(),
+        orderDate: parseISO(data.orderDate).toISOString(),
         status: 'Brouillon',
         items: data.items.map(item => ({
             ...item,
@@ -136,7 +132,7 @@ export function PurchaseOrderDialog({
     setOpen(false);
     form.reset({
         supplierId: '',
-        orderDate: new Date(),
+        orderDate: format(new Date(), 'yyyy-MM-dd'),
         items: [{ productId: '', quantity: 1 }],
     });
   };
@@ -188,30 +184,11 @@ export function PurchaseOrderDialog({
                   control={form.control}
                   name="orderDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Date de commande</FormLabel>
-                       <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={'outline'}
-                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisissez une date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                            locale={fr}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

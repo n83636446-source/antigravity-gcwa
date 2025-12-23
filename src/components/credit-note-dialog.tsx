@@ -31,18 +31,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, CreditNote } from '@/lib/types';
-import { Calendar } from './ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format, parseISO } from 'date-fns';
 
 const creditNoteSchema = z.object({
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
-  creditNoteDate: z.date({ required_error: "La date de l'avoir est requise." }),
+  creditNoteDate: z.string().nonempty("La date de l'avoir est requise."),
   amount: z.coerce.number().min(0.01, "Le montant doit être supérieur à 0."),
   reason: z.string().min(5, "La raison doit contenir au moins 5 caractères."),
 });
@@ -67,7 +63,7 @@ export function CreditNoteDialog({
     resolver: zodResolver(creditNoteSchema),
     defaultValues: {
       supplierId: '',
-      creditNoteDate: new Date(),
+      creditNoteDate: format(new Date(), 'yyyy-MM-dd'),
       amount: 0,
       reason: '',
     },
@@ -82,7 +78,7 @@ export function CreditNoteDialog({
       id: `cn-${Date.now()}`,
       creditNoteNumber: newCreditNoteNumber,
       supplierId: data.supplierId,
-      creditNoteDate: data.creditNoteDate.toISOString(),
+      creditNoteDate: parseISO(data.creditNoteDate).toISOString(),
       amount: data.amount,
       reason: data.reason,
       status: 'Brouillon',
@@ -97,7 +93,7 @@ export function CreditNoteDialog({
     setOpen(false);
     form.reset({
       supplierId: '',
-      creditNoteDate: new Date(),
+      creditNoteDate: format(new Date(), 'yyyy-MM-dd'),
       amount: 0,
       reason: '',
     });
@@ -151,30 +147,11 @@ export function CreditNoteDialog({
                 control={form.control}
                 name="creditNoteDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Date de l'avoir</FormLabel>
-                     <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                          >
-                            {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisissez une date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          locale={fr}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                     <FormControl>
+                        <Input type="date" {...field} />
+                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
