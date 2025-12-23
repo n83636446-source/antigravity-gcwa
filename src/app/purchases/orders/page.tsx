@@ -177,6 +177,11 @@ export default function PurchaseOrdersPage() {
     setOrderToDelete(null);
     setSelectedOrder(null);
   };
+  
+  const handleDoubleClick = (order: PurchaseOrder) => {
+    setSelectedOrder(order);
+    handleEdit(order);
+  }
 
   const handleContainerClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('tr, button')) {
@@ -276,8 +281,7 @@ export default function PurchaseOrdersPage() {
                           {enrichedOrders.map(order => (
                              <TableRow
                               key={order.id}
-                              onClick={() => handleSelectOrder(order)}
-                              onDoubleClick={() => handleEdit(order)}
+                              onDoubleClick={() => handleDoubleClick(order)}
                               className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
                              >
                               {columnIds.map((columnId) => renderCellContent(order, columnId))}
