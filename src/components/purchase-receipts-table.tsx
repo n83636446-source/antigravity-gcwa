@@ -58,12 +58,14 @@ type PurchaseReceiptsTableProps = {
   receipts: PurchaseReceipt[];
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
+  onRowDoubleClick?: (receipt: PurchaseReceipt) => void;
 };
 
 export function PurchaseReceiptsTable({
   receipts,
   purchaseOrders,
   suppliers,
+  onRowDoubleClick
 }: PurchaseReceiptsTableProps) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
 
@@ -175,7 +177,11 @@ export function PurchaseReceiptsTable({
                 </TableHeader>
                 <TableBody>
                   {enrichedReceipts.map((receipt) => (
-                    <TableRow key={receipt.id}>
+                    <TableRow 
+                      key={receipt.id}
+                      onDoubleClick={() => onRowDoubleClick?.(receipt)}
+                      className={cn(onRowDoubleClick && "cursor-pointer")}
+                    >
                       {columnIds.map((columnId) => renderCellContent(receipt, columnId))}
                     </TableRow>
                   ))}

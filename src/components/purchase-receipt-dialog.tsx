@@ -37,6 +37,7 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch, increment } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from './non-blocking-updates';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
@@ -64,10 +65,10 @@ type PurchaseReceiptDialogProps = {
   products: Product[];
   lastReceiptNumber: number;
   onReceiptCreated?: (receipt: PurchaseReceipt) => void;
-  // For opening from another component with a pre-selected order
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
+  receipt?: PurchaseReceipt | null;
 };
 
 export function PurchaseReceiptDialog({
@@ -78,11 +79,13 @@ export function PurchaseReceiptDialog({
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
   purchaseOrder,
+  receipt,
 }: PurchaseReceiptDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const isTriggeredExternally = openProp !== undefined;
+  const isEditMode = !!receipt;
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
@@ -104,28 +107,44 @@ export function PurchaseReceiptDialog({
   });
 
   const watchedOrderId = form.watch('purchaseOrderId');
+  
+  const getOrderForReceipt = () => {
+    if (isEditMode && receipt) {
+      return purchaseOrders.find(o => o.id === receipt.purchaseOrderId);
+    }
+    return purchaseOrder || purchaseOrders.find(o => o.id === watchedOrderId);
+  }
 
   useEffect(() => {
-    // Determine which order to load based on context
-    const orderToLoad = isTriggeredExternally 
-      ? purchaseOrder 
-      : purchaseOrders.find(o => o.id === watchedOrderId);
-    
-    if (isOpen && orderToLoad) {
-      // Set the values in the form
-      form.reset({
-        purchaseOrderId: orderToLoad.id,
-        receiptDate: new Date().toISOString().split('T')[0],
-        notes: '',
-        items: orderToLoad.items.map((item) => ({
-          productId: item.productId,
-          supplierId: orderToLoad.supplierId,
-          quantityOrdered: item.quantity,
-          quantityReceived: item.quantity,
-        })),
-      });
-    } else if (!isOpen) {
-      // Reset form when dialog closes
+    if (isOpen) {
+      const orderToLoad = getOrderForReceipt();
+      
+      if (isEditMode && receipt && orderToLoad) {
+         form.reset({
+            purchaseOrderId: receipt.purchaseOrderId,
+            receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
+            notes: receipt.notes || '',
+            items: receipt.items.map((item) => ({
+              productId: item.productId,
+              supplierId: orderToLoad.supplierId,
+              quantityOrdered: orderToLoad.items.find(i => i.productId === item.productId)?.quantity || 0,
+              quantityReceived: item.quantityReceived,
+            })),
+          });
+      } else if (!isEditMode && orderToLoad) {
+        form.reset({
+          purchaseOrderId: orderToLoad.id,
+          receiptDate: new Date().toISOString().split('T')[0],
+          notes: '',
+          items: orderToLoad.items.map((item) => ({
+            productId: item.productId,
+            supplierId: orderToLoad.supplierId,
+            quantityOrdered: item.quantity,
+            quantityReceived: item.quantity,
+          })),
+        });
+      }
+    } else {
       form.reset({
         purchaseOrderId: '',
         receiptDate: new Date().toISOString().split('T')[0],
@@ -133,7 +152,7 @@ export function PurchaseReceiptDialog({
         items: [],
       });
     }
-  }, [isOpen, purchaseOrder, watchedOrderId, purchaseOrders, form, isTriggeredExternally, replace]);
+  }, [isOpen, purchaseOrder, watchedOrderId, receipt, isEditMode, purchaseOrders, form]);
 
 
   const getProductName = (productId: string) => {
@@ -144,73 +163,78 @@ export function PurchaseReceiptDialog({
   const onSubmit = async (data: PurchaseReceiptFormValues) => {
     if (!firestore) return;
 
-    const newReceiptNumber = `BR-${(lastReceiptNumber + 1)
-      .toString()
-      .padStart(4, '0')}`;
-
-    const newReceiptData: Omit<PurchaseReceipt, 'id' | 'items'> & {
-      items: Omit<PurchaseReceipt['items'][0], 'supplierId'>[];
-    } = {
-      receiptNumber: newReceiptNumber,
-      purchaseOrderId: data.purchaseOrderId,
-      receiptDate: new Date(data.receiptDate).toISOString(),
-      notes: data.notes,
-      items: data.items.map(
-        ({ productId, quantityOrdered, quantityReceived }) => ({
-          productId,
-          quantityOrdered,
-          quantityReceived,
-        })
-      ),
-    };
-
-    const receiptRef = collection(firestore, 'purchaseReceipts');
-    
-    const batch = writeBatch(firestore);
-
-    const newReceiptDocRef = doc(receiptRef);
-    batch.set(newReceiptDocRef, newReceiptData);
-
-
-    // Update stock levels
-    data.items.forEach((item) => {
-      if (item.quantityReceived > 0) {
-        const productDocRef = doc(
-          firestore,
-          'suppliers',
-          item.supplierId,
-          'products',
-          item.productId
-        );
-        batch.update(productDocRef, {
-          stockLevel: increment(item.quantityReceived),
+    if (isEditMode && receipt) {
+        const receiptDocRef = doc(firestore, 'purchaseReceipts', receipt.id);
+        const updatedData = {
+            receiptDate: new Date(data.receiptDate).toISOString(),
+            notes: data.notes,
+            // We don't update items here as stock management on edit is complex
+        };
+        updateDocumentNonBlocking(receiptDocRef, updatedData);
+        toast({
+            title: 'Bon de réception modifié',
+            description: 'Les détails du bon de réception ont été mis à jour.',
         });
-      }
-    });
 
-    try {
-      await batch.commit();
-      toast({
-        title: 'Bon de réception créé',
-        description: `Le stock a été mis à jour.`,
-      });
-      // onReceiptCreated?.({ ...newReceiptData, id: newReceiptDocRef.id });
+    } else {
+        const newReceiptNumber = `BR-${(lastReceiptNumber + 1)
+          .toString()
+          .padStart(4, '0')}`;
 
-      onOpenChange(false);
-      form.reset({
-        purchaseOrderId: '',
-        receiptDate: new Date().toISOString().split('T')[0],
-        notes: '',
-        items: [],
-      });
-    } catch (e) {
-      console.error(e);
-      toast({
-        variant: 'destructive',
-        title: 'Erreur',
-        description: 'Impossible de créer le bon de réception.',
-      });
+        const newReceiptData: Omit<PurchaseReceipt, 'id' | 'items'> & {
+          items: Omit<PurchaseReceipt['items'][0], 'supplierId'>[];
+        } = {
+          receiptNumber: newReceiptNumber,
+          purchaseOrderId: data.purchaseOrderId,
+          receiptDate: new Date(data.receiptDate).toISOString(),
+          notes: data.notes,
+          items: data.items.map(
+            ({ productId, quantityOrdered, quantityReceived }) => ({
+              productId,
+              quantityOrdered,
+              quantityReceived,
+            })
+          ),
+        };
+
+        const receiptRef = collection(firestore, 'purchaseReceipts');
+        const batch = writeBatch(firestore);
+        const newReceiptDocRef = doc(receiptRef);
+        batch.set(newReceiptDocRef, newReceiptData);
+
+        data.items.forEach((item) => {
+          if (item.quantityReceived > 0) {
+            const productDocRef = doc(
+              firestore,
+              'suppliers',
+              item.supplierId,
+              'products',
+              item.productId
+            );
+            batch.update(productDocRef, {
+              stockLevel: increment(item.quantityReceived),
+            });
+          }
+        });
+
+        try {
+          await batch.commit();
+          toast({
+            title: 'Bon de réception créé',
+            description: `Le stock a été mis à jour.`,
+          });
+          onReceiptCreated?.({ ...newReceiptData, id: newReceiptDocRef.id } as PurchaseReceipt);
+        } catch (e) {
+          console.error(e);
+          toast({
+            variant: 'destructive',
+            title: 'Erreur',
+            description: 'Impossible de créer le bon de réception.',
+          });
+        }
     }
+
+    onOpenChange(false);
   };
   
   const Trigger = !isTriggeredExternally ? (
@@ -230,9 +254,9 @@ export function PurchaseReceiptDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Créer un bon de réception</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
               <DialogDescription>
-                Créez un bon de réception à partir d'un bon de commande existant.
+                {isEditMode ? 'Modifiez les informations du bon de réception.' : "Créez un bon de réception à partir d'un bon de commande existant."}
               </DialogDescription>
             </DialogHeader>
 
@@ -246,7 +270,7 @@ export function PurchaseReceiptDialog({
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={isTriggeredExternally && !!purchaseOrder}
+                      disabled={isTriggeredExternally || isEditMode}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -314,6 +338,7 @@ export function PurchaseReceiptDialog({
                             type="number"
                             placeholder="Qté reçue"
                             className="w-full text-center"
+                            disabled={isEditMode}
                             {...itemField}
                           />
                         </FormControl>
@@ -346,7 +371,7 @@ export function PurchaseReceiptDialog({
                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
-              <Button type="submit">Créer le bon de réception</Button>
+              <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
             </DialogFooter>
           </form>
         </Form>
