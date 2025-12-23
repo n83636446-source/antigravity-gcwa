@@ -118,6 +118,7 @@ export default function ArticlesPage() {
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6" onClick={(e) => {
+        // Deselect if the click is on the root div itself
         if (e.target === e.currentTarget) {
             setSelectedArticle(null);
         }
@@ -159,7 +160,7 @@ export default function ArticlesPage() {
             ) : null}
           </CardHeader>
           <CardContent onClick={(e) => {
-             // Clicks inside the card but outside a row deselects
+             // Clicks inside the card but outside a row also deselect
               if (e.target === e.currentTarget) {
                  setSelectedArticle(null);
               }
