@@ -232,7 +232,7 @@ export function PurchaseReceiptDialog({
 
             <div className="space-y-4">
               <div className="grid grid-cols-3 items-center gap-4">
-                  <FormLabel className="col-span-1">Produit</FormLabel>
+                  <FormLabel className="col-span-1">Article</FormLabel>
                   <FormLabel className="text-center">Qté Commandée</FormLabel>
                   <FormLabel className="text-center">Qté Reçue</FormLabel>
               </div>

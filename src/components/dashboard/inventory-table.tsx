@@ -52,7 +52,7 @@ export function InventoryTable({ products, suppliers }: InventoryTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Produit</TableHead>
+              <TableHead>Article</TableHead>
               <TableHead className="text-right">Stock</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">Prix</TableHead>

@@ -39,7 +39,7 @@ import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const productSchema = z.object({
-  name: z.string().min(2, 'Le nom du produit doit contenir au moins 2 caractères.'),
+  name: z.string().min(2, "Le nom de l'article doit contenir au moins 2 caractères."),
   description: z.string().optional(),
   price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
   stock: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
@@ -86,8 +86,8 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
     });
 
     toast({
-      title: 'Produit créé',
-      description: `Le produit "${data.name}" a été créé avec succès.`,
+      title: 'Article créé',
+      description: `L'article "${data.name}" a été créé avec succès.`,
     });
     setOpen(false);
     form.reset();
@@ -99,7 +99,7 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
     <DialogTrigger asChild>
       <Button>
         <PlusCircle className="mr-2 h-4 w-4" />
-        Ajouter un produit
+        Ajouter un article
       </Button>
     </DialogTrigger>
   );
@@ -111,9 +111,9 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Ajouter un nouveau produit</DialogTitle>
+              <DialogTitle>Ajouter un nouvel article</DialogTitle>
               <DialogDescription>
-                Remplissez les détails ci-dessous pour ajouter un nouveau produit à votre inventaire.
+                Remplissez les détails ci-dessous pour ajouter un nouvel article à votre inventaire.
               </DialogDescription>
             </DialogHeader>
 
@@ -122,7 +122,7 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nom du produit</FormLabel>
+                  <FormLabel>Nom de l'article</FormLabel>
                   <FormControl>
                     <Input placeholder="ex: Souris sans fil" {...field} />
                   </FormControl>
@@ -206,7 +206,7 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Une brève description du produit." {...field} />
+                    <Textarea placeholder="Une brève description de l'article." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -214,7 +214,7 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
             />
 
             <DialogFooter>
-              <Button type="submit">Créer le produit</Button>
+              <Button type="submit">Créer l'article</Button>
             </DialogFooter>
           </form>
         </Form>

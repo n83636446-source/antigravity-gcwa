@@ -24,7 +24,7 @@ export function ProductsTable({ products, suppliers }: ProductsTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tous les produits</CardTitle>
+        <CardTitle>Tous les articles</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>

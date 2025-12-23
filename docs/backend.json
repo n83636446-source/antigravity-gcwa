@@ -4,23 +4,23 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a product in the inventory.",
+      "description": "Represents an article in the inventory.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the product."
+          "description": "Unique identifier for the article."
         },
         "name": {
           "type": "string",
-          "description": "Name of the product."
+          "description": "Name of the article."
         },
         "description": {
           "type": "string",
-          "description": "Detailed description of the product."
+          "description": "Detailed description of the article."
         },
         "price": {
           "type": "number",
-          "description": "Selling price of the product."
+          "description": "Selling price of the article."
         },
         "supplierId": {
           "type": "string",
@@ -28,7 +28,7 @@
         },
         "stockLevel": {
           "type": "number",
-          "description": "Current stock level of the product."
+          "description": "Current stock level of the article."
         },
         "reorderThreshold": {
           "type": "number",
@@ -308,7 +308,7 @@
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores product information for each supplier. `supplierId` identifies the supplier, and `productId` is the unique identifier for the product.",
+          "description": "Stores article information for each supplier. `supplierId` identifies the supplier, and `productId` is the unique identifier for the article.",
           "params": [
             {
               "name": "supplierId",
@@ -316,7 +316,7 @@
             },
             {
               "name": "productId",
-              "description": "Unique identifier for the product."
+              "description": "Unique identifier for the article."
             }
           ]
         }
@@ -328,7 +328,7 @@
           "schema": {
             "$ref": "#/backend/entities/StockAlert"
           },
-          "description": "Stores stock alert information for each product. `supplierId` identifies the supplier, `productId` identifies the product, and `stockAlertId` is the unique identifier for the stock alert.",
+          "description": "Stores stock alert information for each article. `supplierId` identifies the supplier, `productId` identifies the article, and `stockAlertId` is the unique identifier for the stock alert.",
           "params": [
             {
               "name": "supplierId",
@@ -336,7 +336,7 @@
             },
             {
               "name": "productId",
-              "description": "Unique identifier for the product."
+              "description": "Unique identifier for the article."
             },
             {
               "name": "stockAlertId",

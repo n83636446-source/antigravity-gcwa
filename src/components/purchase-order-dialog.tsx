@@ -40,7 +40,7 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 
 
 const orderItemSchema = z.object({
-  productId: z.string().nonempty('Veuillez sélectionner un produit.'),
+  productId: z.string().nonempty("Veuillez sélectionner un article."),
   quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
   price: z.number(),
 });
@@ -49,7 +49,7 @@ const purchaseOrderSchema = z.object({
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
   orderDate: z.string({ required_error: 'La date est requise.' }),
   items: z.array(z.object({
-      productId: z.string().nonempty('Veuillez sélectionner un produit.'),
+      productId: z.string().nonempty("Veuillez sélectionner un article."),
       quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
   })).min(1, 'Le bon de commande doit contenir au moins un article.'),
 });
@@ -241,7 +241,7 @@ export function PurchaseOrderDialog({
                         <Select onValueChange={itemField.onChange} value={itemField.value} disabled={!supplierId}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Sélectionnez un produit" />
+                              <SelectValue placeholder="Sélectionnez un article" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -275,9 +275,9 @@ export function PurchaseOrderDialog({
               ))}
                {supplierId && (!filteredProducts || filteredProducts.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
-                    Aucun produit trouvé pour ce fournisseur.
+                    Aucun article trouvé pour ce fournisseur.
                     <ProductDialog suppliers={suppliers.filter(s => s.id === supplierId)} isChild>
-                         <Button variant="link" className="p-1 h-auto">Créer un produit</Button>
+                         <Button variant="link" className="p-1 h-auto">Créer un article</Button>
                     </ProductDialog>
                 </div>
               )}

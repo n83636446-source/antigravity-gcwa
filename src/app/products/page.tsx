@@ -34,8 +34,8 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Produits"
-        description="Gérez votre inventaire de produits."
+        title="Articles"
+        description="Gérez votre inventaire d'articles."
       >
         <ProductDialog suppliers={suppliers || []} />
       </PageHeader>
