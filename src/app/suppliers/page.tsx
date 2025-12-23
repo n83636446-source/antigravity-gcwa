@@ -26,6 +26,17 @@ export default function SuppliersPage() {
     isLoading,
     error,
   } = useCollection<Supplier>(suppliersRef);
+  
+  const lastSupplierCodeNumber = useMemo(() => {
+    if (!suppliers || suppliers.length === 0) {
+      return 0;
+    }
+    return suppliers.reduce((max, s) => {
+      const codeNumber = parseInt(s.code.replace('FOU', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [suppliers]);
+
 
   const handleAdd = () => {
     setEditingSupplier(undefined);
@@ -72,6 +83,7 @@ export default function SuppliersPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         supplier={editingSupplier}
+        lastSupplierCodeNumber={lastSupplierCodeNumber}
       />
     </div>
   );

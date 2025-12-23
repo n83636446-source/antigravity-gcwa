@@ -50,9 +50,10 @@ type SupplierDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   supplier?: Supplier;
+  lastSupplierCodeNumber?: number;
 };
 
-export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialogProps) {
+export function SupplierDialog({ isOpen, onOpenChange, supplier, lastSupplierCodeNumber = 0 }: SupplierDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const isEditMode = !!supplier;
@@ -62,22 +63,25 @@ export function SupplierDialog({ isOpen, onOpenChange, supplier }: SupplierDialo
   });
 
   useEffect(() => {
-    if (supplier) {
-      form.reset(supplier);
-    } else {
-      form.reset({
-        code: '',
-        name: '',
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
-        street: '',
-        city: '',
-        country: '',
-        ice: '',
-      });
+    if (isOpen) {
+      if (isEditMode && supplier) {
+        form.reset(supplier);
+      } else {
+        const nextCode = `FOU${(lastSupplierCodeNumber + 1).toString().padStart(3, '0')}`;
+        form.reset({
+          code: nextCode,
+          name: '',
+          contactName: '',
+          contactEmail: '',
+          contactPhone: '',
+          street: '',
+          city: '',
+          country: '',
+          ice: '',
+        });
+      }
     }
-  }, [supplier, form, isOpen]);
+  }, [supplier, isEditMode, isOpen, form, lastSupplierCodeNumber]);
 
   const onSubmit = (data: SupplierFormValues) => {
     if (!firestore) return;
