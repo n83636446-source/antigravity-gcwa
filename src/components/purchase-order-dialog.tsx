@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -36,97 +35,110 @@ import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { ProductDialog } from './product-dialog';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const orderItemSchema = z.object({
   productId: z.string().nonempty('Veuillez sélectionner un produit.'),
   quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
+  price: z.number(),
 });
 
 const purchaseOrderSchema = z.object({
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
   orderDate: z.string({ required_error: 'La date est requise.' }),
-  items: z.array(orderItemSchema).min(1, 'Le bon de commande doit contenir au moins un article.'),
+  items: z.array(z.object({
+      productId: z.string().nonempty('Veuillez sélectionner un produit.'),
+      quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
+  })).min(1, 'Le bon de commande doit contenir au moins un article.'),
 });
+
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderSchema>;
 
 type PurchaseOrderDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   suppliers: Supplier[];
-  onOrderCreated?: (order: PurchaseOrder) => void;
+  products: Product[];
+  order?: PurchaseOrder;
   lastOrderNumber: number;
 };
 
 export function PurchaseOrderDialog({ 
-    suppliers, 
-    onOrderCreated,
+    isOpen,
+    onOpenChange,
+    suppliers,
+    products,
+    order,
     lastOrderNumber 
 }: PurchaseOrderDialogProps) {
-  const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const isEditMode = !!order;
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
-    defaultValues: {
-      supplierId: '',
-      orderDate: new Date().toISOString().split('T')[0],
-      items: [{ productId: '', quantity: 1 }],
-    },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'items',
   });
   
   const supplierId = form.watch('supplierId');
+  const watchedItems = form.watch('items');
   const [total, setTotal] = useState(0);
 
-  const productsRef = useMemoFirebase(
-    () =>
-      firestore && supplierId
-        ? query(collection(firestore, `suppliers/${supplierId}/products`))
-        : null,
-    [firestore, supplierId]
-  );
-  
-  const { data: filteredProducts, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
-
+  const filteredProducts = useMemoFirebase(
+    () => products.filter(p => p.supplierId === supplierId),
+    [products, supplierId]
+  )
 
   useEffect(() => {
-    if (supplierId) {
-      form.setValue('items', [{ productId: '', quantity: 1 }]);
+    if (isOpen) {
+        if (order) {
+            form.reset({
+                supplierId: order.supplierId,
+                orderDate: new Date(order.orderDate).toISOString().split('T')[0],
+                items: order.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
+            });
+        } else {
+            form.reset({
+                supplierId: '',
+                orderDate: new Date().toISOString().split('T')[0],
+                items: [{ productId: '', quantity: 1 }],
+            });
+        }
     }
-  }, [supplierId, form]);
+  }, [order, isOpen, form]);
+
 
   useEffect(() => {
-    const subscription = form.watch((values) => {
-        const currentItems = values.items || [];
-        const newTotal = currentItems.reduce((acc, item) => {
-            if(item && item.productId && item.quantity > 0) {
-                const product = filteredProducts?.find(p => p.id === item.productId);
-                return acc + (product ? product.price * item.quantity : 0);
-            }
-            return acc;
-        }, 0);
-        setTotal(newTotal);
-    });
-    return () => subscription.unsubscribe();
-  }, [form, filteredProducts]);
+    if (supplierId && !isEditMode) {
+      replace([{ productId: '', quantity: 1 }]);
+    }
+  }, [supplierId, isEditMode, replace]);
+
+  useEffect(() => {
+    const newTotal = watchedItems?.reduce((acc, item) => {
+        if(item && item.productId && item.quantity > 0) {
+            const product = filteredProducts?.find(p => p.id === item.productId);
+            return acc + (product ? product.price * item.quantity : 0);
+        }
+        return acc;
+    }, 0) || 0;
+    setTotal(newTotal);
+  }, [watchedItems, filteredProducts]);
 
 
   const onSubmit = async (data: PurchaseOrderFormValues) => {
     if (!firestore) return;
 
-    const newOrderNumber = `BC-${(lastOrderNumber + 1).toString().padStart(4, '0')}`;
-    const newOrderData = {
-        orderNumber: newOrderNumber,
+    const orderData = {
         supplierId: data.supplierId,
         orderDate: new Date(data.orderDate).toISOString(),
-        status: 'Brouillon' as const,
         items: data.items.map(item => ({
             ...item,
             price: filteredProducts?.find(p => p.id === item.productId)?.price || 0
@@ -134,39 +146,44 @@ export function PurchaseOrderDialog({
         totalAmount: total,
     };
 
-    const purchaseOrdersRef = collection(firestore, 'purchaseOrders');
-    await addDocumentNonBlocking(purchaseOrdersRef, newOrderData);
+    if (isEditMode && order) {
+        const orderDocRef = doc(firestore, 'purchaseOrders', order.id);
+        updateDocumentNonBlocking(orderDocRef, {
+            ...orderData,
+            orderNumber: order.orderNumber, // keep original order number
+            status: order.status, // keep original status unless changed
+        });
+        toast({
+            title: 'Bon de commande modifié',
+            description: `Le bon de commande "${order.orderNumber}" a été mis à jour.`,
+        });
+    } else {
+        const newOrderNumber = `BC-${(lastOrderNumber + 1).toString().padStart(4, '0')}`;
+        const purchaseOrdersRef = collection(firestore, 'purchaseOrders');
+        addDocumentNonBlocking(purchaseOrdersRef, {
+            ...orderData,
+            orderNumber: newOrderNumber,
+            status: 'Brouillon' as const,
+        });
 
-    toast({
-      title: 'Bon de commande créé',
-      description: `Le bon de commande "${newOrderNumber}" a été créé en tant que brouillon.`,
-    });
+        toast({
+          title: 'Bon de commande créé',
+          description: `Le bon de commande "${newOrderNumber}" a été créé en tant que brouillon.`,
+        });
+    }
     
-    onOrderCreated?.(newOrderData as PurchaseOrder);
-
-    setOpen(false);
-    form.reset({
-        supplierId: '',
-        orderDate: new Date().toISOString().split('T')[0],
-        items: [{ productId: '', quantity: 1 }],
-    });
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Créer un bon de commande
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Créer un bon de commande</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de commande</DialogTitle>
               <DialogDescription>
-                Remplissez les informations ci-dessous pour créer un nouveau bon de commande.
+                Remplissez les informations ci-dessous.
               </DialogDescription>
             </DialogHeader>
 
@@ -177,7 +194,7 @@ export function PurchaseOrderDialog({
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Fournisseur</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Sélectionnez un fournisseur" />
@@ -221,22 +238,18 @@ export function PurchaseOrderDialog({
                     name={`items.${index}.productId`}
                     render={({ field: itemField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={itemField.onChange} defaultValue={itemField.value} disabled={!supplierId || isLoadingProducts}>
+                        <Select onValueChange={itemField.onChange} value={itemField.value} disabled={!supplierId}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Sélectionnez un produit" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {isLoadingProducts ? (
-                                <SelectItem value="loading" disabled>Chargement...</SelectItem>
-                            ) : (
-                                filteredProducts?.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                    {product.name}
-                                </SelectItem>
-                                ))
-                            )}
+                            {filteredProducts?.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                  {product.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -260,7 +273,7 @@ export function PurchaseOrderDialog({
                   </Button>
                 </div>
               ))}
-               {supplierId && !isLoadingProducts && (!filteredProducts || filteredProducts.length === 0) && (
+               {supplierId && (!filteredProducts || filteredProducts.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
                     Aucun produit trouvé pour ce fournisseur.
                     <ProductDialog suppliers={suppliers.filter(s => s.id === supplierId)} isChild>
@@ -287,7 +300,8 @@ export function PurchaseOrderDialog({
 
 
             <DialogFooter>
-              <Button type="submit">Créer le bon de commande</Button>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
+                <Button type="submit">{isEditMode ? 'Enregistrer les modifications' : 'Créer le bon de commande'}</Button>
             </DialogFooter>
           </form>
         </Form>
