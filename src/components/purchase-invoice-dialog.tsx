@@ -50,17 +50,28 @@ type PurchaseInvoiceDialogProps = {
   purchaseOrders: PurchaseOrder[];
   onInvoiceCreated?: (invoice: PurchaseInvoice) => void;
   lastInvoiceNumber: number;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  purchaseOrder?: PurchaseOrder;
 };
 
 export function PurchaseInvoiceDialog({
   purchaseOrders,
   onInvoiceCreated,
   lastInvoiceNumber,
+  isOpen: openProp,
+  onOpenChange: onOpenChangeProp,
+  purchaseOrder,
 }: PurchaseInvoiceDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const [totalAmount, setTotalAmount] = useState(0);
   const firestore = useFirestore();
+  
+  const isTriggeredExternally = openProp !== undefined;
+  const isOpen = openProp !== undefined ? openProp : internalOpen;
+  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
+
 
   const form = useForm<PurchaseInvoiceFormValues>({
     resolver: zodResolver(purchaseInvoiceSchema),
@@ -74,15 +85,29 @@ export function PurchaseInvoiceDialog({
   const purchaseOrderId = form.watch('purchaseOrderId');
 
   useEffect(() => {
-    if (purchaseOrderId) {
-      const order = purchaseOrders.find((o) => o.id === purchaseOrderId);
+    const orderIdToUse = purchaseOrder?.id || purchaseOrderId;
+    if (orderIdToUse) {
+      const order = purchaseOrders.find((o) => o.id === orderIdToUse);
       if (order) {
         setTotalAmount(order.totalAmount);
+        form.setValue('purchaseOrderId', order.id);
       }
     } else {
       setTotalAmount(0);
     }
-  }, [purchaseOrderId, purchaseOrders]);
+  }, [purchaseOrderId, purchaseOrder, purchaseOrders, form, isOpen]);
+  
+  useEffect(() => {
+    if (!isOpen) {
+      form.reset({
+        purchaseOrderId: '',
+        invoiceDate: new Date().toISOString().split('T')[0],
+        dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
+      });
+      setTotalAmount(0);
+    }
+  }, [isOpen, form]);
+
 
   const onSubmit = (data: PurchaseInvoiceFormValues) => {
     if (!firestore) return;
@@ -112,22 +137,21 @@ export function PurchaseInvoiceDialog({
     
     onInvoiceCreated?.(newInvoiceData as PurchaseInvoice);
     
-    setOpen(false);
-    form.reset({
-      purchaseOrderId: '',
-      invoiceDate: new Date().toISOString().split('T')[0],
-      dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
-    });
+    onOpenChange(false);
   };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+  
+  const Trigger = !isTriggeredExternally ? (
+     <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
           Créer une facture
         </Button>
       </DialogTrigger>
+  ) : null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {Trigger}
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -144,7 +168,7 @@ export function PurchaseInvoiceDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bon de commande</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!!purchaseOrder}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionnez un bon de commande" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import type {
   PurchaseReceipt,
   PurchaseOrder,
@@ -58,14 +58,20 @@ type PurchaseReceiptsTableProps = {
   receipts: PurchaseReceipt[];
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
+  onRowClick?: (receipt: PurchaseReceipt) => void;
   onRowDoubleClick?: (receipt: PurchaseReceipt) => void;
+  selectedReceiptId?: string | null;
+  actionHeaderContent?: ReactNode;
 };
 
 export function PurchaseReceiptsTable({
   receipts,
   purchaseOrders,
   suppliers,
-  onRowDoubleClick
+  onRowClick,
+  onRowDoubleClick,
+  selectedReceiptId,
+  actionHeaderContent,
 }: PurchaseReceiptsTableProps) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
 
@@ -154,8 +160,9 @@ export function PurchaseReceiptsTable({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Bons de réception récents</CardTitle>
+        {actionHeaderContent}
       </CardHeader>
       <CardContent>
         {receipts.length > 0 ? (
@@ -179,8 +186,9 @@ export function PurchaseReceiptsTable({
                   {enrichedReceipts.map((receipt) => (
                     <TableRow 
                       key={receipt.id}
+                      onClick={() => onRowClick?.(receipt)}
                       onDoubleClick={() => onRowDoubleClick?.(receipt)}
-                      className={cn(onRowDoubleClick && "cursor-pointer")}
+                      className={cn("cursor-pointer", selectedReceiptId === receipt.id && 'bg-muted/50')}
                     >
                       {columnIds.map((columnId) => renderCellContent(receipt, columnId))}
                     </TableRow>
