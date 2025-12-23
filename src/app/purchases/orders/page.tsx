@@ -1,8 +1,6 @@
 'use client';
 
 import { PageHeader } from '@/components/page-header';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -14,21 +12,30 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
-import { products, suppliers, purchaseOrders as initialPurchaseOrders } from '@/lib/data';
-import type { PurchaseOrder } from '@/lib/types';
+import { products, purchaseOrders as initialPurchaseOrders } from '@/lib/data';
+import type { PurchaseOrder, Supplier } from '@/lib/types';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function PurchaseOrdersPage() {
   const [orders, setOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
+  const firestore = useFirestore();
+
+  const suppliersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'suppliers') : null),
+    [firestore]
+  );
+  const { data: suppliers } = useCollection<Supplier>(suppliersRef);
 
   const addOrder = (newOrder: PurchaseOrder) => {
     setOrders(prevOrders => [...prevOrders, newOrder]);
   };
 
   const getSupplierName = (supplierId: string) => {
-    return suppliers.find(s => s.id === supplierId)?.name ?? 'Inconnu';
+    return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
   };
 
   const getStatusVariant = (status: PurchaseOrder['status']) => {
@@ -53,7 +60,7 @@ export default function PurchaseOrdersPage() {
         description="Gérez vos bons de commande."
       >
         <PurchaseOrderDialog
-          suppliers={suppliers}
+          suppliers={suppliers || []}
           products={products}
           onOrderCreated={addOrder}
           lastOrderNumber={orders.length}

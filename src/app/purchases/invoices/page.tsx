@@ -5,14 +5,22 @@ import { PageHeader } from '@/components/page-header';
 import {
   purchaseOrders,
   purchaseInvoices as initialPurchaseInvoices,
-  suppliers,
 } from '@/lib/data';
-import type { PurchaseInvoice } from '@/lib/types';
+import type { PurchaseInvoice, Supplier } from '@/lib/types';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { PurchaseInvoicesTable } from '@/components/purchase-invoices-table';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function PurchaseInvoicesPage() {
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>(initialPurchaseInvoices);
+  const firestore = useFirestore();
+
+  const suppliersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'suppliers') : null),
+    [firestore]
+  );
+  const { data: suppliers } = useCollection<Supplier>(suppliersRef);
 
   const addInvoice = (newInvoice: PurchaseInvoice) => {
     setInvoices((prevInvoices) => [...prevInvoices, newInvoice]);
@@ -37,7 +45,7 @@ export default function PurchaseInvoicesPage() {
       <PurchaseInvoicesTable 
         invoices={invoices}
         purchaseOrders={purchaseOrders}
-        suppliers={suppliers}
+        suppliers={suppliers || []}
       />
     </div>
   );
