@@ -179,11 +179,9 @@ export default function PurchaseOrdersPage() {
   };
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    // If the click is on a row or a button, do nothing.
     if ((e.target as HTMLElement).closest('tr, button')) {
       return;
     }
-    // Otherwise, the click was outside a selectable/actionable area, so deselect.
     setSelectedOrder(null);
   };
 
