@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -88,6 +88,11 @@ export function PurchaseOrderDialog({
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
+    defaultValues: {
+      supplierId: '',
+      orderDate: new Date().toISOString().split('T')[0],
+      items: [{ productId: '', quantity: 1 }],
+    }
   });
 
   const { fields, append, remove, replace, update } = useFieldArray({
@@ -95,18 +100,22 @@ export function PurchaseOrderDialog({
     name: 'items',
   });
   
-  const watchedItems = form.watch('items');
+  const watchedItems = useWatch({
+    control: form.control,
+    name: 'items',
+  });
 
-  const total = useMemo(() => {
+  const liveTotal = useMemo(() => {
     if (!watchedItems || !products) return 0;
-    return watchedItems.reduce((acc, item) => {
-        if(item && item.productId && item.quantity > 0) {
-            const product = products.find(p => p.id === item.productId);
-            return acc + (product ? product.price * item.quantity : 0);
-        }
-        return acc;
+    return watchedItems.reduce((sum, item) => {
+      if (item && item.productId && item.quantity > 0) {
+        const product = products.find(p => p.id === item.productId);
+        return sum + (item.quantity * (product?.price || 0));
+      }
+      return sum;
     }, 0);
   }, [watchedItems, products]);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -130,6 +139,11 @@ export function PurchaseOrderDialog({
   const onSubmit = async (data: PurchaseOrderFormValues) => {
     if (!firestore) return;
     
+    const totalAmount = data.items.reduce((sum, item) => {
+      const product = products?.find(p => p.id === item.productId);
+      return sum + (item.quantity * (product?.price || 0));
+    }, 0);
+
     const orderData = {
         supplierId: data.supplierId,
         orderDate: new Date(data.orderDate).toISOString(),
@@ -137,7 +151,7 @@ export function PurchaseOrderDialog({
             ...item,
             price: products?.find(p => p.id === item.productId)?.price || 0
         })),
-        totalAmount: total,
+        totalAmount: totalAmount,
     };
 
     if (isEditMode && order) {
@@ -316,13 +330,13 @@ export function PurchaseOrderDialog({
                     {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
                         currency: 'EUR',
-                    }).format(total)}
+                    }).format(liveTotal)}
                 </span>
             </div>
 
             <DialogFooter className="sm:justify-between">
               <div className="flex gap-2">
-                 {isEditMode ? (
+                {isEditMode ? (
                   <Button type="button" variant="ghost" onClick={handleTransferClick}>
                     Transférer en BR
                   </Button>
@@ -337,7 +351,7 @@ export function PurchaseOrderDialog({
                 )}
               </div>
               <div className="flex gap-2">
-                {isEditMode && (
+                 {isEditMode && (
                   <Button
                     type="button"
                     variant="ghost"
