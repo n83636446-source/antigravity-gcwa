@@ -35,7 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt, Supplier } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
-import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { ArticleDialog } from './article-dialog';
@@ -64,6 +64,7 @@ type PurchaseReceiptDialogProps = {
   purchaseOrders: PurchaseOrder[];
   receipts: PurchaseReceipt[];
   products: Product[];
+  suppliers: Supplier[];
   lastReceiptNumber: number;
   onReceiptCreated?: () => void;
   isOpen?: boolean;
@@ -83,6 +84,7 @@ export function PurchaseReceiptDialog({
   purchaseOrders,
   receipts,
   products,
+  suppliers,
   lastReceiptNumber,
   onReceiptCreated,
   isOpen: openProp,
@@ -103,20 +105,13 @@ export function PurchaseReceiptDialog({
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
 
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
-  );
-  const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
-
-
   const lastSupplierCodeNumber = useMemo(() => {
-    if (!allSuppliers || allSuppliers.length === 0) return 0;
-    return allSuppliers.reduce((max, s) => {
+    if (!suppliers || suppliers.length === 0) return 0;
+    return suppliers.reduce((max, s) => {
       const codeNumber = parseInt((s.code || 'FOU0').replace('FOU', ''), 10);
       return codeNumber > max ? codeNumber : max;
     }, 0);
-  }, [allSuppliers]);
+  }, [suppliers]);
 
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
@@ -409,7 +404,7 @@ export function PurchaseReceiptDialog({
                           </div>
                         </SelectItem>
                         <Separator />
-                        {allSuppliers?.map((supplier) => (
+                        {suppliers?.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
                           </SelectItem>
@@ -577,7 +572,7 @@ export function PurchaseReceiptDialog({
       onOpenChange={setSupplierDialogOpen}
       lastSupplierCodeNumber={lastSupplierCodeNumber}
       onSupplierCreated={handleSupplierCreated}
-      suppliers={allSuppliers || []}
+      suppliers={suppliers || []}
     />
     </>
   );

@@ -292,6 +292,7 @@ export default function PurchaseReceiptsPage() {
           purchaseOrders={allOrders || []}
           receipts={receipts || []}
           products={products || []}
+          suppliers={suppliers || []}
           lastReceiptNumber={receipts?.length || 0}
         />
       </PageHeader>
@@ -375,6 +376,7 @@ export default function PurchaseReceiptsPage() {
           purchaseOrders={allOrders || []}
           receipts={receipts || []}
           products={products || []}
+          suppliers={suppliers || []}
           lastReceiptNumber={receipts?.length || 0}
           receipt={editingReceipt}
           onValidate={handleValidateReceipt}
