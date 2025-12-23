@@ -64,11 +64,7 @@ service cloud.firestore {
      * requires user authentication, suitable for an internal application prototype.
      */
     match /suppliers/{supplierId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resourceExists();
-      allow delete: if isSignedIn() && resourceExists();
+      allow read, write: if isSignedIn();
     }
 
     /**
@@ -115,11 +111,47 @@ service cloud.firestore {
      * data, requiring authentication for any interaction.
      */
     match /reports/{reportId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resourceExists();
-      allow delete: if isSignedIn() && resourceExists();
+      allow read, write: if isSignedIn();
+    }
+
+    /**
+     * @description Manages client documents. Any authenticated user can manage clients.
+     * @path /clients/{clientId}
+     */
+    match /clients/{clientId} {
+      allow read, write: if isSignedIn();
+    }
+
+    /**
+     * @description Manages purchase order documents. Any authenticated user can manage them.
+     * @path /purchaseOrders/{purchaseOrderId}
+     */
+    match /purchaseOrders/{purchaseOrderId} {
+        allow read, write: if isSignedIn();
+    }
+    
+    /**
+     * @description Manages purchase receipt documents. Any authenticated user can manage them.
+     * @path /purchaseReceipts/{purchaseReceiptId}
+     */
+    match /purchaseReceipts/{purchaseReceiptId} {
+        allow read, write: if isSignedIn();
+    }
+
+    /**
+     * @description Manages purchase invoice documents. Any authenticated user can manage them.
+     * @path /purchaseInvoices/{purchaseInvoiceId}
+     */
+    match /purchaseInvoices/{purchaseInvoiceId} {
+        allow read, write: if isSignedIn();
+    }
+
+    /**
+     * @description Manages credit note documents. Any authenticated user can manage them.
+     * @path /creditNotes/{creditNoteId}
+     */
+    match /creditNotes/{creditNoteId} {
+        allow read, write: if isSignedIn();
     }
   }
 }
