@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -217,55 +217,56 @@ export default function PurchaseReceiptsPage() {
   };
   
  const handleCancelValidation = async () => {
-    if (isLoading) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Les données ne sont pas encore prêtes. Veuillez patienter.' });
-        return;
-    }
-    // This is a critical guard. Do not proceed if collections are not loaded.
+    // Critical Guard: Ensure all required data collections are loaded.
     if (!firestore || !products || !invoices) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Les données nécessaires ne sont pas chargées. Veuillez réessayer.' });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de données',
+        description: 'Les données nécessaires (produits, factures) ne sont pas encore chargées. Veuillez patienter.',
+      });
+      return;
     }
 
     const receiptToCancel = selectedReceipt;
     if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
 
+    // Check if the related PO has been invoiced
     if (receiptToCancel.purchaseOrderId) {
-        const isFactured = invoices.some(
-            (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
-        );
+      const isFactured = invoices.some(
+        (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
+      );
 
-        if (isFactured) {
-            toast({
-                variant: 'destructive',
-                title: 'Action impossible',
-                description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
-            });
-            return;
-        }
+      if (isFactured) {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
+        });
+        return;
+      }
     }
 
-    // Defensive check: Ensure all products in the receipt exist in the main product list.
+    // Defensive check: Ensure all products in the receipt exist and have enough stock.
     for (const item of receiptToCancel.items) {
-        const product = products.find(p => p.id === item.productId);
-        if (!product) {
-            toast({
-                variant: 'destructive',
-                title: 'Action impossible',
-                description: `L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible.`,
-                duration: 7000,
-            });
-            return; // Stop the entire operation
-        }
-        if (product.stockLevel < item.quantityReceived) {
-            toast({
-                variant: 'destructive',
-                title: 'Action impossible',
-                description: `Stock insuffisant pour l'article "${product.name}" pour annuler la réception. Stock actuel: ${product.stockLevel}, Quantité reçue: ${item.quantityReceived}.`,
-                duration: 7000,
-            });
-            return; // Stop the entire operation
-        }
+      const product = products.find(p => p.id === item.productId);
+      if (!product) {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: `L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible.`,
+          duration: 7000,
+        });
+        return; // Stop the entire operation
+      }
+      if (product.stockLevel < item.quantityReceived) {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: `Stock insuffisant pour l'article "${product.name}" pour annuler la réception. Stock actuel: ${product.stockLevel}, Quantité reçue: ${item.quantityReceived}.`,
+          duration: 7000,
+        });
+        return; // Stop the entire operation
+      }
     }
 
     // If all checks pass, proceed with the batch update.
@@ -273,28 +274,28 @@ export default function PurchaseReceiptsPage() {
     const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
     batch.update(receiptRef, { status: 'Brouillon' });
 
-    for (const item of receiptToCancel.items) {
-        if (item.quantityReceived > 0) {
-            const productRef = doc(firestore, 'products', item.productId);
-            batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
-        }
-    }
+    receiptToCancel.items.forEach(item => {
+      if (item.quantityReceived > 0) {
+        const productRef = doc(firestore, 'products', item.productId);
+        batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
+      }
+    });
 
     try {
-        await batch.commit();
-        toast({
-            title: 'Validation annulée',
-            description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
-        });
-        const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
-        setSelectedReceipt(updatedReceipt);
+      await batch.commit();
+      toast({
+        title: 'Validation annulée',
+        description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
+      });
+      const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
+      setSelectedReceipt(updatedReceipt);
     } catch (error) {
-        console.error("Validation cancellation failed: ", error);
-        toast({
-            variant: 'destructive',
-            title: 'Erreur d\'annulation',
-            description: 'L\'annulation a échoué. Veuillez réessayer.',
-        });
+      console.error("Validation cancellation failed: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur d\'annulation',
+        description: 'L\'annulation a échoué. Veuillez réessayer.',
+      });
     }
 };
 
