@@ -286,7 +286,11 @@
         },
         "purchaseOrderId": {
           "type": "string",
-          "description": "Reference to the PurchaseOrder."
+          "description": "Optional reference to the PurchaseOrder."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to the Supplier."
         },
         "receiptDate": {
           "type": "string",
@@ -305,16 +309,12 @@
               "productId": {
                 "type": "string"
               },
-              "quantityOrdered": {
-                "type": "number"
-              },
               "quantityReceived": {
                 "type": "number"
               }
             },
             "required": [
               "productId",
-              "quantityOrdered",
               "quantityReceived"
             ]
           }
@@ -330,7 +330,7 @@
       },
       "required": [
         "receiptNumber",
-        "purchaseOrderId",
+        "supplierId",
         "receiptDate",
         "items",
         "status"

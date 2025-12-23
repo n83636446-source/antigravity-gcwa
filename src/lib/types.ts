@@ -54,14 +54,15 @@ export type Client = {
 
 export type PurchaseReceiptItem = {
   productId: string;
-  quantityOrdered: number;
+  quantityOrdered?: number; // Now optional
   quantityReceived: number;
 };
 
 export type PurchaseReceipt = {
   id: string;
   receiptNumber: string;
-  purchaseOrderId: string;
+  purchaseOrderId?: string; // Made optional
+  supplierId: string; // Added to directly link to supplier
   receiptDate: string; // ISO string
   notes?: string;
   items: PurchaseReceiptItem[];

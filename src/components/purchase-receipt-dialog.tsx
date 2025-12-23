@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,18 +30,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, CheckCircle, FileText, XCircle } from 'lucide-react';
+import { PlusCircle, CheckCircle, FileText, XCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
+import type { Product, PurchaseOrder, PurchaseReceipt, Supplier } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
-import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { ArticleDialog } from './article-dialog';
+import { SupplierDialog } from './supplier-dialog';
 
 const receiptItemSchema = z.object({
-  productId: z.string(),
-  quantityOrdered: z.coerce.number().int(),
+  productId: z.string().nonempty("Veuillez sélectionner un article."),
+  quantityOrdered: z.coerce.number().int().optional(),
   quantityReceived: z.coerce
     .number()
     .int()
@@ -49,12 +51,11 @@ const receiptItemSchema = z.object({
 });
 
 const purchaseReceiptSchema = z.object({
-  purchaseOrderId: z
-    .string()
-    .nonempty('Un bon de commande doit être sélectionné.'),
+  purchaseOrderId: z.string().optional(),
+  supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   receiptDate: z.string({ required_error: 'La date est requise.' }),
   notes: z.string().optional(),
-  items: z.array(receiptItemSchema),
+  items: z.array(receiptItemSchema).min(1, 'Le bon de réception doit contenir au moins un article.'),
 });
 
 type PurchaseReceiptFormValues = z.infer<typeof purchaseReceiptSchema>;
@@ -72,6 +73,10 @@ type PurchaseReceiptDialogProps = {
   onTransferToInvoice?: () => void;
   onCancelValidation?: () => void;
 };
+
+const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
+const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
+
 
 export function PurchaseReceiptDialog({
   purchaseOrders,
@@ -91,6 +96,26 @@ export function PurchaseReceiptDialog({
   const firestore = useFirestore();
   const isTriggeredExternally = openProp !== undefined;
   const isEditMode = !!receipt;
+  
+  const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
+  const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
+  const articleCreationIndex = useRef<number | null>(null);
+
+  const suppliersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'suppliers') : null),
+    [firestore]
+  );
+  const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
+
+
+  const lastSupplierCodeNumber = useMemo(() => {
+    if (!allSuppliers || allSuppliers.length === 0) return 0;
+    return allSuppliers.reduce((max, s) => {
+      const codeNumber = parseInt((s.code || 'FOU0').replace('FOU', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [allSuppliers]);
+
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
@@ -100,72 +125,86 @@ export function PurchaseReceiptDialog({
     resolver: zodResolver(purchaseReceiptSchema),
     defaultValues: {
       purchaseOrderId: '',
+      supplierId: '',
       receiptDate: new Date().toISOString().split('T')[0],
       notes: '',
       items: [],
     },
   });
 
-  const { fields, replace } = useFieldArray({
+  const { fields, replace, append, remove } = useFieldArray({
     control: form.control,
     name: 'items',
   });
 
   const watchedOrderId = form.watch('purchaseOrderId');
-  
-  const getOrderForReceipt = () => {
-    if (isEditMode && receipt) {
-      return purchaseOrders.find(o => o.id === receipt.purchaseOrderId);
-    }
-    return purchaseOrder || purchaseOrders.find(o => o.id === watchedOrderId);
-  }
+  const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
 
   useEffect(() => {
-    const orderToLoad = getOrderForReceipt();
-    if (isOpen) {
-      if (isEditMode && receipt && orderToLoad) {
-         form.reset({
-            purchaseOrderId: receipt.purchaseOrderId,
-            receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
-            notes: receipt.notes || '',
-            items: receipt.items.map((item) => ({
-              productId: item.productId,
-              quantityOrdered: orderToLoad.items.find(i => i.productId === item.productId)?.quantity || 0,
-              quantityReceived: item.quantityReceived,
-            })),
-          });
-      } else if (!isEditMode) {
-        const effectiveOrder = purchaseOrder || purchaseOrders.find(o => o.id === watchedOrderId);
-        if (effectiveOrder) {
-          form.reset({
-            purchaseOrderId: effectiveOrder.id,
-            receiptDate: new Date().toISOString().split('T')[0],
-            notes: '',
-            items: effectiveOrder.items.map((item) => ({
-              productId: item.productId,
-              quantityOrdered: item.quantity,
-              quantityReceived: item.quantity,
-            })),
-          });
-        } else {
-            // If no order is selected (e.g. creating from scratch), reset the form
-            form.reset({
-                purchaseOrderId: '',
-                receiptDate: new Date().toISOString().split('T')[0],
-                notes: '',
-                items: [],
-            });
-        }
-      }
-    } else if (!isTriggeredExternally) {
+    if (!isOpen) {
       form.reset({
         purchaseOrderId: '',
+        supplierId: '',
         receiptDate: new Date().toISOString().split('T')[0],
         notes: '',
         items: [],
       });
+      return;
     }
-  }, [isOpen, purchaseOrder, watchedOrderId, receipt, isEditMode, purchaseOrders, form, isTriggeredExternally]);
+  
+    if (isEditMode && receipt) {
+      const orderForReceipt = purchaseOrders.find(o => o.id === receipt.purchaseOrderId);
+      form.reset({
+        purchaseOrderId: receipt.purchaseOrderId,
+        supplierId: receipt.supplierId,
+        receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
+        notes: receipt.notes || '',
+        items: receipt.items.map(item => ({
+          productId: item.productId,
+          quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
+          quantityReceived: item.quantityReceived,
+        })),
+      });
+    } else if (purchaseOrder) {
+      // Case: Transfer from a specific PO
+      form.reset({
+        purchaseOrderId: purchaseOrder.id,
+        supplierId: purchaseOrder.supplierId,
+        receiptDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        items: purchaseOrder.items.map(item => ({
+          productId: item.productId,
+          quantityOrdered: item.quantity,
+          quantityReceived: item.quantity,
+        })),
+      });
+    } else {
+      // Case: Creating a new BR from scratch or after selecting a PO in dialog
+      const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
+      if (selectedPO) {
+        form.reset({
+          purchaseOrderId: selectedPO.id,
+          supplierId: selectedPO.supplierId,
+          receiptDate: new Date().toISOString().split('T')[0],
+          notes: '',
+          items: selectedPO.items.map(item => ({
+            productId: item.productId,
+            quantityOrdered: item.quantity,
+            quantityReceived: item.quantity,
+          })),
+        });
+      } else {
+         // Reset for manual creation
+         form.reset({
+            purchaseOrderId: '',
+            supplierId: '',
+            receiptDate: new Date().toISOString().split('T')[0],
+            notes: '',
+            items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0 }],
+         });
+      }
+    }
+  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form]);
 
 
   const getProductName = (productId: string) => {
@@ -175,22 +214,25 @@ export function PurchaseReceiptDialog({
 
   const onSubmit = async (data: PurchaseReceiptFormValues) => {
     if (!firestore) return;
+    
+    const receiptData = {
+      purchaseOrderId: data.purchaseOrderId,
+      supplierId: data.supplierId,
+      receiptDate: new Date(data.receiptDate).toISOString(),
+      notes: data.notes,
+      items: data.items.map(({ productId, quantityReceived }) => ({
+        productId,
+        quantityReceived,
+      })),
+    };
+
 
     if (isEditMode && receipt) {
         const receiptDocRef = doc(firestore, 'purchaseReceipts', receipt.id);
-        const updatedData = {
-            receiptDate: new Date(data.receiptDate).toISOString(),
-            notes: data.notes,
-            items: data.items.map(
-              ({ productId, quantityOrdered, quantityReceived }) => ({
-                productId,
-                quantityOrdered,
-                quantityReceived,
-              })
-            ),
-        };
-        // In edit mode, we only update notes, date, and quantities. Status and stock are handled by validation actions.
-        updateDocumentNonBlocking(receiptDocRef, updatedData);
+        updateDocumentNonBlocking(receiptDocRef, {
+            ...receiptData,
+            status: receipt.status,
+        });
         toast({
             title: 'Bon de réception modifié',
             description: 'Les détails du bon de réception ont été mis à jour.',
@@ -201,19 +243,10 @@ export function PurchaseReceiptDialog({
           .toString()
           .padStart(4, '0')}`;
 
-        const newReceiptData: Omit<PurchaseReceipt, 'id'> = {
+        const newReceiptData = {
+          ...receiptData,
           receiptNumber: newReceiptNumber,
-          purchaseOrderId: data.purchaseOrderId,
-          receiptDate: new Date(data.receiptDate).toISOString(),
-          notes: data.notes,
-          status: 'Brouillon',
-          items: data.items.map(
-            ({ productId, quantityOrdered, quantityReceived }) => ({
-              productId,
-              quantityOrdered,
-              quantityReceived,
-            })
-          ),
+          status: 'Brouillon' as const,
         };
 
         const receiptRef = collection(firestore, 'purchaseReceipts');
@@ -238,6 +271,43 @@ export function PurchaseReceiptDialog({
     onOpenChange(false);
   };
   
+  const handleSupplierChange = (value: string) => {
+    if (value === CREATE_NEW_SUPPLIER_VALUE) {
+      setSupplierDialogOpen(true);
+    } else {
+      form.setValue('supplierId', value);
+    }
+  };
+
+  const handleSupplierCreated = (newSupplier: Supplier) => {
+    if(newSupplier && newSupplier.id) {
+        form.setValue('supplierId', newSupplier.id);
+    }
+    setSupplierDialogOpen(false);
+  };
+
+  const handleProductChange = (value: string, index: number) => {
+    if (value === CREATE_NEW_ARTICLE_VALUE) {
+      articleCreationIndex.current = index;
+      setArticleDialogOpen(true);
+    } else {
+      const field = fields[index];
+      field.productId = value;
+      replace(fields);
+    }
+  };
+
+  const handleArticleCreated = (newArticle: Product) => {
+    if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
+      const index = articleCreationIndex.current;
+      const field = fields[index];
+      field.productId = newArticle.id;
+      replace(fields);
+    }
+    articleCreationIndex.current = null;
+    setArticleDialogOpen(false);
+  };
+  
   const Trigger = !isTriggeredExternally ? (
     <DialogTrigger asChild>
       <Button>
@@ -246,9 +316,12 @@ export function PurchaseReceiptDialog({
       </Button>
     </DialogTrigger>
   ) : null;
+  
+  const readOnly = isEditMode && receipt?.status === 'Validé';
 
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
       <DialogContent className="sm:max-w-[80vw]">
@@ -257,7 +330,7 @@ export function PurchaseReceiptDialog({
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
               <DialogDescription>
-                {isEditMode ? 'Modifiez les informations du bon de réception.' : "Créez un bon de réception à partir d'un bon de commande existant."}
+                {isEditMode ? 'Modifiez les informations du bon de réception.' : "Créez un bon de réception à partir d'un bon de commande existant ou manuellement."}
               </DialogDescription>
             </DialogHeader>
 
@@ -267,10 +340,10 @@ export function PurchaseReceiptDialog({
                 name="purchaseOrderId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bon de commande</FormLabel>
+                    <FormLabel>Bon de commande (Optionnel)</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ''}
                       disabled={isTriggeredExternally || isEditMode}
                     >
                       <FormControl>
@@ -290,45 +363,117 @@ export function PurchaseReceiptDialog({
                   </FormItem>
                 )}
               />
-              <FormField
+               <FormField
                 control={form.control}
                 name="receiptDate"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Date de réception</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} disabled={isEditMode && receipt?.status === 'Validé'} />
+                      <Input type="date" {...field} disabled={readOnly} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+             <FormField
+                control={form.control}
+                name="supplierId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fournisseur</FormLabel>
+                    <Select
+                      onValueChange={handleSupplierChange}
+                      value={field.value}
+                      disabled={readOnly || fromBC}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez un fournisseur" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                          <div className="flex items-center gap-2">
+                            <PlusCircle className="h-4 w-4" />
+                            <span>Créer un nouveau fournisseur</span>
+                          </div>
+                        </SelectItem>
+                        <Separator />
+                        {allSuppliers?.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
             <Separator />
 
             <div className="space-y-4">
-              <div className="grid grid-cols-3 items-center gap-4">
-                <FormLabel className="col-span-1">Article</FormLabel>
-                <FormLabel className="text-center">Qté Commandée</FormLabel>
+              <div className={cn("grid items-center gap-4", fromBC ? "grid-cols-3" : "grid-cols-[1fr_auto_auto]")}>
+                <FormLabel>Article</FormLabel>
+                {fromBC && <FormLabel className="text-center">Qté Commandée</FormLabel>}
                 <FormLabel className="text-center">Qté Reçue</FormLabel>
+                {!fromBC && <div />}
               </div>
 
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-3 items-center gap-4"
+                  className={cn("grid items-center gap-4", fromBC ? "grid-cols-3" : "grid-cols-[1fr_auto_auto]")}
                 >
-                  <p className="col-span-1 text-sm font-medium">
-                    {getProductName(field.productId)}
-                  </p>
-                  <Input
-                    type="number"
-                    readOnly
-                    disabled
-                    value={field.quantityOrdered}
-                    className="w-full text-center"
-                  />
+                  {fromBC ? (
+                     <p className="text-sm font-medium">
+                        {getProductName(field.productId)}
+                     </p>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.productId`}
+                      render={({ field: itemField }) => (
+                        <FormItem>
+                          <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez un article" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                <div className="flex items-center gap-2">
+                                  <PlusCircle className="h-4 w-4" />
+                                  <span>Créer un nouvel article</span>
+                                </div>
+                              </SelectItem>
+                              <Separator />
+                              {products?.map((product) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {fromBC && (
+                    <Input
+                      type="number"
+                      readOnly
+                      disabled
+                      value={field.quantityOrdered}
+                      className="w-full text-center"
+                    />
+                  )}
                   <FormField
                     control={form.control}
                     name={`items.${index}.quantityReceived`}
@@ -339,7 +484,7 @@ export function PurchaseReceiptDialog({
                             type="number"
                             placeholder="Qté reçue"
                             className="w-full text-center"
-                            disabled={isEditMode && receipt?.status === 'Validé'}
+                            disabled={readOnly}
                             {...itemField}
                           />
                         </FormControl>
@@ -347,8 +492,18 @@ export function PurchaseReceiptDialog({
                       </FormItem>
                     )}
                   />
+                  {!fromBC && !readOnly && (
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
               ))}
+               {!fromBC && !readOnly && (
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0 })}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
+                </Button>
+              )}
             </div>
 
             <FormField
@@ -361,7 +516,7 @@ export function PurchaseReceiptDialog({
                     <Textarea
                       placeholder="Ajouter des notes sur la réception..."
                       {...field}
-                       disabled={isEditMode && receipt?.status === 'Validé'}
+                       disabled={readOnly}
                     />
                   </FormControl>
                   <FormMessage />
@@ -393,9 +548,9 @@ export function PurchaseReceiptDialog({
               </div>
               <div className='flex gap-2'>
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                  {isEditMode && receipt?.status === 'Validé' ? 'Fermer' : 'Annuler'}
+                  {readOnly ? 'Fermer' : 'Annuler'}
                 </Button>
-                {!(isEditMode && receipt?.status === 'Validé') && (
+                {!readOnly && (
                   <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
                 )}
               </div>
@@ -404,5 +559,18 @@ export function PurchaseReceiptDialog({
         </Form>
       </DialogContent>
     </Dialog>
+    <ArticleDialog
+      isOpen={isArticleDialogOpen}
+      onOpenChange={setArticleDialogOpen}
+      onArticleCreated={handleArticleCreated}
+    />
+    <SupplierDialog
+      isOpen={isSupplierDialogOpen}
+      onOpenChange={setSupplierDialogOpen}
+      lastSupplierCodeNumber={lastSupplierCodeNumber}
+      onSupplierCreated={handleSupplierCreated}
+      suppliers={allSuppliers || []}
+    />
+    </>
   );
 }

@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 
 type EnrichedReceipt = PurchaseReceipt & {
-  orderNumber: string;
+  orderNumber?: string;
   supplierName: string;
   formattedDate: string;
 }
@@ -123,24 +123,20 @@ export function PurchaseReceiptsTable({
     }
   }
 
-
-  const getOrderDetails = (orderId: string) => {
-    const order = purchaseOrders.find((o) => o.id === orderId);
-    if (!order) return { orderNumber: 'Inconnu', supplierName: 'Inconnu' };
-    const supplier = suppliers.find((s) => s.id === order.supplierId);
-    return {
-      orderNumber: order.orderNumber,
-      supplierName: supplier?.name ?? 'Inconnu',
-    };
-  };
-  
   const enrichedReceipts = useMemo(() => {
     return (receipts || []).map(receipt => {
-      const { orderNumber, supplierName } = getOrderDetails(receipt.purchaseOrderId);
+      let orderNumber: string | undefined = 'N/A';
+      const supplier = suppliers.find((s) => s.id === receipt.supplierId);
+      
+      if (receipt.purchaseOrderId) {
+          const order = purchaseOrders.find((o) => o.id === receipt.purchaseOrderId);
+          orderNumber = order?.orderNumber;
+      }
+      
       return {
         ...receipt,
         orderNumber,
-        supplierName,
+        supplierName: supplier?.name ?? 'Inconnu',
         formattedDate: format(new Date(receipt.receiptDate), 'dd/MM/yyyy', { locale: fr }),
       };
     }).sort((a, b) => new Date(b.receiptDate).getTime() - new Date(a.receiptDate).getTime());

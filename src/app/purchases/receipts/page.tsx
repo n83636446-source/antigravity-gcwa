@@ -201,7 +201,7 @@ export default function PurchaseReceiptsPage() {
     if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
     
     const isFactured = (invoices || []).some(
-      (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
+      (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId && receiptToCancel.purchaseOrderId // Check only if PO id exists
     );
 
     if (isFactured) {
@@ -292,7 +292,7 @@ export default function PurchaseReceiptsPage() {
                 )}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice}>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice} disabled={selectedReceipt.status !== 'Validé' || !selectedReceipt.purchaseOrderId}>
                       <FileText className="h-4 w-4" />
                       <span className="sr-only">Transférer en Facture</span>
                     </Button>
