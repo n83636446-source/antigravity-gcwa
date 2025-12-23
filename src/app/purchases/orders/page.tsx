@@ -358,8 +358,10 @@ export default function PurchaseOrdersPage() {
           isOpen={receiptDialogOpen}
           onOpenChange={setReceiptDialogOpen}
           purchaseOrders={orders || []}
+          receipts={receipts || []}
           purchaseOrder={selectedOrder}
           products={products || []}
+          suppliers={suppliers || []}
           lastReceiptNumber={receipts?.length || 0}
           onReceiptCreated={handleReceiptCreated}
         />

@@ -133,6 +133,7 @@ export function PurchaseReceiptDialog({
 
   // Filter out purchase orders that already have a receipt
   const availablePurchaseOrders = useMemo(() => {
+    if (!receipts || !purchaseOrders) return [];
     const receivedOrderIds = new Set(receipts.map(r => r.purchaseOrderId));
     // When editing, allow the current receipt's PO to be in the list
     if (isEditMode && receipt?.purchaseOrderId) {
