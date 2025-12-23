@@ -10,12 +10,21 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { DraggableHeader } from './ui/DraggableHeader';
+import { ReactNode } from 'react';
+
+type Column = {
+    id: keyof Supplier | 'address';
+    label: string;
+};
 
 type SuppliersTableProps = {
   suppliers: Supplier[];
   onRowClick: (supplier: Supplier) => void;
   onRowDoubleClick: (supplier: Supplier) => void;
   selectedSupplierId?: string | null;
+  columns: Column[];
+  columnIds: (keyof Supplier | 'address')[];
 };
 
 export function SuppliersTable({
@@ -23,18 +32,41 @@ export function SuppliersTable({
   onRowClick,
   onRowDoubleClick,
   selectedSupplierId,
+  columns,
+  columnIds,
 }: SuppliersTableProps) {
+
+  const renderCellContent = (supplier: Supplier, columnId: Column['id']): ReactNode => {
+    const key = `${supplier.id}-${columnId}`;
+    switch (columnId) {
+      case 'code':
+        return <TableCell key={key} className="font-medium">{supplier.code}</TableCell>;
+      case 'name':
+        return <TableCell key={key}>{supplier.name}</TableCell>;
+      case 'ice':
+        return <TableCell key={key}>{supplier.ice}</TableCell>;
+      case 'address':
+        return <TableCell key={key}>{`${supplier.street}, ${supplier.city}, ${supplier.country}`}</TableCell>;
+      case 'contactName':
+        return <TableCell key={key}>{supplier.contactName}</TableCell>;
+      case 'contactEmail':
+        return <TableCell key={key}>{supplier.contactEmail}</TableCell>;
+      case 'contactPhone':
+        return <TableCell key={key}>{supplier.contactPhone}</TableCell>;
+      default:
+        return <TableCell key={key}></TableCell>;
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Code</TableHead>
-          <TableHead>Nom de l'entreprise</TableHead>
-          <TableHead>ICE</TableHead>
-          <TableHead>Adresse</TableHead>
-          <TableHead>Personne à contacter</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Téléphone</TableHead>
+          {columns.map(({ id, label }) => (
+            <DraggableHeader key={id} id={id}>
+              {label}
+            </DraggableHeader>
+          ))}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -48,13 +80,7 @@ export function SuppliersTable({
               selectedSupplierId === supplier.id && 'bg-muted/50'
             )}
           >
-            <TableCell className="font-medium">{supplier.code}</TableCell>
-            <TableCell>{supplier.name}</TableCell>
-            <TableCell>{supplier.ice}</TableCell>
-            <TableCell>{`${supplier.street}, ${supplier.city}, ${supplier.country}`}</TableCell>
-            <TableCell>{supplier.contactName}</TableCell>
-            <TableCell>{supplier.contactEmail}</TableCell>
-            <TableCell>{supplier.contactPhone}</TableCell>
+            {columnIds.map((columnId) => renderCellContent(supplier, columnId))}
           </TableRow>
         ))}
       </TableBody>

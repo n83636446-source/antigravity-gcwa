@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { collection, doc, collectionGroup, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Supplier, Product } from '@/lib/types';
@@ -24,6 +24,38 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { DraggableHeader } from '@/components/ui/DraggableHeader';
+import { cn } from '@/lib/utils';
+
+type Column = {
+  id: keyof Supplier | 'address';
+  label: string;
+};
+
+const initialColumns: Column[] = [
+  { id: 'code', label: 'Code' },
+  { id: 'name', label: 'Nom de l\'entreprise' },
+  { id: 'ice', label: 'ICE' },
+  { id: 'address', label: 'Adresse' },
+  { id: 'contactName', label: 'Personne à contacter' },
+  { id: 'contactEmail', label: 'Email' },
+  { id: 'contactPhone', label: 'Téléphone' },
+];
 
 export default function SuppliersPage() {
   const firestore = useFirestore();
@@ -33,6 +65,51 @@ export default function SuppliersPage() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [columns, setColumns] = useState<Column[]>(initialColumns);
+
+  useEffect(() => {
+    try {
+      const savedColumns = localStorage.getItem('suppliersColumns');
+      if (savedColumns) {
+        const parsedColumns: Column[] = JSON.parse(savedColumns);
+        const savedColumnIds = new Set(parsedColumns.map(c => c.id));
+        const initialColumnIds = new Set(initialColumns.map(c => c.id));
+        
+        if (parsedColumns.length === initialColumns.length && [...savedColumnIds].every(id => initialColumnIds.has(id))) {
+          setColumns(parsedColumns);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load or parse columns from localStorage", error);
+    }
+  }, []);
+
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setColumns((items) => {
+        const oldIndex = columnIds.indexOf(active.id as any);
+        const newIndex = columnIds.indexOf(over.id as any);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        try {
+          localStorage.setItem('suppliersColumns', JSON.stringify(newOrder));
+        } catch (error) {
+          console.error("Failed to save columns to localStorage", error);
+        }
+        return newOrder;
+      });
+    }
+  }
+
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -170,12 +247,22 @@ export default function SuppliersPage() {
             )}
           </CardHeader>
           <CardContent>
-            <SuppliersTable
-              suppliers={suppliers || []}
-              onRowClick={handleSelectSupplier}
-              onRowDoubleClick={handleEdit}
-              selectedSupplierId={selectedSupplier?.id}
-            />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+                <SuppliersTable
+                  suppliers={suppliers || []}
+                  onRowClick={handleSelectSupplier}
+                  onRowDoubleClick={handleEdit}
+                  selectedSupplierId={selectedSupplier?.id}
+                  columns={columns}
+                  columnIds={columnIds}
+                />
+              </SortableContext>
+            </DndContext>
           </CardContent>
         </Card>
       )}
