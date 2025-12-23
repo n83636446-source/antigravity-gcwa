@@ -211,25 +211,41 @@ export default function PurchaseReceiptsPage() {
     const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
     batch.update(receiptRef, { status: 'Brouillon' });
 
-    let allItemsHaveSupplierId = true;
-    selectedReceipt.items.forEach(item => {
-      if (!item.supplierId) {
-        allItemsHaveSupplierId = false;
+    let isDataMissing = false;
+    
+    // Find the original purchase order for fallback.
+    const originalOrder = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
+
+    for (const item of selectedReceipt.items) {
+      // Prioritize supplierId from the item (new data structure)
+      let supplierId = item.supplierId;
+      
+      // Fallback for old data: if supplierId is not on the item, get it from the original order.
+      if (!supplierId && originalOrder) {
+        supplierId = originalOrder.supplierId;
       }
-      if (item.quantityReceived > 0 && item.supplierId) {
-        const productRef = doc(firestore, 'suppliers', item.supplierId, 'products', item.productId);
+      
+      // If we still don't have a supplierId, we can't proceed.
+      if (!supplierId) {
+        isDataMissing = true;
+        break; // Exit the loop early
+      }
+
+      if (item.quantityReceived > 0) {
+        const productRef = doc(firestore, 'suppliers', supplierId, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
       }
-    });
-
-    if (!allItemsHaveSupplierId) {
+    }
+    
+    if (isDataMissing) {
         toast({
             variant: 'destructive',
             title: 'Erreur d\'annulation',
-            description: 'Données de fournisseur manquantes dans ce bon de réception. Impossible de restaurer le stock. Veuillez contacter le support.',
+            description: 'Données de fournisseur manquantes et bon de commande original introuvable. Impossible de restaurer le stock.',
         });
         return;
     }
+
 
     try {
       await batch.commit();
