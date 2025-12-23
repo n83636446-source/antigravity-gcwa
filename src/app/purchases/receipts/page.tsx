@@ -201,7 +201,6 @@ export default function PurchaseReceiptsPage() {
       const updatedReceipt = { ...selectedReceipt, status: 'Validé' as const };
       setSelectedReceipt(updatedReceipt);
     } catch (error) {
-      console.error("Validation failed: ", error);
       toast({
         variant: 'destructive',
         title: 'Erreur de validation',
@@ -212,12 +211,7 @@ export default function PurchaseReceiptsPage() {
   
   const handleCancelValidation = async () => {
     const receiptToCancel = selectedReceipt;
-    if (!firestore || !receiptToCancel || receiptToCancel.status === 'Brouillon' || !invoices) {
-      toast({
-        variant: "destructive",
-        title: "Action impossible",
-        description: "Les données requises ne sont pas disponibles ou le bon de réception est déjà en brouillon.",
-      });
+    if (!firestore || !receiptToCancel || receiptToCancel.status !== 'Validé' || !invoices ) {
       return;
     }
 
@@ -234,25 +228,24 @@ export default function PurchaseReceiptsPage() {
     }
 
     try {
-      const batch = writeBatch(firestore);
-      const productChecks: Promise<any>[] = [];
+      const productChecks: { productRef: DocumentReference; quantityReceived: number; }[] = [];
       const stockErrors: string[] = [];
 
+      // Phase 1: Read and validate all product stocks
       for (const item of receiptToCancel.items) {
+        if (!item.productId) continue;
         const productRef = doc(firestore, 'products', item.productId);
-        const check = getDoc(productRef).then(productDoc => {
-          if (!productDoc.exists()) {
-            throw new Error(`L'article avec l'ID "${item.productId}" est introuvable.`);
-          }
-          const productData = productDoc.data() as Product;
-          if (productData.stockLevel < item.quantityReceived) {
-            stockErrors.push(`Stock insuffisant pour "${productData.name}" (Actuel: ${productData.stockLevel}, Reçu: ${item.quantityReceived})`);
-          }
-        });
-        productChecks.push(check);
-      }
+        const productDoc = await getDoc(productRef);
 
-      await Promise.all(productChecks);
+        if (!productDoc.exists()) {
+          throw new Error(`L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible`);
+        }
+        const productData = productDoc.data() as Product;
+        if (productData.stockLevel < item.quantityReceived) {
+          stockErrors.push(`Stock insuffisant pour "${productData.name}" (Actuel: ${productData.stockLevel}, Reçu: ${item.quantityReceived})`);
+        }
+        productChecks.push({ productRef, quantityReceived: item.quantityReceived });
+      }
 
       if (stockErrors.length > 0) {
         toast({
@@ -263,30 +256,28 @@ export default function PurchaseReceiptsPage() {
         });
         return;
       }
+
+      // Phase 2: Write all changes in a batch
+      const batch = writeBatch(firestore);
+      const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
+      batch.update(receiptRef, { status: 'Brouillon' });
+
+      productChecks.forEach(({ productRef, quantityReceived }) => {
+        if (quantityReceived > 0) {
+          batch.update(productRef, { stockLevel: increment(-quantityReceived) });
+        }
+      });
       
-      if (stockErrors.length === 0) {
-        const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
-        batch.update(receiptRef, { status: 'Brouillon' });
+      await batch.commit();
 
-        receiptToCancel.items.forEach(item => {
-          if (item.quantityReceived > 0) {
-            const productRef = doc(firestore, 'products', item.productId);
-            batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
-          }
-        });
-        
-        await batch.commit();
-
-        toast({
-          title: 'Validation annulée',
-          description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
-        });
-        const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
-        setSelectedReceipt(updatedReceipt);
-      }
+      toast({
+        title: 'Validation annulée',
+        description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
+      });
+      const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
+      setSelectedReceipt(updatedReceipt);
 
     } catch (error: any) {
-        console.error("Validation cancellation failed: ", error);
         toast({
             variant: 'destructive',
             title: "Erreur d'annulation",
