@@ -126,23 +126,10 @@ export default function ArticlesPage() {
         title="Articles"
         description="Gérez votre inventaire d'articles."
       >
-        {selectedArticle ? (
-            <div className='flex items-center gap-2'>
-                 <Button variant="outline" onClick={() => handleEdit(selectedArticle)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Modifier
-                </Button>
-                 <Button variant="destructive" onClick={() => handleDeleteRequest(selectedArticle)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Supprimer
-                </Button>
-            </div>
-        ) : (
-            <Button onClick={handleAdd}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Ajouter un article
-            </Button>
-        )}
+        <Button onClick={handleAdd}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Ajouter un article
+        </Button>
       </PageHeader>
       
       {isLoading ? (
@@ -156,8 +143,20 @@ export default function ArticlesPage() {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Tous les articles</CardTitle>
+            {selectedArticle ? (
+              <div className='flex items-center gap-2'>
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(selectedArticle)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Modifier
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteRequest(selectedArticle)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Supprimer
+                  </Button>
+              </div>
+            ) : null}
           </CardHeader>
           <CardContent onClick={(e) => {
              // Clicks inside the card but outside a row deselects
