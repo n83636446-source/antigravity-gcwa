@@ -6,7 +6,7 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, writeBatch, increment, getDoc } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, increment, getDoc, DocumentReference } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { FileText, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
@@ -228,23 +228,23 @@ export default function PurchaseReceiptsPage() {
     }
 
     try {
-      const productChecks: { productRef: DocumentReference; quantityReceived: number; }[] = [];
+      const productUpdates: { productRef: DocumentReference; quantityReceived: number }[] = [];
       const stockErrors: string[] = [];
 
-      // Phase 1: Read and validate all product stocks
+      // Phase 1: Fetch all products from Firestore and validate stocks
       for (const item of receiptToCancel.items) {
         if (!item.productId) continue;
         const productRef = doc(firestore, 'products', item.productId);
         const productDoc = await getDoc(productRef);
 
         if (!productDoc.exists()) {
-          throw new Error(`L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible`);
+          throw new Error(`L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible.`);
         }
         const productData = productDoc.data() as Product;
         if (productData.stockLevel < item.quantityReceived) {
           stockErrors.push(`Stock insuffisant pour "${productData.name}" (Actuel: ${productData.stockLevel}, Reçu: ${item.quantityReceived})`);
         }
-        productChecks.push({ productRef, quantityReceived: item.quantityReceived });
+        productUpdates.push({ productRef, quantityReceived: item.quantityReceived });
       }
 
       if (stockErrors.length > 0) {
@@ -257,12 +257,12 @@ export default function PurchaseReceiptsPage() {
         return;
       }
 
-      // Phase 2: Write all changes in a batch
+      // Phase 2: Write all changes in a single batch
       const batch = writeBatch(firestore);
       const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
       batch.update(receiptRef, { status: 'Brouillon' });
 
-      productChecks.forEach(({ productRef, quantityReceived }) => {
+      productUpdates.forEach(({ productRef, quantityReceived }) => {
         if (quantityReceived > 0) {
           batch.update(productRef, { stockLevel: increment(-quantityReceived) });
         }
