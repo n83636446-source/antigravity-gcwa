@@ -63,7 +63,9 @@ export function InventoryTable({ articles, suppliers, onRowDoubleClick }: Invent
           <TableBody>
             {articles.map((article) => {
               const status = getStockStatus(article);
-              const supplier = suppliers.find((s) => s.id === article.supplierId);
+              // Since a supplier is not tied to a product, we just need any supplier for the AI estimation dialog.
+              // In a real scenario, you might want a more sophisticated way to select a supplier.
+              const supplierForEstimation = suppliers?.[0];
               return (
                 <TableRow 
                   key={article.id}
@@ -85,8 +87,8 @@ export function InventoryTable({ articles, suppliers, onRowDoubleClick }: Invent
                     }).format(article.price)}
                   </TableCell>
                   <TableCell className="text-center">
-                    {status.label === 'Stock faible' && supplier && (
-                      <EstimateStockDialog article={article} supplier={supplier} />
+                    {status.label === 'Stock faible' && supplierForEstimation && (
+                      <EstimateStockDialog article={article} supplier={supplierForEstimation} />
                     )}
                   </TableCell>
                 </TableRow>

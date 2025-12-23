@@ -24,15 +24,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Product as Article, Supplier } from '@/lib/types';
+import type { Product as Article } from '@/lib/types';
 import { useFirestore } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -44,13 +37,11 @@ const articleSchema = z.object({
   price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
   stockLevel: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
   reorderThreshold: z.coerce.number().int().min(0, 'Le seuil doit être un entier non négatif.'),
-  supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
 type ArticleDialogProps = {
-  suppliers: Supplier[];
   isChild?: boolean;
   children?: ReactNode;
   isOpen?: boolean;
@@ -61,7 +52,6 @@ type ArticleDialogProps = {
 };
 
 export function ArticleDialog({ 
-  suppliers, 
   isChild = false, 
   children,
   isOpen: openProp,
@@ -88,7 +78,6 @@ export function ArticleDialog({
       price: 0,
       stockLevel: 0,
       reorderThreshold: 10,
-      supplierId: suppliers.length === 1 ? suppliers[0].id : '',
     },
   });
 
@@ -102,7 +91,6 @@ export function ArticleDialog({
             price: article.price,
             stockLevel: article.stockLevel,
             reorderThreshold: article.reorderThreshold,
-            supplierId: article.supplierId,
         });
       } else {
         const nextCode = `ART${(lastArticleCodeNumber + 1).toString().padStart(3, '0')}`;
@@ -113,11 +101,10 @@ export function ArticleDialog({
           price: 0,
           stockLevel: 0,
           reorderThreshold: 10,
-          supplierId: suppliers.length === 1 ? suppliers[0].id : '',
         });
       }
     }
-  }, [article, isEditMode, isOpen, form, suppliers, lastArticleCodeNumber]);
+  }, [article, isEditMode, isOpen, form, lastArticleCodeNumber]);
 
 
   const onSubmit = async (data: ArticleFormValues) => {
@@ -130,18 +117,17 @@ export function ArticleDialog({
         price: data.price,
         stockLevel: data.stockLevel,
         reorderThreshold: data.reorderThreshold,
-        supplierId: data.supplierId,
     };
 
     if (isEditMode && article) {
-        const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'products', article.id);
+        const articleDocRef = doc(firestore, 'products', article.id);
         updateDocumentNonBlocking(articleDocRef, articleData);
         toast({
             title: 'Article modifié',
             description: `L'article "${data.name}" a été mis à jour.`,
         });
     } else {
-        const articlesRef = collection(firestore, 'suppliers', data.supplierId, 'products');
+        const articlesRef = collection(firestore, 'products');
         const docRef = await addDocumentNonBlocking(articlesRef, articleData);
         if (docRef) {
           onArticleCreated?.({ ...articleData, id: docRef.id });
@@ -200,31 +186,6 @@ export function ArticleDialog({
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="supplierId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fournisseur</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez un fournisseur" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

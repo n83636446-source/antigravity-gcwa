@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup, query } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { Product, Supplier } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { StatsCards } from '@/components/dashboard/stats-cards';
@@ -22,12 +22,12 @@ export default function DashboardPage() {
   const { data: suppliers, isLoading: isLoadingSuppliers } =
     useCollection<Supplier>(suppliersRef);
 
-  const articlesQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const articlesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
   const { data: articles, isLoading: isLoadingArticles } =
-    useCollection<Product>(articlesQuery);
+    useCollection<Product>(articlesRef);
 
   const isLoading = isLoadingSuppliers || isLoadingArticles;
 
@@ -64,7 +64,6 @@ export default function DashboardPage() {
       <ArticleDialog
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
-        suppliers={suppliers || []}
         article={editingArticle}
       />
     </div>

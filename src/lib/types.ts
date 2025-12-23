@@ -21,7 +21,6 @@ export type Product = {
   price: number;
   stockLevel: number;
   reorderThreshold: number;
-  supplierId: string;
 };
 
 export type SalesData = {
@@ -55,7 +54,6 @@ export type Client = {
 
 export type PurchaseReceiptItem = {
   productId: string;
-  supplierId: string;
   quantityOrdered: number;
   quantityReceived: number;
 };

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, collectionGroup, query, doc } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Product as Article, Supplier, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
+import type { Product as Article, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,19 +43,13 @@ export default function ArticlesPage() {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
 
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
-  );
-  const { data: suppliers, isLoading: isLoadingSuppliers } =
-    useCollection<Supplier>(suppliersRef);
-
-  const articlesQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const articlesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
   const { data: articles, isLoading: isLoadingArticles } =
-    useCollection<Article>(articlesQuery);
+    useCollection<Article>(articlesRef);
+
 
   const purchaseOrdersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseOrders') : null),
@@ -80,7 +74,7 @@ export default function ArticlesPage() {
   }, [articles]);
 
 
-  const isLoading = isLoadingSuppliers || isLoadingArticles || isLoadingOrders || isLoadingReceipts;
+  const isLoading = isLoadingArticles || isLoadingOrders || isLoadingReceipts;
 
   const handleAdd = () => {
     setEditingArticle(undefined);
@@ -129,8 +123,6 @@ export default function ArticlesPage() {
 
     const articleDocRef = doc(
       firestore,
-      'suppliers',
-      articleToDelete.supplierId,
       'products',
       articleToDelete.id
     );
@@ -142,10 +134,6 @@ export default function ArticlesPage() {
     setDeleteDialogOpen(false);
     setArticleToDelete(null);
     setSelectedArticle(null);
-  };
-
-  const getSupplierName = (supplierId: string) => {
-    return suppliers?.find((s) => s.id === supplierId)?.name || 'Inconnu';
   };
 
   return (
@@ -202,7 +190,6 @@ export default function ArticlesPage() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Fournisseur</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead className="text-right">Prix</TableHead>
                 </TableRow>
@@ -217,7 +204,6 @@ export default function ArticlesPage() {
                   >
                     <TableCell className="font-medium">{article.code}</TableCell>
                     <TableCell>{article.name}</TableCell>
-                    <TableCell>{getSupplierName(article.supplierId)}</TableCell>
                     <TableCell className="text-right">
                       {article.stockLevel}
                     </TableCell>
@@ -238,7 +224,6 @@ export default function ArticlesPage() {
       <ArticleDialog
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
-        suppliers={suppliers || []}
         article={editingArticle}
         lastArticleCodeNumber={lastArticleCodeNumber}
       />

@@ -41,7 +41,6 @@ import { cn } from '@/lib/utils';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
-  supplierId: z.string(),
   quantityOrdered: z.coerce.number().int(),
   quantityReceived: z.coerce
     .number()
@@ -131,7 +130,6 @@ export function PurchaseReceiptDialog({
             notes: receipt.notes || '',
             items: receipt.items.map((item) => ({
               productId: item.productId,
-              supplierId: orderToLoad.supplierId,
               quantityOrdered: orderToLoad.items.find(i => i.productId === item.productId)?.quantity || 0,
               quantityReceived: item.quantityReceived,
             })),
@@ -145,7 +143,6 @@ export function PurchaseReceiptDialog({
             notes: '',
             items: effectiveOrder.items.map((item) => ({
               productId: item.productId,
-              supplierId: effectiveOrder.supplierId,
               quantityOrdered: item.quantity,
               quantityReceived: item.quantity,
             })),
@@ -185,9 +182,8 @@ export function PurchaseReceiptDialog({
             receiptDate: new Date(data.receiptDate).toISOString(),
             notes: data.notes,
             items: data.items.map(
-              ({ productId, supplierId, quantityOrdered, quantityReceived }) => ({
+              ({ productId, quantityOrdered, quantityReceived }) => ({
                 productId,
-                supplierId,
                 quantityOrdered,
                 quantityReceived,
               })
@@ -212,9 +208,8 @@ export function PurchaseReceiptDialog({
           notes: data.notes,
           status: 'Brouillon',
           items: data.items.map(
-            ({ productId, supplierId, quantityOrdered, quantityReceived }) => ({
+            ({ productId, quantityOrdered, quantityReceived }) => ({
               productId,
-              supplierId,
               quantityOrdered,
               quantityReceived,
             })

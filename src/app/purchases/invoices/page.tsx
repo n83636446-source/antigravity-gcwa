@@ -6,7 +6,7 @@ import type { PurchaseInvoice, Supplier, PurchaseOrder, Product } from '@/lib/ty
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { PurchaseInvoicesTable } from '@/components/purchase-invoices-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, collectionGroup, writeBatch, increment } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, increment } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -129,11 +129,11 @@ export default function PurchaseInvoicesPage() {
   );
   const { data: purchaseOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(ordersRef);
   
-  const productsQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
   
   const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
 
@@ -213,7 +213,7 @@ export default function PurchaseInvoicesPage() {
     if (!selectedInvoice.purchaseOrderId) {
       selectedInvoice.items.forEach(item => {
         if (item.quantity > 0) {
-          const productRef = doc(firestore, 'suppliers', selectedInvoice.supplierId, 'products', item.productId);
+          const productRef = doc(firestore, 'products', item.productId);
           batch.update(productRef, { stockLevel: increment(item.quantity) });
         }
       });

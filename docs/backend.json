@@ -26,10 +26,6 @@
           "type": "number",
           "description": "Selling price of the article."
         },
-        "supplierId": {
-          "type": "string",
-          "description": "Reference to Supplier. (Relationship: Supplier 1:N Product)"
-        },
         "stockLevel": {
           "type": "number",
           "description": "Current stock level of the article."
@@ -45,7 +41,6 @@
         "name",
         "description",
         "price",
-        "supplierId",
         "stockLevel",
         "reorderThreshold"
       ]
@@ -446,18 +441,14 @@
         }
       },
       {
-        "path": "/suppliers/{supplierId}/products/{productId}",
+        "path": "/products/{productId}",
         "definition": {
           "entityName": "Product",
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores article information for each supplier. `supplierId` identifies the supplier, and `productId` is the unique identifier for the article.",
+          "description": "Stores article information. `productId` is the unique identifier for the article.",
           "params": [
-            {
-              "name": "supplierId",
-              "description": "Unique identifier for the supplier."
-            },
             {
               "name": "productId",
               "description": "Unique identifier for the article."
@@ -466,18 +457,14 @@
         }
       },
       {
-        "path": "/suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId}",
+        "path": "/products/{productId}/stockAlerts/{stockAlertId}",
         "definition": {
           "entityName": "StockAlert",
           "schema": {
             "$ref": "#/backend/entities/StockAlert"
           },
-          "description": "Stores stock alert information for each article. `supplierId` identifies the supplier, `productId` identifies the article, and `stockAlertId` is the unique identifier for the stock alert.",
+          "description": "Stores stock alert information for each article. `productId` identifies the article, and `stockAlertId` is the unique identifier for the stock alert.",
           "params": [
-            {
-              "name": "supplierId",
-              "description": "Unique identifier for the supplier."
-            },
             {
               "name": "productId",
               "description": "Unique identifier for the article."
@@ -570,6 +557,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
   }
 }

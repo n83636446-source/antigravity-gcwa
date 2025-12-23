@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, doc, collectionGroup, query } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Supplier, Product, PurchaseOrder, CreditNote } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
@@ -117,11 +117,11 @@ export default function SuppliersPage() {
   );
   const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
 
-  const productsQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
 
   const purchaseOrdersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseOrders') : null),
@@ -172,10 +172,8 @@ export default function SuppliersPage() {
   const handleDeleteConfirm = () => {
     if (!firestore || !supplierToDelete) return;
   
-    const isUsedInProducts = (products || []).some(
-      (product) => product.supplierId === supplierToDelete.id
-    );
-  
+    // We only check for usage in orders and credit notes now.
+    // A supplier can exist without having products directly linked to them.
     const isUsedInOrders = (purchaseOrders || []).some(
       (order) => order.supplierId === supplierToDelete.id
     );
@@ -185,8 +183,7 @@ export default function SuppliersPage() {
     );
   
     let usedInMessage = '';
-    if (isUsedInProducts) usedInMessage = 'des articles';
-    else if (isUsedInOrders) usedInMessage = 'des bons de commande';
+    if (isUsedInOrders) usedInMessage = 'des bons de commande';
     else if (isUsedInCreditNotes) usedInMessage = 'des avoirs';
   
     if (usedInMessage) {

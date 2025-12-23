@@ -9,26 +9,24 @@ service cloud.firestore {
      * data, preventing any public or anonymous access. It assumes all signed-in
      * users are trusted operators with full permissions.
      *
-     * Data Structure: The data is organized hierarchically to represent business
-     * relationships:
-     * - /suppliers/{supplierId} (Top-level suppliers)
-     *   - /products/{productId} (Products nested under their supplier)
-     *     - /stockAlerts/{stockAlertId} (Alerts nested under a specific product)
-     * - /reports/{reportId} (A separate top-level collection for generated reports)
+     * Data Structure: The data is organized with top-level collections for major
+     * entities like suppliers, products, and clients to allow for flexible relationships.
+     * - /suppliers/{supplierId}
+     * - /products/{productId}
+     *   - /stockAlerts/{stockAlertId}
+     * - /reports/{reportId}
      *
      * Key Security Decisions:
      * - Authenticated Access Only: All read and write operations across all
      *   collections require the user to be signed in. This provides a fundamental
      *   layer of security.
      * - No User-Specific Ownership (Prototype Limitation): The current data models
-     *   (e.g., Supplier) do not contain a reference to a user (e.g., an `ownerId`
-     *   or `memberIds` field). Therefore, the rules cannot enforce user-specific
-     *   ownership. The current implementation grants access to ANY authenticated
-     *   user. For production, denormalizing user IDs onto documents is critical.
+     *   do not contain a reference to a user (e.g., an `ownerId`). Therefore, the
+     *   rules grant access to ANY authenticated user. For production,
+     *   denormalizing user IDs onto documents is critical.
      * - Flexible Schema: In line with the prototyping philosophy, these rules do
-     *   not enforce the shape or data types of documents. Validation is limited
-     *   strictly to fields required for maintaining relational integrity (e.g.,
-     *   ensuring a product's `supplierId` field matches its path).
+     *   not enforce the shape or data types of documents, aside from basic
+     *   relational integrity where necessary.
      */
 
     // --------------------------------------------------------------------------
@@ -56,33 +54,20 @@ service cloud.firestore {
 
     /**
      * @description Manages access to supplier documents. Any authenticated user
-     * can create, read, update, and delete supplier information.
-     * @path /suppliers/{supplierId}
-     * @allow (get) An authenticated user reads a supplier document.
-     * @deny (get) An unauthenticated (anonymous) user tries to read a supplier.
-     * @principle Establishes a baseline security posture where all data interaction
-     * requires user authentication, suitable for an internal application prototype.
+     * can manage supplier information.
      */
     match /suppliers/{supplierId} {
       allow read, write: if isSignedIn();
     }
-
+    
     /**
-     * @description Manages products, which are nested under a specific supplier.
+     * @description Manages product documents, which are now a top-level collection.
      * Any authenticated user can manage products.
-     * @path /suppliers/{supplierId}/products/{productId}
-     * @allow (create) An authenticated user creates a new product under a supplier.
-     * @deny (create) An unauthenticated user tries to create a product.
-     * @principle Enforces relational integrity by ensuring a product's internal
-     * `supplierId` field matches its parent document in the path.
      */
-    match /suppliers/{supplierId}/products/{productId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.supplierId == supplierId;
-      allow update: if isSignedIn() && resourceExists() && request.resource.data.supplierId == resource.data.supplierId;
-      allow delete: if isSignedIn() && resourceExists();
+    match /products/{productId} {
+      allow read, write: if isSignedIn();
     }
+
 
     /**
      * @description Allows listing products across all suppliers for authenticated users.
@@ -94,13 +79,10 @@ service cloud.firestore {
     /**
      * @description Manages stock alerts, nested under a specific product. Any
      * authenticated user can manage stock alerts.
-     * @path /suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId}
-     * @allow (get) An authenticated user retrieves a specific stock alert.
-     * @deny (list) An unauthenticated user tries to list alerts for a product.
      * @principle Enforces relational integrity by ensuring an alert's internal
      * `productId` field is immutable and matches its parent document in the path.
      */
-    match /suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId} {
+    match /products/{productId}/stockAlerts/{stockAlertId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.productId == productId;
@@ -111,11 +93,6 @@ service cloud.firestore {
     /**
      * @description Manages top-level report documents. Access is restricted to
      * authenticated users for all operations.
-     * @path /reports/{reportId}
-     * @allow (create) An authenticated user saves a new report.
-     * @deny (delete) An unauthenticated user tries to delete a report.
-     * @principle Provides a secure default for a collection with sensitive business
-     * data, requiring authentication for any interaction.
      */
     match /reports/{reportId} {
       allow read, write: if isSignedIn();
@@ -123,7 +100,6 @@ service cloud.firestore {
 
     /**
      * @description Manages client documents. Any authenticated user can manage clients.
-     * @path /clients/{clientId}
      */
     match /clients/{clientId} {
       allow read, write: if isSignedIn();
@@ -131,7 +107,6 @@ service cloud.firestore {
 
     /**
      * @description Manages purchase order documents. Any authenticated user can manage them.
-     * @path /purchaseOrders/{purchaseOrderId}
      */
     match /purchaseOrders/{purchaseOrderId} {
         allow read, write: if isSignedIn();
@@ -139,7 +114,6 @@ service cloud.firestore {
     
     /**
      * @description Manages purchase receipt documents. Any authenticated user can manage them.
-     * @path /purchaseReceipts/{purchaseReceiptId}
      */
     match /purchaseReceipts/{purchaseReceiptId} {
         allow read, write: if isSignedIn();
@@ -147,7 +121,6 @@ service cloud.firestore {
 
     /**
      * @description Manages purchase invoice documents. Any authenticated user can manage them.
-     * @path /purchaseInvoices/{purchaseInvoiceId}
      */
     match /purchaseInvoices/{purchaseInvoiceId} {
         allow read, write: if isSignedIn();
@@ -155,7 +128,6 @@ service cloud.firestore {
 
     /**
      * @description Manages credit note documents. Any authenticated user can manage them.
-     * @path /creditNotes/{creditNoteId}
      */
     match /creditNotes/{creditNoteId} {
         allow read, write: if isSignedIn();

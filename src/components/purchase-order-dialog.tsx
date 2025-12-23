@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { ArticleDialog } from './article-dialog';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -91,14 +91,8 @@ export function PurchaseOrderDialog({
     name: 'items',
   });
   
-  const supplierId = form.watch('supplierId');
   const watchedItems = form.watch('items');
   const [total, setTotal] = useState(0);
-
-  const filteredProducts = useMemo(
-    () => products.filter(p => p.supplierId === supplierId),
-    [products, supplierId]
-  )
 
   useEffect(() => {
     if (isOpen) {
@@ -118,23 +112,16 @@ export function PurchaseOrderDialog({
     }
   }, [order, isOpen, form]);
 
-
-  useEffect(() => {
-    if (supplierId && !isEditMode) {
-      replace([{ productId: '', quantity: 1 }]);
-    }
-  }, [supplierId, isEditMode, replace]);
-
   useEffect(() => {
     const newTotal = watchedItems?.reduce((acc, item) => {
         if(item && item.productId && item.quantity > 0) {
-            const product = filteredProducts?.find(p => p.id === item.productId);
+            const product = products?.find(p => p.id === item.productId);
             return acc + (product ? product.price * item.quantity : 0);
         }
         return acc;
     }, 0) || 0;
     setTotal(newTotal);
-  }, [watchedItems, filteredProducts]);
+  }, [watchedItems, products]);
 
 
   const onSubmit = async (data: PurchaseOrderFormValues) => {
@@ -145,7 +132,7 @@ export function PurchaseOrderDialog({
         orderDate: new Date(data.orderDate).toISOString(),
         items: data.items.map(item => ({
             ...item,
-            price: filteredProducts?.find(p => p.id === item.productId)?.price || 0
+            price: products?.find(p => p.id === item.productId)?.price || 0
         })),
         totalAmount: total,
     };
@@ -259,7 +246,7 @@ export function PurchaseOrderDialog({
                     name={`items.${index}.productId`}
                     render={({ field: itemField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={!supplierId}>
+                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Sélectionnez un article" />
@@ -273,7 +260,7 @@ export function PurchaseOrderDialog({
                                 </div>
                             </SelectItem>
                             <Separator />
-                            {filteredProducts?.map((product) => (
+                            {products?.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
                                   {product.name}
                               </SelectItem>
@@ -301,13 +288,13 @@ export function PurchaseOrderDialog({
                   </Button>
                 </div>
               ))}
-               {supplierId && (!filteredProducts || filteredProducts.length === 0) && (
+               {(!products || products.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
-                    Aucun article trouvé pour ce fournisseur.
+                    Aucun article trouvé.
                     <Button type="button" variant="link" className="p-1 h-auto" onClick={() => setArticleDialogOpen(true)}>Créer un article</Button>
                 </div>
               )}
-              <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })} disabled={!supplierId}>
+              <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un article
               </Button>
             </div>
@@ -333,14 +320,11 @@ export function PurchaseOrderDialog({
         </Form>
       </DialogContent>
     </Dialog>
-    {supplierId && (
-        <ArticleDialog
-            isOpen={isArticleDialogOpen}
-            onOpenChange={setArticleDialogOpen}
-            suppliers={suppliers.filter(s => s.id === supplierId)}
-            onArticleCreated={handleArticleCreated}
-        />
-    )}
+    <ArticleDialog
+        isOpen={isArticleDialogOpen}
+        onOpenChange={setArticleDialogOpen}
+        onArticleCreated={handleArticleCreated}
+    />
     </>
   );
 }

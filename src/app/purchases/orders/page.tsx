@@ -16,7 +16,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Pencil, Trash2, ArrowRightLeft } from 'lucide-react';
@@ -126,11 +126,11 @@ export default function PurchaseOrdersPage() {
   );
   const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
 
-  const productsQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
 
 
   const ordersRef = useMemoFirebase(

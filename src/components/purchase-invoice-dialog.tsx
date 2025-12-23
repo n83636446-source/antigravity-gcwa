@@ -125,14 +125,9 @@ export function PurchaseInvoiceDialog({
   });
 
   const purchaseOrderId = form.watch('purchaseOrderId');
-  const supplierId = form.watch('supplierId');
   const watchedItems = form.watch('items');
   const [total, setTotal] = useState(0);
 
-  const filteredProducts = useMemo(
-    () => products.filter(p => p.supplierId === supplierId),
-    [products, supplierId]
-  )
   
   useEffect(() => {
     if (isOpen) {
@@ -179,13 +174,13 @@ export function PurchaseInvoiceDialog({
   useEffect(() => {
     const newTotal = watchedItems?.reduce((acc, item) => {
         if(item && item.productId && item.quantity > 0) {
-            const product = filteredProducts?.find(p => p.id === item.productId);
+            const product = products?.find(p => p.id === item.productId);
             return acc + (product ? product.price * item.quantity : 0);
         }
         return acc;
     }, 0) || 0;
     setTotal(newTotal);
-  }, [watchedItems, filteredProducts]);
+  }, [watchedItems, products]);
   
   useEffect(() => {
     if (!isOpen) {
@@ -210,7 +205,7 @@ export function PurchaseInvoiceDialog({
         dueDate: new Date(data.dueDate).toISOString(),
         items: data.items.map(item => ({
             ...item,
-            price: filteredProducts?.find(p => p.id === item.productId)?.price || 0
+            price: products?.find(p => p.id === item.productId)?.price || 0
         })),
         totalAmount: total,
     };
@@ -249,7 +244,6 @@ export function PurchaseInvoiceDialog({
   const handleSupplierChange = (value: string) => {
     if (value === CREATE_NEW_SUPPLIER_VALUE) {
       setSupplierDialogOpen(true);
-      form.setValue('supplierId', supplierId || '');
     } else {
       form.setValue('supplierId', value);
     }
@@ -403,7 +397,7 @@ export function PurchaseInvoiceDialog({
                     name={`items.${index}.productId`}
                     render={({ field: itemField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={!supplierId || fromBC || readOnly}>
+                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={fromBC || readOnly}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Sélectionnez un article" />
@@ -417,7 +411,7 @@ export function PurchaseInvoiceDialog({
                                 </div>
                             </SelectItem>
                             <Separator />
-                            {filteredProducts?.map((product) => (
+                            {products?.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
                                   {product.name}
                               </SelectItem>
@@ -447,14 +441,14 @@ export function PurchaseInvoiceDialog({
                    )}
                 </div>
               ))}
-               {supplierId && (!filteredProducts || filteredProducts.length === 0) && (
+               {(!products || products.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
-                    Aucun article trouvé pour ce fournisseur.
+                    Aucun article trouvé.
                     <Button type="button" variant="link" className="p-1 h-auto" onClick={() => setArticleDialogOpen(true)}>Créer un article</Button>
                 </div>
               )}
               {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })} disabled={!supplierId}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un article
                 </Button>
               )}
@@ -484,14 +478,11 @@ export function PurchaseInvoiceDialog({
         </Form>
       </DialogContent>
     </Dialog>
-    {supplierId && (
-        <ArticleDialog
-            isOpen={isArticleDialogOpen}
-            onOpenChange={setArticleDialogOpen}
-            suppliers={suppliers.filter(s => s.id === supplierId)}
-            onArticleCreated={handleArticleCreated}
-        />
-    )}
+    <ArticleDialog
+        isOpen={isArticleDialogOpen}
+        onOpenChange={setArticleDialogOpen}
+        onArticleCreated={handleArticleCreated}
+    />
      <SupplierDialog
         isOpen={isSupplierDialogOpen}
         onOpenChange={setSupplierDialogOpen}

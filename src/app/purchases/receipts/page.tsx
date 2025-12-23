@@ -6,7 +6,7 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, collectionGroup, doc, writeBatch, increment } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, increment } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { FileText, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
@@ -55,11 +55,11 @@ export default function PurchaseReceiptsPage() {
   const { data: invoices } = useCollection<PurchaseInvoice>(invoicesRef);
 
 
-  const productsQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
 
 
   const suppliersRef = useMemoFirebase(
@@ -161,16 +161,6 @@ export default function PurchaseReceiptsPage() {
     const receiptToValidate = editingReceipt || selectedReceipt;
     if (!receiptToValidate || receiptToValidate.status === 'Validé') return;
     
-    const order = allOrders?.find(o => o.id === receiptToValidate.purchaseOrderId);
-    if (!order) {
-        toast({
-            variant: 'destructive',
-            title: 'Erreur de validation',
-            description: 'Le bon de commande associé est introuvable.',
-        });
-        return;
-    };
-
     const batch = writeBatch(firestore);
 
     const receiptRef = doc(firestore, 'purchaseReceipts', receiptToValidate.id);
@@ -178,7 +168,7 @@ export default function PurchaseReceiptsPage() {
 
     receiptToValidate.items.forEach(item => {
       if (item.quantityReceived > 0) {
-        const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
+        const productRef = doc(firestore, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(item.quantityReceived) });
       }
     });
@@ -228,19 +218,9 @@ export default function PurchaseReceiptsPage() {
     const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
     batch.update(receiptRef, { status: 'Brouillon' });
   
-    const originalOrder = allOrders?.find(o => o.id === receiptToCancel.purchaseOrderId);
-    if (!originalOrder) {
-        toast({
-            variant: 'destructive',
-            title: 'Erreur d\'annulation',
-            description: 'Bon de commande original introuvable. Impossible de restaurer le stock.',
-        });
-        return;
-    }
-  
     for (const item of receiptToCancel.items) {
       if (item.quantityReceived > 0) {
-        const productRef = doc(firestore, 'suppliers', originalOrder.supplierId, 'products', item.productId);
+        const productRef = doc(firestore, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
       }
     }

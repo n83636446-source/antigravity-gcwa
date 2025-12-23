@@ -6,19 +6,19 @@ import { SalesTrendsChart } from '@/components/reports/sales-trends-chart';
 import { salesData } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReportsPage() {
   const firestore = useFirestore();
 
-  const articlesQuery = useMemoFirebase(
-    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+  const articlesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
   const { data: articles, isLoading: isLoadingArticles } =
-    useCollection<Product>(articlesQuery);
+    useCollection<Product>(articlesRef);
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
