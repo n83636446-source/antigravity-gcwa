@@ -19,7 +19,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, ArrowRightLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -50,6 +50,7 @@ import {
 } from '@dnd-kit/sortable';
 import { DraggableHeader } from '@/components/ui/DraggableHeader';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 
 type Column = {
   id: keyof PurchaseOrder | 'supplierName' | 'formattedDate' | 'formattedAmount';
@@ -67,6 +68,7 @@ export default function PurchaseOrdersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<PurchaseOrder | undefined>();
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -112,6 +114,12 @@ export default function PurchaseOrdersPage() {
   );
   const { data: orders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(ordersRef);
 
+  const receiptsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
+    [firestore]
+  );
+  const { data: receipts } = useCollection<PurchaseReceipt>(receiptsRef);
+
 
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
@@ -138,6 +146,10 @@ export default function PurchaseOrdersPage() {
   const handleEdit = (order: PurchaseOrder) => {
     setEditingOrder(order);
     setDialogOpen(true);
+  };
+  
+  const handleTransfer = () => {
+    setReceiptDialogOpen(true);
   };
 
   const handleSelectOrder = (order: PurchaseOrder) => {
@@ -213,6 +225,15 @@ export default function PurchaseOrdersPage() {
                 <CardTitle>Bons de commande récents</CardTitle>
                 {selectedOrder && (
                   <div className="flex items-center gap-2">
+                     <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransfer}>
+                          <ArrowRightLeft className="h-4 w-4" />
+                          <span className="sr-only">Transférer en BR</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Transférer en BR</TooltipContent>
+                    </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(selectedOrder)}>
@@ -288,6 +309,16 @@ export default function PurchaseOrdersPage() {
         order={editingOrder}
         lastOrderNumber={orders?.length || 0}
       />
+       {selectedOrder && (
+        <PurchaseReceiptDialog
+          isOpen={receiptDialogOpen}
+          onOpenChange={setReceiptDialogOpen}
+          purchaseOrders={orders || []}
+          purchaseOrder={selectedOrder}
+          products={products || []}
+          lastReceiptNumber={receipts?.length || 0}
+        />
+      )}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

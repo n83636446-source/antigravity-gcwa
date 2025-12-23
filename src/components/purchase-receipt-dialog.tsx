@@ -64,17 +64,29 @@ type PurchaseReceiptDialogProps = {
   products: Product[];
   lastReceiptNumber: number;
   onReceiptCreated?: (receipt: PurchaseReceipt) => void;
+  // For opening from another component with a pre-selected order
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  purchaseOrder?: PurchaseOrder;
 };
 
 export function PurchaseReceiptDialog({
   purchaseOrders,
   products,
-  onReceiptCreated,
   lastReceiptNumber,
+  onReceiptCreated,
+  isOpen: openProp,
+  onOpenChange: onOpenChangeProp,
+  purchaseOrder,
 }: PurchaseReceiptDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const isTriggeredExternally = openProp !== undefined;
+
+  const isOpen = openProp !== undefined ? openProp : internalOpen;
+  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
+
 
   const form = useForm<PurchaseReceiptFormValues>({
     resolver: zodResolver(purchaseReceiptSchema),
@@ -92,6 +104,23 @@ export function PurchaseReceiptDialog({
   });
 
   const purchaseOrderId = form.watch('purchaseOrderId');
+
+  useEffect(() => {
+    // If dialog is controlled externally and a specific purchaseOrder is passed
+    if (isOpen && isTriggeredExternally && purchaseOrder) {
+        form.setValue('purchaseOrderId', purchaseOrder.id);
+    }
+
+    if (!isOpen) {
+      form.reset({
+        purchaseOrderId: '',
+        receiptDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        items: [],
+      })
+    }
+  }, [isOpen, isTriggeredExternally, purchaseOrder, form]);
+
 
   useEffect(() => {
     if (purchaseOrderId) {
@@ -170,7 +199,7 @@ export function PurchaseReceiptDialog({
       });
       // onReceiptCreated?.({ ...newReceiptData, id: newReceiptDocRef.id });
 
-      setOpen(false);
+      onOpenChange(false);
       form.reset({
         purchaseOrderId: '',
         receiptDate: new Date().toISOString().split('T')[0],
@@ -186,15 +215,20 @@ export function PurchaseReceiptDialog({
       });
     }
   };
+  
+  const Trigger = !isTriggeredExternally ? (
+    <DialogTrigger asChild>
+      <Button>
+        <PlusCircle className="mr-2 h-4 w-4" />
+        Créer un bon de réception
+      </Button>
+    </DialogTrigger>
+  ) : null;
+
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Créer un bon de réception
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {Trigger}
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -214,7 +248,8 @@ export function PurchaseReceiptDialog({
                     <FormLabel>Bon de commande</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
+                      disabled={isTriggeredExternally && !!purchaseOrder}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -311,6 +346,9 @@ export function PurchaseReceiptDialog({
             />
 
             <DialogFooter>
+               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Annuler
+              </Button>
               <Button type="submit">Créer le bon de réception</Button>
             </DialogFooter>
           </form>
