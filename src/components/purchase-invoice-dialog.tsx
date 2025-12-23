@@ -34,8 +34,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseInvoice } from '@/lib/types';
 import { addDays } from 'date-fns';
 import { Input } from './ui/input';
-import { useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const purchaseInvoiceSchema = z.object({
@@ -53,6 +53,7 @@ type PurchaseInvoiceDialogProps = {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder;
+  invoice?: PurchaseInvoice | null;
 };
 
 export function PurchaseInvoiceDialog({
@@ -62,6 +63,7 @@ export function PurchaseInvoiceDialog({
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
   purchaseOrder,
+  invoice,
 }: PurchaseInvoiceDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -69,6 +71,7 @@ export function PurchaseInvoiceDialog({
   const firestore = useFirestore();
   
   const isTriggeredExternally = openProp !== undefined;
+  const isEditMode = !!invoice;
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
 
@@ -85,17 +88,30 @@ export function PurchaseInvoiceDialog({
   const purchaseOrderId = form.watch('purchaseOrderId');
 
   useEffect(() => {
-    const orderIdToUse = purchaseOrder?.id || purchaseOrderId;
+    let orderIdToUse = '';
+     if (isEditMode && invoice) {
+        orderIdToUse = invoice.purchaseOrderId;
+        form.reset({
+            purchaseOrderId: invoice.purchaseOrderId,
+            invoiceDate: new Date(invoice.invoiceDate).toISOString().split('T')[0],
+            dueDate: new Date(invoice.dueDate).toISOString().split('T')[0],
+        });
+    } else if (purchaseOrder) {
+        orderIdToUse = purchaseOrder.id;
+        form.setValue('purchaseOrderId', purchaseOrder.id);
+    } else if (purchaseOrderId) {
+        orderIdToUse = purchaseOrderId;
+    }
+    
     if (orderIdToUse) {
       const order = purchaseOrders.find((o) => o.id === orderIdToUse);
       if (order) {
         setTotalAmount(order.totalAmount);
-        form.setValue('purchaseOrderId', order.id);
       }
     } else {
       setTotalAmount(0);
     }
-  }, [purchaseOrderId, purchaseOrder, purchaseOrders, form, isOpen]);
+  }, [purchaseOrderId, purchaseOrder, invoice, isEditMode, purchaseOrders, form, isOpen]);
   
   useEffect(() => {
     if (!isOpen) {
@@ -111,31 +127,44 @@ export function PurchaseInvoiceDialog({
 
   const onSubmit = (data: PurchaseInvoiceFormValues) => {
     if (!firestore) return;
-    const order = purchaseOrders.find((o) => o.id === data.purchaseOrderId);
-    if (!order) return;
-    
-    const newInvoiceNumber = `FA-${(lastInvoiceNumber + 1)
-      .toString()
-      .padStart(4, '0')}`;
-      
-    const newInvoiceData: Omit<PurchaseInvoice, 'id'> = {
-      invoiceNumber: newInvoiceNumber,
-      purchaseOrderId: data.purchaseOrderId,
-      invoiceDate: new Date(data.invoiceDate).toISOString(),
-      dueDate: new Date(data.dueDate).toISOString(),
-      totalAmount: order.totalAmount,
-      status: 'Non payée',
-    };
 
-    const invoicesRef = collection(firestore, 'purchaseInvoices');
-    addDocumentNonBlocking(invoicesRef, newInvoiceData);
+    if (isEditMode && invoice) {
+        const invoiceDocRef = doc(firestore, 'purchaseInvoices', invoice.id);
+        updateDocumentNonBlocking(invoiceDocRef, {
+            invoiceDate: new Date(data.invoiceDate).toISOString(),
+            dueDate: new Date(data.dueDate).toISOString(),
+        });
+        toast({
+            title: 'Facture modifiée',
+            description: `La facture "${invoice.invoiceNumber}" a été mise à jour.`,
+        });
+    } else {
+        const order = purchaseOrders.find((o) => o.id === data.purchaseOrderId);
+        if (!order) return;
+        
+        const newInvoiceNumber = `FA-${(lastInvoiceNumber + 1)
+        .toString()
+        .padStart(4, '0')}`;
+        
+        const newInvoiceData: Omit<PurchaseInvoice, 'id'> = {
+            invoiceNumber: newInvoiceNumber,
+            purchaseOrderId: data.purchaseOrderId,
+            invoiceDate: new Date(data.invoiceDate).toISOString(),
+            dueDate: new Date(data.dueDate).toISOString(),
+            totalAmount: order.totalAmount,
+            status: 'Brouillon',
+        };
 
-    toast({
-      title: 'Facture créée',
-      description: `La facture "${newInvoiceNumber}" a été créée.`,
-    });
-    
-    onInvoiceCreated?.(newInvoiceData as PurchaseInvoice);
+        const invoicesRef = collection(firestore, 'purchaseInvoices');
+        addDocumentNonBlocking(invoicesRef, newInvoiceData);
+
+        toast({
+        title: 'Facture créée',
+        description: `La facture "${newInvoiceNumber}" a été créée.`,
+        });
+        
+        onInvoiceCreated?.(newInvoiceData as PurchaseInvoice);
+    }
     
     onOpenChange(false);
   };
@@ -148,6 +177,8 @@ export function PurchaseInvoiceDialog({
         </Button>
       </DialogTrigger>
   ) : null;
+  
+  const readOnly = isEditMode && invoice?.status !== 'Brouillon';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -156,9 +187,9 @@ export function PurchaseInvoiceDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Créer une facture</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Détails de la facture' : 'Créer une facture'}</DialogTitle>
               <DialogDescription>
-                Créez une facture à partir d'un bon de commande reçu.
+                {isEditMode ? `Consultez les détails de la facture ${invoice?.invoiceNumber}.` : "Créez une facture à partir d'un bon de commande reçu."}
               </DialogDescription>
             </DialogHeader>
 
@@ -168,7 +199,7 @@ export function PurchaseInvoiceDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bon de commande</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!!purchaseOrder}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!!purchaseOrder || isEditMode}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionnez un bon de commande" />
@@ -195,7 +226,7 @@ export function PurchaseInvoiceDialog({
                   <FormItem>
                     <FormLabel>Date de facturation</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} disabled={readOnly} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -208,7 +239,7 @@ export function PurchaseInvoiceDialog({
                   <FormItem>
                     <FormLabel>Date d'échéance</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} disabled={readOnly}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -227,7 +258,12 @@ export function PurchaseInvoiceDialog({
             </div>
 
             <DialogFooter>
-              <Button type="submit">Créer la facture</Button>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                {readOnly ? 'Fermer' : 'Annuler'}
+              </Button>
+              {!readOnly && (
+                <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer la facture'}</Button>
+              )}
             </DialogFooter>
           </form>
         </Form>

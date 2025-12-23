@@ -18,17 +18,24 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 type PurchaseInvoicesTableProps = {
   invoices: PurchaseInvoice[];
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
+  onRowClick: (invoice: PurchaseInvoice) => void;
+  onRowDoubleClick: (invoice: PurchaseInvoice) => void;
+  selectedInvoiceId?: string | null;
 };
 
 export function PurchaseInvoicesTable({
   invoices,
   purchaseOrders,
   suppliers,
+  onRowClick,
+  onRowDoubleClick,
+  selectedInvoiceId,
 }: PurchaseInvoicesTableProps) {
   const getOrderDetails = (orderId: string) => {
     const order = purchaseOrders.find((o) => o.id === orderId);
@@ -81,7 +88,12 @@ export function PurchaseInvoicesTable({
                   invoice.purchaseOrderId
                 );
                 return (
-                  <TableRow key={invoice.id}>
+                  <TableRow 
+                    key={invoice.id}
+                    onClick={() => onRowClick(invoice)}
+                    onDoubleClick={() => onRowDoubleClick(invoice)}
+                    className={cn("cursor-pointer", selectedInvoiceId === invoice.id && 'bg-muted/50')}
+                  >
                     <TableCell className="font-medium">
                       {invoice.invoiceNumber}
                     </TableCell>
