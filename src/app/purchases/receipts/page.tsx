@@ -203,6 +203,10 @@ export default function PurchaseReceiptsPage() {
   };
   
  const handleCancelValidation = async () => {
+    if (isLoading) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Les données ne sont pas encore prêtes. Veuillez patienter.' });
+        return;
+    }
     if (!firestore || !products || !invoices || !suppliers) {
         toast({ variant: 'destructive', title: 'Erreur', description: 'Les données nécessaires ne sont pas chargées.' });
         return;
