@@ -380,6 +380,7 @@ export default function PurchaseReceiptsPage() {
           lastReceiptNumber={receipts?.length || 0}
           receipt={editingReceipt}
           onValidate={handleValidateReceipt}
+          onCancelValidation={handleCancelValidation}
           onTransferToInvoice={handleTransferToInvoice}
       />
       {selectedOrderForInvoice && (

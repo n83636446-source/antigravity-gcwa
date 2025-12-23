@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, CheckCircle, FileText } from 'lucide-react';
+import { PlusCircle, CheckCircle, FileText, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -71,6 +71,7 @@ type PurchaseReceiptDialogProps = {
   receipt?: PurchaseReceipt | null;
   onValidate?: () => void;
   onTransferToInvoice?: () => void;
+  onCancelValidation?: () => void;
 };
 
 export function PurchaseReceiptDialog({
@@ -84,6 +85,7 @@ export function PurchaseReceiptDialog({
   receipt,
   onValidate,
   onTransferToInvoice,
+  onCancelValidation,
 }: PurchaseReceiptDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -379,10 +381,19 @@ export function PurchaseReceiptDialog({
                     <CheckCircle className="mr-2 h-4 w-4" /> Valider
                   </Button>
                 )}
-                 {isEditMode && receipt?.status === 'Validé' && onTransferToInvoice && (
-                  <Button type="button" variant="outline" onClick={onTransferToInvoice}>
-                    <FileText className="mr-2 h-4 w-4" /> Transférer en facture
-                  </Button>
+                 {isEditMode && receipt?.status === 'Validé' && (
+                   <>
+                    {onCancelValidation && (
+                        <Button type="button" variant="outline" onClick={onCancelValidation}>
+                            <XCircle className="mr-2 h-4 w-4" /> Annuler la validation
+                        </Button>
+                    )}
+                    {onTransferToInvoice && (
+                        <Button type="button" variant="outline" onClick={onTransferToInvoice}>
+                            <FileText className="mr-2 h-4 w-4" /> Transférer en facture
+                        </Button>
+                    )}
+                   </>
                 )}
               </div>
               <div className='flex gap-2'>
