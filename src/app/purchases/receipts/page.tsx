@@ -36,8 +36,6 @@ export default function PurchaseReceiptsPage() {
   const [receiptToDelete, setReceiptToDelete] = useState<PurchaseReceipt | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const receiptsRef = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'purchaseReceipts'),) : null),
     [firestore]
@@ -72,25 +70,15 @@ export default function PurchaseReceiptsPage() {
   
   const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingProducts || isLoadingSuppliers;
 
-  const handleSingleClick = (receipt: PurchaseReceipt) => {
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
+  const handleRowClick = (receipt: PurchaseReceipt) => {
+    if (selectedReceipt?.id === receipt.id) {
+      setSelectedReceipt(null);
+    } else {
+      setSelectedReceipt(receipt);
     }
-    clickTimeoutRef.current = setTimeout(() => {
-      if (selectedReceipt?.id === receipt.id) {
-        setSelectedReceipt(null);
-      } else {
-        setSelectedReceipt(receipt);
-      }
-    }, 200);
   };
 
-  const handleDoubleClick = (receipt: PurchaseReceipt) => {
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-    }
+  const handleRowDoubleClick = (receipt: PurchaseReceipt) => {
     if (receipt.status === 'Validé') {
         toast({
             variant: 'destructive',
@@ -105,7 +93,7 @@ export default function PurchaseReceiptsPage() {
   
   const handleEditClick = () => {
     if (selectedReceipt) {
-      handleDoubleClick(selectedReceipt);
+      handleRowDoubleClick(selectedReceipt);
     }
   };
 
@@ -180,11 +168,9 @@ export default function PurchaseReceiptsPage() {
 
     const batch = writeBatch(firestore);
 
-    // 1. Update receipt status
     const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
     batch.update(receiptRef, { status: 'Validé' });
 
-    // 2. Update stock levels
     selectedReceipt.items.forEach(item => {
       if (item.quantityReceived > 0) {
         const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
@@ -218,11 +204,9 @@ export default function PurchaseReceiptsPage() {
 
     const batch = writeBatch(firestore);
     
-    // 1. Update receipt status
     const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
     batch.update(receiptRef, { status: 'Brouillon' });
 
-    // 2. Decrement stock levels
     selectedReceipt.items.forEach(item => {
       if (item.quantityReceived > 0) {
         const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
@@ -327,8 +311,8 @@ export default function PurchaseReceiptsPage() {
               receipts={receipts || []}
               purchaseOrders={allOrders || []}
               suppliers={suppliers || []}
-              onRowClick={handleSingleClick}
-              onRowDoubleClick={handleDoubleClick}
+              onRowClick={handleRowClick}
+              onRowDoubleClick={handleRowDoubleClick}
               selectedReceiptId={selectedReceipt?.id}
             />
           </CardContent>
