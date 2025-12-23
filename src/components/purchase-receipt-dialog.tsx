@@ -295,7 +295,7 @@ export function PurchaseReceiptDialog({
                   <FormItem>
                     <FormLabel>Date de réception</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} disabled={isEditMode && receipt?.status === 'Validé'} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -359,6 +359,7 @@ export function PurchaseReceiptDialog({
                     <Textarea
                       placeholder="Ajouter des notes sur la réception..."
                       {...field}
+                       disabled={isEditMode && receipt?.status === 'Validé'}
                     />
                   </FormControl>
                   <FormMessage />
