@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -64,6 +64,7 @@ type PurchaseOrderDialogProps = {
   products: Product[];
   order?: PurchaseOrder;
   lastOrderNumber: number;
+  onTransfer?: (order: PurchaseOrder) => void;
 };
 
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
@@ -74,7 +75,8 @@ export function PurchaseOrderDialog({
     suppliers,
     products,
     order,
-    lastOrderNumber 
+    lastOrderNumber,
+    onTransfer
 }: PurchaseOrderDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -180,6 +182,12 @@ export function PurchaseOrderDialog({
     articleCreationIndex.current = null;
     setArticleDialogOpen(false);
   };
+
+  const handleTransferClick = () => {
+    if (order && onTransfer) {
+        onTransfer(order);
+    }
+  }
 
 
   return (
@@ -312,9 +320,17 @@ export function PurchaseOrderDialog({
             </div>
 
 
-            <DialogFooter>
+            <DialogFooter className='sm:justify-between'>
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
-                <Button type="submit">{isEditMode ? 'Enregistrer les modifications' : 'Créer le bon de commande'}</Button>
+                <div className="flex gap-2">
+                    {isEditMode && onTransfer && (
+                        <Button type="button" variant="outline" onClick={handleTransferClick}>
+                            <ArrowRightLeft className="mr-2 h-4 w-4" />
+                            Transférer en BR
+                        </Button>
+                    )}
+                    <Button type="submit">{isEditMode ? 'Enregistrer les modifications' : 'Créer le bon de commande'}</Button>
+                </div>
             </DialogFooter>
           </form>
         </Form>

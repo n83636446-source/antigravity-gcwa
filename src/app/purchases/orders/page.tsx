@@ -150,7 +150,8 @@ export default function PurchaseOrdersPage() {
   };
   
   const enrichedOrders = useMemo(() => {
-    return (orders || []).map(order => ({
+    if (!orders || !suppliers) return [];
+    return orders.map(order => ({
       ...order,
       supplierName: getSupplierName(order.supplierId),
       formattedDate: format(new Date(order.orderDate), 'dd/MM/yyyy', { locale: fr }),
@@ -177,6 +178,12 @@ export default function PurchaseOrdersPage() {
       setReceiptDialogOpen(true);
     }
   };
+
+  const handleTransferFromDialog = (order: PurchaseOrder) => {
+    setDialogOpen(false);
+    setSelectedOrder(order);
+    setTimeout(() => setReceiptDialogOpen(true), 150);
+  }
 
   const handleRowClick = (order: PurchaseOrder) => {
     if (selectedOrder?.id === order.id) {
@@ -352,6 +359,7 @@ export default function PurchaseOrdersPage() {
         products={products || []}
         order={editingOrder}
         lastOrderNumber={orders?.length || 0}
+        onTransfer={handleTransferFromDialog}
       />
        {selectedOrder && (
         <PurchaseReceiptDialog
