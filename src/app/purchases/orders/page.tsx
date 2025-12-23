@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
 import type { PurchaseOrder, Supplier, Product, PurchaseReceipt } from '@/lib/types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -74,6 +74,8 @@ export default function PurchaseOrdersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
   const [columns, setColumns] = useState<Column[]>(initialColumns);
+  
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
 
@@ -151,13 +153,28 @@ export default function PurchaseOrdersPage() {
   const handleTransfer = () => {
     setReceiptDialogOpen(true);
   };
-
-  const handleSelectOrder = (order: PurchaseOrder) => {
-    if (selectedOrder?.id === order.id) {
-      setSelectedOrder(null); // Deselect if clicking the same row
-    } else {
-      setSelectedOrder(order);
+  
+  const handleSingleClick = (order: PurchaseOrder) => {
+     if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
     }
+    clickTimeoutRef.current = setTimeout(() => {
+      if (selectedOrder?.id === order.id) {
+        setSelectedOrder(null);
+      } else {
+        setSelectedOrder(order);
+      }
+    }, 200); // 200ms delay to wait for a potential double click
+  };
+
+  const handleDoubleClick = (order: PurchaseOrder) => {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+    setSelectedOrder(order);
+    handleEdit(order);
   };
 
   const handleDeleteRequest = (order: PurchaseOrder) => {
@@ -177,11 +194,6 @@ export default function PurchaseOrdersPage() {
     setOrderToDelete(null);
     setSelectedOrder(null);
   };
-  
-  const handleDoubleClick = (order: PurchaseOrder) => {
-    setSelectedOrder(order);
-    handleEdit(order);
-  }
 
   const handleContainerClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('tr, button')) {
@@ -281,6 +293,7 @@ export default function PurchaseOrdersPage() {
                           {enrichedOrders.map(order => (
                              <TableRow
                               key={order.id}
+                              onClick={() => handleSingleClick(order)}
                               onDoubleClick={() => handleDoubleClick(order)}
                               className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
                              >
