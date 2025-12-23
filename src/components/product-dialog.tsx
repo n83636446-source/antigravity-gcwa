@@ -34,6 +34,9 @@ import {
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier } from '@/lib/types';
+import { useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const productSchema = z.object({
   name: z.string().min(2, 'Le nom du produit doit contenir au moins 2 caractères.'),
@@ -53,6 +56,7 @@ type ProductDialogProps = {
 export function ProductDialog({ suppliers }: ProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -67,8 +71,18 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
   });
 
   const onSubmit = (data: ProductFormValues) => {
-    // In a real app, you would send this data to your API
-    console.log(data);
+    if (!firestore) return;
+
+    const productsRef = collection(firestore, 'suppliers', data.supplierId, 'products');
+    addDocumentNonBlocking(productsRef, {
+        name: data.name,
+        description: data.description || '',
+        price: data.price,
+        stock: data.stock,
+        lowStockThreshold: data.lowStockThreshold,
+        supplierId: data.supplierId,
+    });
+
     toast({
       title: 'Produit créé',
       description: `Le produit "${data.name}" a été créé avec succès.`,
