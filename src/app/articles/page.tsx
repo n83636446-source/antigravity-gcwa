@@ -5,13 +5,21 @@ import { collection, collectionGroup, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Product as Article, Supplier } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
-import { ArticlesTable } from '@/components/articles-table';
 import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil } from 'lucide-react';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function ArticlesPage() {
   const firestore = useFirestore();
@@ -45,16 +53,26 @@ export default function ArticlesPage() {
     setEditingArticle(article);
     setDialogOpen(true);
   };
-  
+
   const handleDelete = (article: Article) => {
-      if(!firestore) return;
-      const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'products', article.id);
-      deleteDocumentNonBlocking(articleDocRef);
-      toast({
-          title: "Article supprimé",
-          description: `L'article "${article.name}" a été supprimé.`,
-      })
-  }
+    if (!firestore) return;
+    const articleDocRef = doc(
+      firestore,
+      'suppliers',
+      article.supplierId,
+      'products',
+      article.id
+    );
+    deleteDocumentNonBlocking(articleDocRef);
+    toast({
+      title: 'Article supprimé',
+      description: `L'article "${article.name}" a été supprimé.`,
+    });
+  };
+
+  const getSupplierName = (supplierId: string) => {
+    return suppliers?.find((s) => s.id === supplierId)?.name || 'Inconnu';
+  };
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -73,13 +91,51 @@ export default function ArticlesPage() {
           <Skeleton className="h-24 w-full" />
         </div>
       ) : (
-        <ArticlesTable
-          articles={articles || []}
-          suppliers={suppliers || []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onRowDoubleClick={handleEdit}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle>Tous les articles</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Fournisseur</TableHead>
+                  <TableHead className="text-right">Stock</TableHead>
+                  <TableHead className="text-right">Prix</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(articles || []).map((article) => (
+                  <TableRow
+                    key={article.id}
+                    onDoubleClick={() => handleEdit(article)}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="font-medium">{article.name}</TableCell>
+                    <TableCell>{getSupplierName(article.supplierId)}</TableCell>
+                    <TableCell className="text-right">
+                      {article.stockLevel}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {new Intl.NumberFormat('fr-FR', {
+                        style: 'currency',
+                        currency: 'EUR',
+                      }).format(article.price)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                       <Button variant="ghost" size="icon" onClick={() => handleEdit(article)}>
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Modifier</span>
+                        </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
       <ArticleDialog
         isOpen={dialogOpen}
