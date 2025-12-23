@@ -369,7 +369,7 @@ export function PurchaseReceiptDialog({
 
             <DialogFooter>
                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Annuler
+                {isEditMode && receipt?.status === 'Validé' ? 'Fermer' : 'Annuler'}
               </Button>
               <Button type="submit" disabled={isEditMode && receipt?.status === 'Validé'}>{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
             </DialogFooter>
@@ -379,3 +379,5 @@ export function PurchaseReceiptDialog({
     </Dialog>
   );
 }
+
+    
