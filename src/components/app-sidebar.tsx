@@ -33,7 +33,7 @@ import { Button } from './ui/button';
 
 const menuItems = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-  { href: '/products', label: 'Articles', icon: Boxes },
+  { href: '/articles', label: 'Articles', icon: Boxes },
   { href: '/suppliers', label: 'Fournisseurs', icon: Users },
   { href: '/clients', label: 'Clients', icon: Contact },
 ];
