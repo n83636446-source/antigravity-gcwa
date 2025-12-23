@@ -22,10 +22,8 @@ import {
   ShoppingCart,
   Menu,
   Contact,
-  List,
   PanelLeft,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import {
   Collapsible,
   CollapsibleContent,
@@ -44,6 +42,7 @@ const achatSubMenuItems = [
     { href: '/purchases/orders', label: 'Bons de commande' },
     { href: '/purchases/receipts', label: 'Bons de réception' },
     { href: '/purchases/invoices', label: 'Factures' },
+    { href: '/purchases/credit-notes', label: 'Avoirs' },
 ];
 
 export function AppSidebar() {
