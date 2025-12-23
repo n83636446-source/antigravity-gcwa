@@ -66,6 +66,7 @@ export type PurchaseReceipt = {
   receiptDate: string; // ISO string
   notes?: string;
   items: PurchaseReceiptItem[];
+  status: 'Brouillon' | 'Validé';
 };
 
 export type PurchaseInvoice = {

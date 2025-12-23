@@ -35,8 +35,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, writeBatch, increment } from 'firebase/firestore';
+import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
@@ -130,18 +130,21 @@ export function PurchaseReceiptDialog({
               quantityReceived: item.quantityReceived,
             })),
           });
-      } else if (!isEditMode && orderToLoad) {
-        form.reset({
-          purchaseOrderId: orderToLoad.id,
-          receiptDate: new Date().toISOString().split('T')[0],
-          notes: '',
-          items: orderToLoad.items.map((item) => ({
-            productId: item.productId,
-            supplierId: orderToLoad.supplierId,
-            quantityOrdered: item.quantity,
-            quantityReceived: item.quantity,
-          })),
-        });
+      } else if (!isEditMode) {
+        const effectiveOrder = purchaseOrder || purchaseOrders.find(o => o.id === watchedOrderId);
+        if (effectiveOrder) {
+          form.reset({
+            purchaseOrderId: effectiveOrder.id,
+            receiptDate: new Date().toISOString().split('T')[0],
+            notes: '',
+            items: effectiveOrder.items.map((item) => ({
+              productId: item.productId,
+              supplierId: effectiveOrder.supplierId,
+              quantityOrdered: item.quantity,
+              quantityReceived: item.quantity,
+            })),
+          });
+        }
       }
     } else {
       form.reset({
@@ -151,7 +154,7 @@ export function PurchaseReceiptDialog({
         items: [],
       });
     }
-  }, [isOpen, purchaseOrder, watchedOrderId, receipt, isEditMode, purchaseOrders, form]);
+  }, [isOpen, purchaseOrder, watchedOrderId, receipt, isEditMode, purchaseOrders, form, onOpenChange]);
 
 
   const getProductName = (productId: string) => {
@@ -167,8 +170,15 @@ export function PurchaseReceiptDialog({
         const updatedData = {
             receiptDate: new Date(data.receiptDate).toISOString(),
             notes: data.notes,
-            // We don't update items here as stock management on edit is complex
+            items: data.items.map(
+              ({ productId, quantityOrdered, quantityReceived }) => ({
+                productId,
+                quantityOrdered,
+                quantityReceived,
+              })
+            ),
         };
+        // In edit mode, we only update notes, date, and quantities. Status and stock are handled by validation actions.
         updateDocumentNonBlocking(receiptDocRef, updatedData);
         toast({
             title: 'Bon de réception modifié',
@@ -180,13 +190,12 @@ export function PurchaseReceiptDialog({
           .toString()
           .padStart(4, '0')}`;
 
-        const newReceiptData: Omit<PurchaseReceipt, 'id' | 'items'> & {
-          items: Omit<PurchaseReceipt['items'][0], 'supplierId'>[];
-        } = {
+        const newReceiptData: Omit<PurchaseReceipt, 'id'> = {
           receiptNumber: newReceiptNumber,
           purchaseOrderId: data.purchaseOrderId,
           receiptDate: new Date(data.receiptDate).toISOString(),
           notes: data.notes,
+          status: 'Brouillon',
           items: data.items.map(
             ({ productId, quantityOrdered, quantityReceived }) => ({
               productId,
@@ -197,40 +206,22 @@ export function PurchaseReceiptDialog({
         };
 
         const receiptRef = collection(firestore, 'purchaseReceipts');
-        const batch = writeBatch(firestore);
-        const newReceiptDocRef = doc(receiptRef);
-        batch.set(newReceiptDocRef, newReceiptData);
-
-        data.items.forEach((item) => {
-          if (item.quantityReceived > 0) {
-            const productDocRef = doc(
-              firestore,
-              'suppliers',
-              item.supplierId,
-              'products',
-              item.productId
-            );
-            batch.update(productDocRef, {
-              stockLevel: increment(item.quantityReceived),
+        addDocumentNonBlocking(receiptRef, newReceiptData)
+          .then((docRef) => {
+             toast({
+              title: 'Bon de réception créé',
+              description: `Le BR "${newReceiptNumber}" est enregistré en brouillon.`,
             });
-          }
-        });
-
-        try {
-          await batch.commit();
-          toast({
-            title: 'Bon de réception créé',
-            description: `Le stock a été mis à jour.`,
-          });
-          onReceiptCreated?.({ ...newReceiptData, id: newReceiptDocRef.id } as PurchaseReceipt);
-        } catch (e) {
-          console.error(e);
-          toast({
-            variant: 'destructive',
-            title: 'Erreur',
-            description: 'Impossible de créer le bon de réception.',
-          });
-        }
+            onReceiptCreated?.({ ...newReceiptData, id: docRef.id } as PurchaseReceipt);
+          })
+          .catch((e) => {
+             console.error(e);
+             toast({
+              variant: 'destructive',
+              title: 'Erreur',
+              description: 'Impossible de créer le bon de réception.',
+            });
+          })
     }
 
     onOpenChange(false);
@@ -337,7 +328,7 @@ export function PurchaseReceiptDialog({
                             type="number"
                             placeholder="Qté reçue"
                             className="w-full text-center"
-                            disabled={isEditMode}
+                            disabled={isEditMode && receipt?.status === 'Validé'}
                             {...itemField}
                           />
                         </FormControl>

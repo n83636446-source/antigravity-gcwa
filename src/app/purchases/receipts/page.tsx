@@ -6,10 +6,10 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder } from '@/lib/ty
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, collectionGroup, doc, writeBatch, increment } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { FileText, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -102,6 +102,14 @@ export default function PurchaseReceiptsPage() {
 
   const handleDeleteRequest = () => {
     if (selectedReceipt) {
+      if (selectedReceipt.status === 'Validé') {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: 'Vous ne pouvez pas supprimer un bon de réception validé. Annulez d\'abord la validation.',
+        });
+        return;
+      }
       setReceiptToDelete(selectedReceipt);
       setDeleteDialogOpen(true);
     }
@@ -110,7 +118,6 @@ export default function PurchaseReceiptsPage() {
   const handleDeleteConfirm = () => {
     if (!firestore || !receiptToDelete) return;
     const receiptDocRef = doc(firestore, 'purchaseReceipts', receiptToDelete.id);
-    // Note: Stock is not decremented on deletion. This is a business logic decision.
     deleteDocumentNonBlocking(receiptDocRef);
     toast({
       title: 'Bon de réception supprimé',
@@ -123,6 +130,14 @@ export default function PurchaseReceiptsPage() {
   
   const handleTransferToInvoice = () => {
     if (selectedReceipt) {
+       if (selectedReceipt.status !== 'Validé') {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: 'Vous ne pouvez transférer qu\'un bon de réception validé.',
+        });
+        return;
+      }
       setInvoiceDialogOpen(true);
     }
   };
@@ -146,6 +161,80 @@ export default function PurchaseReceiptsPage() {
     if (!selectedReceipt || !allOrders) return undefined;
     return allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
   }, [selectedReceipt, allOrders]);
+
+  const handleValidateReceipt = async () => {
+    if (!firestore || !selectedReceipt || !allOrders) return;
+    if (selectedReceipt.status === 'Validé') return;
+    
+    const order = allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
+    if (!order) return;
+
+    const batch = writeBatch(firestore);
+
+    // 1. Update receipt status
+    const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
+    batch.update(receiptRef, { status: 'Validé' });
+
+    // 2. Update stock levels
+    selectedReceipt.items.forEach(item => {
+      if (item.quantityReceived > 0) {
+        const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
+        batch.update(productRef, { stockLevel: increment(item.quantityReceived) });
+      }
+    });
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'Bon de réception validé',
+        description: 'Le stock a été mis à jour avec succès.',
+      });
+    } catch (error) {
+      console.error("Validation failed: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de validation',
+        description: 'La validation a échoué. Veuillez réessayer.',
+      });
+    }
+  };
+  
+  const handleCancelValidation = async () => {
+    if (!firestore || !selectedReceipt || !allOrders) return;
+    if (selectedReceipt.status === 'Brouillon') return;
+
+    const order = allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
+    if (!order) return;
+
+    const batch = writeBatch(firestore);
+    
+    // 1. Update receipt status
+    const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
+    batch.update(receiptRef, { status: 'Brouillon' });
+
+    // 2. Decrement stock levels
+    selectedReceipt.items.forEach(item => {
+      if (item.quantityReceived > 0) {
+        const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
+        batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
+      }
+    });
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'Validation annulée',
+        description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
+      });
+    } catch (error) {
+       console.error("Validation cancellation failed: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur d\'annulation',
+        description: 'L\'annulation a échoué. Veuillez réessayer.',
+      });
+    }
+  };
 
 
   return (
@@ -175,6 +264,28 @@ export default function PurchaseReceiptsPage() {
           actionHeaderContent={
             selectedReceipt && (
               <div className="flex items-center gap-2">
+                {selectedReceipt.status === 'Brouillon' && (
+                   <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt}>
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="sr-only">Valider</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Valider</TooltipContent>
+                    </Tooltip>
+                )}
+                {selectedReceipt.status === 'Validé' && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
+                            <XCircle className="h-4 w-4 text-orange-500" />
+                            <span className="sr-only">Annuler la validation</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Annuler la validation</TooltipContent>
+                    </Tooltip>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice}>
@@ -186,7 +297,7 @@ export default function PurchaseReceiptsPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick}>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick} disabled={selectedReceipt.status === 'Validé'}>
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Modifier</span>
                     </Button>

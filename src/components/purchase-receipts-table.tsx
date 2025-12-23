@@ -34,6 +34,7 @@ import {
 } from '@dnd-kit/sortable';
 import { DraggableHeader } from '@/components/ui/DraggableHeader';
 import { cn } from '@/lib/utils';
+import { Badge } from './ui/badge';
 
 type EnrichedReceipt = PurchaseReceipt & {
   orderNumber: string;
@@ -42,7 +43,7 @@ type EnrichedReceipt = PurchaseReceipt & {
 }
 
 type Column = {
-  id: keyof EnrichedReceipt | 'orderNumber' | 'supplierName' | 'formattedDate';
+  id: keyof EnrichedReceipt | 'orderNumber' | 'supplierName' | 'formattedDate' | 'status';
   label: string;
 };
 
@@ -51,6 +52,7 @@ const initialColumns: Column[] = [
     { id: 'orderNumber', label: 'Numéro BC' },
     { id: 'supplierName', label: 'Fournisseur' },
     { id: 'formattedDate', label: 'Date de réception' },
+    { id: 'status', label: 'Statut' },
 ];
 
 
@@ -80,15 +82,16 @@ export function PurchaseReceiptsTable({
       const savedColumns = localStorage.getItem('purchaseReceiptsColumns');
       if (savedColumns) {
         const parsedColumns: Column[] = JSON.parse(savedColumns);
-        const savedColumnIds = new Set(parsedColumns.map(c => c.id));
-        const initialColumnIds = new Set(initialColumns.map(c => c.id));
-        
-        if (parsedColumns.length === initialColumns.length && [...savedColumnIds].every(id => initialColumnIds.has(id))) {
-          setColumns(parsedColumns);
+        // Add new 'status' column if it's not there for backward compatibility
+        const columnIds = new Set(parsedColumns.map(c => c.id));
+        if (!columnIds.has('status')) {
+          parsedColumns.push({ id: 'status', label: 'Statut' });
         }
+        setColumns(parsedColumns);
       }
     } catch (error) {
       console.error("Failed to load or parse columns from localStorage", error);
+      setColumns(initialColumns);
     }
   }, []);
 
@@ -141,6 +144,10 @@ export function PurchaseReceiptsTable({
     });
   }, [receipts, purchaseOrders, suppliers]);
   
+  const getStatusVariant = (status: PurchaseReceipt['status']) => {
+    return status === 'Brouillon' ? 'secondary' : 'default';
+  };
+  
   const renderCellContent = (receipt: any, columnId: Column['id']) => {
     const key = `${receipt.id}-${columnId}`;
     switch (columnId) {
@@ -152,6 +159,8 @@ export function PurchaseReceiptsTable({
         return <TableCell key={key}>{receipt.supplierName}</TableCell>;
       case 'formattedDate':
         return <TableCell key={key}>{receipt.formattedDate}</TableCell>;
+      case 'status':
+        return <TableCell key={key}><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>;
       default:
         return <TableCell key={key}></TableCell>;
     }

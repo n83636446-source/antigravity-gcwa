@@ -274,6 +274,72 @@
         "totalAmount",
         "items"
       ]
+    },
+    "PurchaseReceipt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseReceipt",
+      "type": "object",
+      "description": "Represents a receipt of goods from a supplier.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the purchase receipt."
+        },
+        "receiptNumber": {
+          "type": "string",
+          "description": "The unique number for the purchase receipt."
+        },
+        "purchaseOrderId": {
+          "type": "string",
+          "description": "Reference to the PurchaseOrder."
+        },
+        "receiptDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the goods were received."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notes about the receipt."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {
+                "type": "string"
+              },
+              "quantityOrdered": {
+                "type": "number"
+              },
+              "quantityReceived": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "productId",
+              "quantityOrdered",
+              "quantityReceived"
+            ]
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the purchase receipt.",
+          "enum": [
+            "Brouillon",
+            "Validé"
+          ]
+        }
+      },
+      "required": [
+        "receiptNumber",
+        "purchaseOrderId",
+        "receiptDate",
+        "items",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -388,6 +454,22 @@
             {
               "name": "purchaseOrderId",
               "description": "Unique identifier for the purchase order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/purchaseReceipts/{purchaseReceiptId}",
+        "definition": {
+          "entityName": "PurchaseReceipt",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseReceipt"
+          },
+          "description": "Stores purchase receipt information. `purchaseReceiptId` is the unique identifier for the purchase receipt.",
+          "params": [
+            {
+              "name": "purchaseReceiptId",
+              "description": "Unique identifier for the purchase receipt."
             }
           ]
         }
