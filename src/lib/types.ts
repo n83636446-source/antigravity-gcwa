@@ -84,3 +84,5 @@ export type CreditNote = {
     reason: string;
     status: 'Brouillon' | 'Appliqué';
 };
+
+export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote;

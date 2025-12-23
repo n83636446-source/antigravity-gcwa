@@ -37,14 +37,11 @@ import type {
   PurchaseOrder,
   PurchaseReceipt,
 } from '@/lib/types';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Calendar } from './ui/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
+import { useFirestore } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
@@ -59,7 +56,7 @@ const purchaseReceiptSchema = z.object({
   purchaseOrderId: z
     .string()
     .nonempty('Un bon de commande doit être sélectionné.'),
-  receiptDate: z.date({ required_error: 'La date est requise.' }),
+  receiptDate: z.string({ required_error: 'La date est requise.' }),
   notes: z.string().optional(),
   items: z.array(receiptItemSchema),
 });
@@ -69,8 +66,8 @@ type PurchaseReceiptFormValues = z.infer<typeof purchaseReceiptSchema>;
 type PurchaseReceiptDialogProps = {
   purchaseOrders: PurchaseOrder[];
   products: Product[];
-  onReceiptCreated: (receipt: PurchaseReceipt) => void;
   lastReceiptNumber: number;
+  onReceiptCreated?: (receipt: PurchaseReceipt) => void;
 };
 
 export function PurchaseReceiptDialog({
@@ -81,12 +78,13 @@ export function PurchaseReceiptDialog({
 }: PurchaseReceiptDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<PurchaseReceiptFormValues>({
     resolver: zodResolver(purchaseReceiptSchema),
     defaultValues: {
       purchaseOrderId: '',
-      receiptDate: new Date(),
+      receiptDate: new Date().toISOString().split('T')[0],
       notes: '',
       items: [],
     },
@@ -119,35 +117,70 @@ export function PurchaseReceiptDialog({
     return products.find((p) => p.id === productId)?.name || 'Inconnu';
   };
 
-  const onSubmit = (data: PurchaseReceiptFormValues) => {
+  const onSubmit = async (data: PurchaseReceiptFormValues) => {
+    if (!firestore) return;
+
     const newReceiptNumber = `BR-${(lastReceiptNumber + 1)
       .toString()
       .padStart(4, '0')}`;
-    const newReceipt: PurchaseReceipt = {
-      id: `pr-${Date.now()}`,
+      
+    const newReceiptData: Omit<PurchaseReceipt, 'id'> = {
       receiptNumber: newReceiptNumber,
       purchaseOrderId: data.purchaseOrderId,
-      receiptDate: data.receiptDate.toISOString(),
+      receiptDate: new Date(data.receiptDate).toISOString(),
       notes: data.notes,
       items: data.items,
     };
+    
+    const receiptRef = collection(firestore, 'purchaseReceipts');
+    const orderRef = doc(firestore, 'purchaseOrders', data.purchaseOrderId);
+    
+    // In a real app, you would use a transaction or a batch write
+    // to ensure data consistency.
+    const batch = writeBatch(firestore);
+    
+    // 1. Create the receipt
+    // Since addDocumentNonBlocking is not designed for batches, we'll add it manually
+    const newReceiptDocRef = doc(receiptRef); // Create a new doc with a generated id
+    batch.set(newReceiptDocRef, newReceiptData);
 
-    onReceiptCreated(newReceipt);
-
-    // In a real app, you would update the Purchase Order status and product stock levels.
-    console.log('New Receipt:', newReceipt);
-
-    toast({
-      title: 'Bon de réception créé',
-      description: `Le bon de réception "${newReceipt.receiptNumber}" a été créé.`,
+    // 2. Update the purchase order status
+    batch.update(orderRef, { status: 'Reçu' });
+    
+    // 3. Update product stock levels
+    data.items.forEach(item => {
+        const product = products.find(p => p.id === item.productId);
+        if(product) {
+            // This is not ideal as products are nested under suppliers.
+            // A better structure would be a top-level products collection.
+            // For now, we assume a simple update. This will likely fail with current rules/structure.
+            console.warn("Stock update logic needs to be adjusted for the nested product structure.")
+        }
     });
-    setOpen(false);
-    form.reset({
-      purchaseOrderId: '',
-      receiptDate: new Date(),
-      notes: '',
-      items: [],
-    });
+
+    try {
+        await batch.commit();
+        toast({
+            title: 'Bon de réception créé',
+            description: `Le bon de réception "${newReceiptNumber}" a été créé.`,
+        });
+        onReceiptCreated?.({ ...newReceiptData, id: newReceiptDocRef.id });
+
+        setOpen(false);
+        form.reset({
+          purchaseOrderId: '',
+          receiptDate: new Date().toISOString().split('T')[0],
+          notes: '',
+          items: [],
+        });
+    } catch(e) {
+        console.error(e);
+        toast({
+            variant: "destructive",
+            title: "Erreur",
+            description: "Impossible de créer le bon de réception.",
+        });
+    }
   };
 
   return (
@@ -200,37 +233,11 @@ export function PurchaseReceiptDialog({
                 control={form.control}
                 name="receiptDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Date de réception</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP', { locale: fr })
-                            ) : (
-                              <span>Choisissez une date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          locale={fr}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                        <Input type="date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -240,7 +247,12 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-4">
-              <FormLabel>Articles Reçus</FormLabel>
+              <div className="grid grid-cols-3 items-center gap-4">
+                  <FormLabel className="col-span-1">Produit</FormLabel>
+                  <FormLabel className="text-center">Qté Commandée</FormLabel>
+                  <FormLabel className="text-center">Qté Reçue</FormLabel>
+              </div>
+
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-3 items-center gap-4">
                   <p className="col-span-1 text-sm font-medium">

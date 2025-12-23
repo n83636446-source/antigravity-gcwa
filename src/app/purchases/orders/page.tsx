@@ -17,21 +17,24 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PurchaseOrdersPage() {
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const firestore = useFirestore();
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
     [firestore]
   );
-  const { data: suppliers } = useCollection<Supplier>(suppliersRef);
+  const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
 
-  const addOrder = (newOrder: PurchaseOrder) => {
-    setOrders(prevOrders => [...prevOrders, newOrder]);
-  };
+  const ordersRef = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'purchaseOrders'), orderBy('orderDate', 'desc')) : null),
+    [firestore]
+  );
+  const { data: orders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(ordersRef);
+
 
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
@@ -52,6 +55,8 @@ export default function PurchaseOrdersPage() {
     }
   };
 
+  const isLoading = isLoadingSuppliers || isLoadingOrders;
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
@@ -60,12 +65,15 @@ export default function PurchaseOrdersPage() {
       >
         <PurchaseOrderDialog
           suppliers={suppliers || []}
-          onOrderCreated={addOrder}
-          lastOrderNumber={orders.length}
+          lastOrderNumber={orders?.length || 0}
         />
       </PageHeader>
       
-      {orders.length > 0 ? (
+      {isLoading ? (
+         <div className="space-y-4">
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : orders && orders.length > 0 ? (
         <Card>
             <CardHeader>
                 <CardTitle>Bons de commande récents</CardTitle>

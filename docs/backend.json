@@ -202,6 +202,74 @@
         "email",
         "phone"
       ]
+    },
+    "PurchaseOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseOrder",
+      "type": "object",
+      "description": "Represents a purchase order sent to a supplier.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the purchase order."
+        },
+        "orderNumber": {
+          "type": "string",
+          "description": "The unique number for the purchase order."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to the Supplier."
+        },
+        "orderDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the order was placed."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the order."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Brouillon",
+            "Envoyé",
+            "Reçu",
+            "Annulé"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "price": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "productId",
+              "quantity",
+              "price"
+            ]
+          }
+        }
+      },
+      "required": [
+        "orderNumber",
+        "supplierId",
+        "orderDate",
+        "totalAmount",
+        "status",
+        "items"
+      ]
     }
   },
   "auth": {
@@ -303,9 +371,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/purchaseOrders/{purchaseOrderId}",
+        "definition": {
+          "entityName": "PurchaseOrder",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseOrder"
+          },
+          "description": "Stores purchase order information. `purchaseOrderId` is the unique identifier for the purchase order.",
+          "params": [
+            {
+              "name": "purchaseOrderId",
+              "description": "Unique identifier for the purchase order."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products related to suppliers are stored in a subcollection `/suppliers/{supplierId}/products`. This enables easy querying of products by supplier and maintains a clear ownership structure. StockAlerts are similarly organized under each product in `/suppliers/{supplierId}/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership. Each product is implicitly associated with its supplier through its location in the `/suppliers/{supplierId}/products/{productId}` path. Rules can easily verify that a user has access to a supplier before accessing their products. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`) contains documents with similar access control requirements. For example, only authorized users (e.g., those with permission to manage suppliers) will be able to list suppliers, and similarly for the other collections."
   }
 }
-    

@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import {
-  purchaseOrders,
-  purchaseInvoices as initialPurchaseInvoices,
-} from '@/lib/data';
-import type { PurchaseInvoice, Supplier } from '@/lib/types';
+import type { PurchaseInvoice, Supplier, PurchaseOrder } from '@/lib/types';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { PurchaseInvoicesTable } from '@/components/purchase-invoices-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function PurchaseInvoicesPage() {
-  const [invoices, setInvoices] = useState<PurchaseInvoice[]>(initialPurchaseInvoices);
   const firestore = useFirestore();
+
+  const invoicesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
+    [firestore]
+  );
+  const { data: invoices } = useCollection<PurchaseInvoice>(invoicesRef);
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -22,12 +23,15 @@ export default function PurchaseInvoicesPage() {
   );
   const { data: suppliers } = useCollection<Supplier>(suppliersRef);
 
-  const addInvoice = (newInvoice: PurchaseInvoice) => {
-    setInvoices((prevInvoices) => [...prevInvoices, newInvoice]);
-  };
+  const ordersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
+    [firestore]
+  );
+  const { data: purchaseOrders } = useCollection<PurchaseOrder>(ordersRef);
 
-  const receivedOrders = purchaseOrders.filter(
-    (order) => order.status === 'Reçu'
+  const receivedOrders = useMemoFirebase(
+    () => purchaseOrders?.filter((order) => order.status === 'Reçu') || [],
+    [purchaseOrders]
   );
 
   return (
@@ -38,13 +42,12 @@ export default function PurchaseInvoicesPage() {
       >
         <PurchaseInvoiceDialog
             purchaseOrders={receivedOrders}
-            onInvoiceCreated={addInvoice}
-            lastInvoiceNumber={invoices.length}
+            lastInvoiceNumber={invoices?.length || 0}
         />
       </PageHeader>
       <PurchaseInvoicesTable 
-        invoices={invoices}
-        purchaseOrders={purchaseOrders}
+        invoices={invoices || []}
+        purchaseOrders={purchaseOrders || []}
         suppliers={suppliers || []}
       />
     </div>

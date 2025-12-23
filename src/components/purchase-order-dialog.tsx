@@ -33,11 +33,11 @@ import {
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
-import { format } from 'date-fns';
 import { Separator } from './ui/separator';
 import { ProductDialog } from './product-dialog';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const orderItemSchema = z.object({
@@ -55,7 +55,7 @@ type PurchaseOrderFormValues = z.infer<typeof purchaseOrderSchema>;
 
 type PurchaseOrderDialogProps = {
   suppliers: Supplier[];
-  onOrderCreated: (order: PurchaseOrder) => void;
+  onOrderCreated?: (order: PurchaseOrder) => void;
   lastOrderNumber: number;
 };
 
@@ -72,7 +72,7 @@ export function PurchaseOrderDialog({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: {
       supplierId: '',
-      orderDate: format(new Date(), 'yyyy-MM-dd'),
+      orderDate: new Date().toISOString().split('T')[0],
       items: [{ productId: '', quantity: 1 }],
     },
   });
@@ -118,14 +118,15 @@ export function PurchaseOrderDialog({
   }, [form, filteredProducts]);
 
 
-  const onSubmit = (data: PurchaseOrderFormValues) => {
+  const onSubmit = async (data: PurchaseOrderFormValues) => {
+    if (!firestore) return;
+
     const newOrderNumber = `BC-${(lastOrderNumber + 1).toString().padStart(4, '0')}`;
-    const newOrder: PurchaseOrder = {
-        id: `po-${Date.now()}`,
+    const newOrderData = {
         orderNumber: newOrderNumber,
         supplierId: data.supplierId,
         orderDate: new Date(data.orderDate).toISOString(),
-        status: 'Brouillon',
+        status: 'Brouillon' as const,
         items: data.items.map(item => ({
             ...item,
             price: filteredProducts?.find(p => p.id === item.productId)?.price || 0
@@ -133,15 +134,20 @@ export function PurchaseOrderDialog({
         totalAmount: total,
     };
 
-    onOrderCreated(newOrder);
+    const purchaseOrdersRef = collection(firestore, 'purchaseOrders');
+    await addDocumentNonBlocking(purchaseOrdersRef, newOrderData);
+
     toast({
       title: 'Bon de commande créé',
-      description: `Le bon de commande "${newOrder.orderNumber}" a été créé en tant que brouillon.`,
+      description: `Le bon de commande "${newOrderNumber}" a été créé en tant que brouillon.`,
     });
+    
+    onOrderCreated?.(newOrderData as PurchaseOrder);
+
     setOpen(false);
     form.reset({
         supplierId: '',
-        orderDate: format(new Date(), 'yyyy-MM-dd'),
+        orderDate: new Date().toISOString().split('T')[0],
         items: [{ productId: '', quantity: 1 }],
     });
   };

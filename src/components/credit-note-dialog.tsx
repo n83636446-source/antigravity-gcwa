@@ -34,7 +34,9 @@ import {
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, CreditNote } from '@/lib/types';
-import { format, parseISO } from 'date-fns';
+import { useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const creditNoteSchema = z.object({
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
@@ -47,7 +49,7 @@ type CreditNoteFormValues = z.infer<typeof creditNoteSchema>;
 
 type CreditNoteDialogProps = {
   suppliers: Supplier[];
-  onCreditNoteCreated: (creditNote: CreditNote) => void;
+  onCreditNoteCreated?: (creditNote: CreditNote) => void;
   lastCreditNoteNumber: number;
 };
 
@@ -58,24 +60,26 @@ export function CreditNoteDialog({
 }: CreditNoteDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<CreditNoteFormValues>({
     resolver: zodResolver(creditNoteSchema),
     defaultValues: {
       supplierId: '',
-      creditNoteDate: format(new Date(), 'yyyy-MM-dd'),
+      creditNoteDate: new Date().toISOString().split('T')[0],
       amount: 0,
       reason: '',
     },
   });
 
   const onSubmit = (data: CreditNoteFormValues) => {
+    if (!firestore) return;
+    
     const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1)
       .toString()
       .padStart(4, '0')}`;
       
-    const newCreditNote: CreditNote = {
-      id: `cn-${Date.now()}`,
+    const newCreditNoteData: Omit<CreditNote, 'id'> = {
       creditNoteNumber: newCreditNoteNumber,
       supplierId: data.supplierId,
       creditNoteDate: new Date(data.creditNoteDate).toISOString(),
@@ -84,16 +88,20 @@ export function CreditNoteDialog({
       status: 'Brouillon',
     };
 
-    onCreditNoteCreated(newCreditNote);
+    const creditNotesRef = collection(firestore, 'creditNotes');
+    addDocumentNonBlocking(creditNotesRef, newCreditNoteData);
 
     toast({
       title: 'Avoir créé',
-      description: `L'avoir "${newCreditNote.creditNoteNumber}" a été créé avec succès.`,
+      description: `L'avoir "${newCreditNoteNumber}" a été créé avec succès.`,
     });
+    
+    onCreditNoteCreated?.(newCreditNoteData as CreditNote);
+
     setOpen(false);
     form.reset({
       supplierId: '',
-      creditNoteDate: format(new Date(), 'yyyy-MM-dd'),
+      creditNoteDate: new Date().toISOString().split('T')[0],
       amount: 0,
       reason: '',
     });

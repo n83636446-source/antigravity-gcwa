@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import { creditNotes as initialCreditNotes } from '@/lib/data';
 import type { CreditNote, Supplier } from '@/lib/types';
 import { CreditNoteDialog } from '@/components/credit-note-dialog';
 import { CreditNotesTable } from '@/components/credit-notes-table';
@@ -11,19 +10,19 @@ import { collection } from 'firebase/firestore';
 
 
 export default function CreditNotesPage() {
-  const [creditNotes, setCreditNotes] = useState<CreditNote[]>(initialCreditNotes);
   const firestore = useFirestore();
+
+  const creditNotesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'creditNotes') : null),
+    [firestore]
+  );
+  const { data: creditNotes } = useCollection<CreditNote>(creditNotesRef);
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
     [firestore]
   );
   const { data: suppliers } = useCollection<Supplier>(suppliersRef);
-
-
-  const addCreditNote = (newCreditNote: CreditNote) => {
-    setCreditNotes((prev) => [...prev, newCreditNote]);
-  };
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -33,12 +32,11 @@ export default function CreditNotesPage() {
       >
         <CreditNoteDialog
           suppliers={suppliers || []}
-          onCreditNoteCreated={addCreditNote}
-          lastCreditNoteNumber={creditNotes.length}
+          lastCreditNoteNumber={creditNotes?.length || 0}
         />
       </PageHeader>
       
-      <CreditNotesTable creditNotes={creditNotes} suppliers={suppliers || []} />
+      <CreditNotesTable creditNotes={creditNotes || []} suppliers={suppliers || []} />
     </div>
   );
 }

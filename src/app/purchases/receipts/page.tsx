@@ -2,28 +2,45 @@
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import {
-  purchaseOrders,
-  purchaseReceipts as initialPurchaseReceipts,
-  products,
-  suppliers,
-} from '@/lib/data';
-import type { PurchaseReceipt } from '@/lib/types';
+import type { PurchaseReceipt, Product, Supplier, PurchaseOrder } from '@/lib/types';
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 export default function PurchaseReceiptsPage() {
-  const [receipts, setReceipts] = useState<PurchaseReceipt[]>(
-    initialPurchaseReceipts
-  );
+  const firestore = useFirestore();
 
-  const addReceipt = (newReceipt: PurchaseReceipt) => {
-    setReceipts((prevReceipts) => [...prevReceipts, newReceipt]);
-  };
-
-  const availableOrders = purchaseOrders.filter(
-    (order) => order.status === 'Envoyé'
+  const receiptsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
+    [firestore]
   );
+  const { data: receipts } = useCollection<PurchaseReceipt>(receiptsRef);
+  
+  const ordersRef = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'purchaseOrders'), where('status', '==', 'Envoyé')) : null),
+    [firestore]
+  );
+  const { data: availableOrders } = useCollection<PurchaseOrder>(ordersRef);
+
+  const allOrdersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
+    [firestore]
+  );
+  const { data: allOrders } = useCollection<PurchaseOrder>(allOrdersRef);
+
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
+    [firestore]
+  );
+  const { data: products } = useCollection<Product>(productsRef);
+
+  const suppliersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'suppliers') : null),
+    [firestore]
+  );
+  const { data: suppliers } = useCollection<Supplier>(suppliersRef);
+
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -32,16 +49,15 @@ export default function PurchaseReceiptsPage() {
         description="Gérez vos bons de réception."
       >
         <PurchaseReceiptDialog
-          purchaseOrders={availableOrders}
-          products={products}
-          onReceiptCreated={addReceipt}
-          lastReceiptNumber={receipts.length}
+          purchaseOrders={availableOrders || []}
+          products={products || []}
+          lastReceiptNumber={receipts?.length || 0}
         />
       </PageHeader>
       <PurchaseReceiptsTable
-        receipts={receipts}
-        purchaseOrders={purchaseOrders}
-        suppliers={suppliers}
+        receipts={receipts || []}
+        purchaseOrders={allOrders || []}
+        suppliers={suppliers || []}
       />
     </div>
   );

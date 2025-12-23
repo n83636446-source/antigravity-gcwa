@@ -32,8 +32,11 @@ import {
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { PurchaseOrder, PurchaseInvoice } from '@/lib/types';
-import { format, addDays } from 'date-fns';
+import { addDays } from 'date-fns';
 import { Input } from './ui/input';
+import { useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const purchaseInvoiceSchema = z.object({
   purchaseOrderId: z.string().nonempty('Un bon de commande doit être sélectionné.'),
@@ -45,7 +48,7 @@ type PurchaseInvoiceFormValues = z.infer<typeof purchaseInvoiceSchema>;
 
 type PurchaseInvoiceDialogProps = {
   purchaseOrders: PurchaseOrder[];
-  onInvoiceCreated: (invoice: PurchaseInvoice) => void;
+  onInvoiceCreated?: (invoice: PurchaseInvoice) => void;
   lastInvoiceNumber: number;
 };
 
@@ -57,13 +60,14 @@ export function PurchaseInvoiceDialog({
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [totalAmount, setTotalAmount] = useState(0);
+  const firestore = useFirestore();
 
   const form = useForm<PurchaseInvoiceFormValues>({
     resolver: zodResolver(purchaseInvoiceSchema),
     defaultValues: {
       purchaseOrderId: '',
-      invoiceDate: format(new Date(), 'yyyy-MM-dd'),
-      dueDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+      invoiceDate: new Date().toISOString().split('T')[0],
+      dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
     },
   });
 
@@ -81,6 +85,7 @@ export function PurchaseInvoiceDialog({
   }, [purchaseOrderId, purchaseOrders]);
 
   const onSubmit = (data: PurchaseInvoiceFormValues) => {
+    if (!firestore) return;
     const order = purchaseOrders.find((o) => o.id === data.purchaseOrderId);
     if (!order) return;
     
@@ -88,8 +93,7 @@ export function PurchaseInvoiceDialog({
       .toString()
       .padStart(4, '0')}`;
       
-    const newInvoice: PurchaseInvoice = {
-      id: `pi-${Date.now()}`,
+    const newInvoiceData: Omit<PurchaseInvoice, 'id'> = {
       invoiceNumber: newInvoiceNumber,
       purchaseOrderId: data.purchaseOrderId,
       invoiceDate: new Date(data.invoiceDate).toISOString(),
@@ -98,17 +102,21 @@ export function PurchaseInvoiceDialog({
       status: 'Non payée',
     };
 
-    onInvoiceCreated(newInvoice);
+    const invoicesRef = collection(firestore, 'purchaseInvoices');
+    addDocumentNonBlocking(invoicesRef, newInvoiceData);
 
     toast({
       title: 'Facture créée',
-      description: `La facture "${newInvoice.invoiceNumber}" a été créée.`,
+      description: `La facture "${newInvoiceNumber}" a été créée.`,
     });
+    
+    onInvoiceCreated?.(newInvoiceData as PurchaseInvoice);
+    
     setOpen(false);
     form.reset({
       purchaseOrderId: '',
-      invoiceDate: format(new Date(), 'yyyy-MM-dd'),
-      dueDate: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+      invoiceDate: new Date().toISOString().split('T')[0],
+      dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
     });
   };
 
