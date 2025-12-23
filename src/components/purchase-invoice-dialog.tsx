@@ -257,14 +257,13 @@ export function PurchaseInvoiceDialog({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Bon de commande (Optionnel)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode || !suppliers.length}>
+                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={isEditMode || !suppliers.length}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Sélectionnez un bon de commande" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="">Aucun</SelectItem>
                             {purchaseOrders.map((order) => (
                             <SelectItem key={order.id} value={order.id}>
                                 {order.orderNumber}
