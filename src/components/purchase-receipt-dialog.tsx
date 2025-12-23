@@ -35,9 +35,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
-import { useFirestore } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch, increment } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from './non-blocking-updates';
 
 const receiptItemSchema = z.object({
   productId: z.string(),
