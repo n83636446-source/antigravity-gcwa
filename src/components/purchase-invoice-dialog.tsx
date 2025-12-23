@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -72,7 +72,8 @@ type PurchaseInvoiceDialogProps = {
   invoice?: PurchaseInvoice | null;
 };
 
-const CREATE_NEW_SUPPLIER_VALUE = '--create-new--';
+const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
+const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
 export function PurchaseInvoiceDialog({
   purchaseOrders,
@@ -90,6 +91,7 @@ export function PurchaseInvoiceDialog({
   const firestore = useFirestore();
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
+  const articleCreationIndex = useRef<number | null>(null);
   
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -117,7 +119,7 @@ export function PurchaseInvoiceDialog({
     resolver: zodResolver(purchaseInvoiceSchema),
   });
   
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove, replace, update } = useFieldArray({
     control: form.control,
     name: 'items',
   });
@@ -260,6 +262,24 @@ export function PurchaseInvoiceDialog({
     setSupplierDialogOpen(false);
   };
 
+  const handleProductChange = (value: string, index: number) => {
+    if (value === CREATE_NEW_ARTICLE_VALUE) {
+      articleCreationIndex.current = index;
+      setArticleDialogOpen(true);
+    } else {
+      update(index, { ...fields[index], productId: value });
+    }
+  };
+
+  const handleArticleCreated = (newArticle: Product) => {
+    if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
+      update(articleCreationIndex.current, { ...fields[articleCreationIndex.current], productId: newArticle.id });
+    }
+    articleCreationIndex.current = null;
+    setArticleDialogOpen(false);
+  };
+
+
   const Trigger = !isTriggeredExternally ? (
      <DialogTrigger asChild>
         <Button>
@@ -383,13 +403,20 @@ export function PurchaseInvoiceDialog({
                     name={`items.${index}.productId`}
                     render={({ field: itemField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={itemField.onChange} value={itemField.value} disabled={!supplierId || fromBC || readOnly}>
+                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={!supplierId || fromBC || readOnly}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Sélectionnez un article" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                             <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                <div className="flex items-center gap-2">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span>Créer un nouvel article</span>
+                                </div>
+                            </SelectItem>
+                            <Separator />
                             {filteredProducts?.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
                                   {product.name}
@@ -462,6 +489,7 @@ export function PurchaseInvoiceDialog({
             isOpen={isArticleDialogOpen}
             onOpenChange={setArticleDialogOpen}
             suppliers={suppliers.filter(s => s.id === supplierId)}
+            onArticleCreated={handleArticleCreated}
         />
     )}
      <SupplierDialog

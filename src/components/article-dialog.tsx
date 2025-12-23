@@ -57,6 +57,7 @@ type ArticleDialogProps = {
   onOpenChange?: (open: boolean) => void;
   article?: Article;
   lastArticleCodeNumber?: number;
+  onArticleCreated?: (article: Article) => void;
 };
 
 export function ArticleDialog({ 
@@ -66,7 +67,8 @@ export function ArticleDialog({
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
   article,
-  lastArticleCodeNumber = 0
+  lastArticleCodeNumber = 0,
+  onArticleCreated
  }: ArticleDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -118,7 +120,7 @@ export function ArticleDialog({
   }, [article, isEditMode, isOpen, form, suppliers, lastArticleCodeNumber]);
 
 
-  const onSubmit = (data: ArticleFormValues) => {
+  const onSubmit = async (data: ArticleFormValues) => {
     if (!firestore) return;
 
     const articleData = {
@@ -140,8 +142,10 @@ export function ArticleDialog({
         });
     } else {
         const articlesRef = collection(firestore, 'suppliers', data.supplierId, 'products');
-        addDocumentNonBlocking(articlesRef, articleData);
-
+        const docRef = await addDocumentNonBlocking(articlesRef, articleData);
+        if (docRef) {
+          onArticleCreated?.({ ...articleData, id: docRef.id });
+        }
         toast({
           title: 'Article créé',
           description: `L'article "${data.name}" a été créé avec succès.`,
@@ -289,5 +293,3 @@ export function ArticleDialog({
     </Dialog>
   );
 }
-
-    

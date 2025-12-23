@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -66,6 +66,8 @@ type PurchaseOrderDialogProps = {
   lastOrderNumber: number;
 };
 
+const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
+
 export function PurchaseOrderDialog({ 
     isOpen,
     onOpenChange,
@@ -78,12 +80,13 @@ export function PurchaseOrderDialog({
   const firestore = useFirestore();
   const isEditMode = !!order;
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
+  const articleCreationIndex = useRef<number | null>(null);
 
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove, replace, update } = useFieldArray({
     control: form.control,
     name: 'items',
   });
@@ -174,6 +177,24 @@ export function PurchaseOrderDialog({
     onOpenChange(false);
   };
 
+  const handleProductChange = (value: string, index: number) => {
+    if (value === CREATE_NEW_ARTICLE_VALUE) {
+      articleCreationIndex.current = index;
+      setArticleDialogOpen(true);
+    } else {
+      update(index, { ...fields[index], productId: value });
+    }
+  };
+
+  const handleArticleCreated = (newArticle: Product) => {
+    if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
+      update(articleCreationIndex.current, { ...fields[articleCreationIndex.current], productId: newArticle.id });
+    }
+    articleCreationIndex.current = null;
+    setArticleDialogOpen(false);
+  };
+
+
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -238,13 +259,20 @@ export function PurchaseOrderDialog({
                     name={`items.${index}.productId`}
                     render={({ field: itemField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={itemField.onChange} value={itemField.value} disabled={!supplierId}>
+                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={!supplierId}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Sélectionnez un article" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                <div className="flex items-center gap-2">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span>Créer un nouvel article</span>
+                                </div>
+                            </SelectItem>
+                            <Separator />
                             {filteredProducts?.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
                                   {product.name}
@@ -310,6 +338,7 @@ export function PurchaseOrderDialog({
             isOpen={isArticleDialogOpen}
             onOpenChange={setArticleDialogOpen}
             suppliers={suppliers.filter(s => s.id === supplierId)}
+            onArticleCreated={handleArticleCreated}
         />
     )}
     </>
