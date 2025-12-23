@@ -143,7 +143,7 @@ export default function PurchaseOrdersPage() {
     () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
     [firestore]
   );
-  const { data: receipts } = useCollection<PurchaseReceipt>(receiptsRef);
+  const { data: receipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(receiptsRef);
 
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
@@ -236,7 +236,7 @@ export default function PurchaseOrdersPage() {
     setSelectedOrder(null);
   };
 
-  const isLoading = isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
+  const isLoading = isLoadingSuppliers || isLoadingOrders || isLoadingProducts || isLoadingReceipts;
   
   const renderCellContent = (order: any, columnId: Column['id']) => {
     const key = `${order.id}-${columnId}`;
