@@ -175,17 +175,18 @@ export default function PurchaseOrdersPage() {
   const isLoading = isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
   
   const renderCellContent = (order: any, columnId: Column['id']) => {
+    const key = `${order.id}-${columnId}`;
     switch (columnId) {
       case 'orderNumber':
-        return <TableCell className="font-medium">{order.orderNumber}</TableCell>;
+        return <TableCell key={key} className="font-medium">{order.orderNumber}</TableCell>;
       case 'supplierName':
-        return <TableCell>{order.supplierName}</TableCell>;
+        return <TableCell key={key}>{order.supplierName}</TableCell>;
       case 'formattedDate':
-        return <TableCell>{order.formattedDate}</TableCell>;
+        return <TableCell key={key}>{order.formattedDate}</TableCell>;
       case 'formattedAmount':
-        return <TableCell className="text-right">{order.formattedAmount}</TableCell>;
+        return <TableCell key={key} className="text-right">{order.formattedAmount}</TableCell>;
       default:
-        return <TableCell></TableCell>;
+        return <TableCell key={key}></TableCell>;
     }
   };
 
