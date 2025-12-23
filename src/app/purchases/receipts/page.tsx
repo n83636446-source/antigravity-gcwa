@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseReceipt, Product, Supplier, PurchaseOrder } from '@/lib/types';
+import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice } from '@/lib/types';
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -52,7 +52,7 @@ export default function PurchaseReceiptsPage() {
     () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
     [firestore]
   );
-  const { data: invoices } = useCollection(invoicesRef);
+  const { data: invoices } = useCollection<PurchaseInvoice>(invoicesRef);
 
 
   const productsQuery = useMemoFirebase(
@@ -199,6 +199,19 @@ export default function PurchaseReceiptsPage() {
   const handleCancelValidation = async () => {
     if (!firestore || !selectedReceipt) return;
     if (selectedReceipt.status === 'Brouillon') return;
+    
+    const isFactured = (invoices || []).some(
+      (invoice) => invoice.purchaseOrderId === selectedReceipt.purchaseOrderId
+    );
+
+    if (isFactured) {
+      toast({
+        variant: 'destructive',
+        title: 'Action impossible',
+        description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
+      });
+      return;
+    }
   
     const batch = writeBatch(firestore);
     
@@ -210,10 +223,8 @@ export default function PurchaseReceiptsPage() {
     for (const item of selectedReceipt.items) {
       let supplierId: string | undefined;
   
-      // 1. Preferred method: Use supplierId from the receipt item (new data structure)
       supplierId = item.supplierId;
       
-      // 2. Fallback for older receipts: Find the supplierId from the original purchase order
       if (!supplierId) {
         const originalOrder = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
         if (originalOrder) {
@@ -221,7 +232,6 @@ export default function PurchaseReceiptsPage() {
         }
       }
   
-      // 3. Last resort fallback: Find the supplierId from the product itself
       if (!supplierId) {
         const product = products?.find(p => p.id === item.productId);
         if (product) {
@@ -229,7 +239,6 @@ export default function PurchaseReceiptsPage() {
         }
       }
       
-      // If we still don't have a supplierId after all fallbacks, we can't proceed for this item.
       if (!supplierId) {
         isDataMissing = true;
         break; 
@@ -245,7 +254,7 @@ export default function PurchaseReceiptsPage() {
         toast({
             variant: 'destructive',
             title: 'Erreur d\'annulation',
-            description: 'Données de fournisseur manquantes et bon de commande original introuvable. Impossible de restaurer le stock.',
+            description: 'donnees de fournisseur manquantes et bon de commande original introuvable. Impossible de restaurer le stock',
         });
         return;
     }
