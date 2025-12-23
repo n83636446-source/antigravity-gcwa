@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 export default function ArticlesPage() {
   const firestore = useFirestore();
@@ -38,6 +39,8 @@ export default function ArticlesPage() {
   const [editingArticle, setEditingArticle] = useState<Article | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -81,6 +84,14 @@ export default function ArticlesPage() {
     setArticleToDelete(article);
     setDeleteDialogOpen(true);
   };
+  
+  const handleSelectArticle = (article: Article) => {
+    if (selectedArticle?.id === article.id) {
+      setSelectedArticle(null); // Deselect if clicking the same row
+    } else {
+      setSelectedArticle(article);
+    }
+  };
 
   const handleDeleteConfirm = () => {
     if (!firestore || !articleToDelete) return;
@@ -98,6 +109,7 @@ export default function ArticlesPage() {
     });
     setDeleteDialogOpen(false);
     setArticleToDelete(null);
+    setSelectedArticle(null);
   };
 
   const getSupplierName = (supplierId: string) => {
@@ -105,15 +117,32 @@ export default function ArticlesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6">
+    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={(e) => {
+        if (e.target === e.currentTarget) {
+            setSelectedArticle(null);
+        }
+    }}>
       <PageHeader
         title="Articles"
         description="Gérez votre inventaire d'articles."
       >
-        <Button onClick={handleAdd}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Ajouter un article
-        </Button>
+        {selectedArticle ? (
+            <div className='flex items-center gap-2'>
+                 <Button variant="outline" onClick={() => handleEdit(selectedArticle)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Modifier
+                </Button>
+                 <Button variant="destructive" onClick={() => handleDeleteRequest(selectedArticle)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Supprimer
+                </Button>
+            </div>
+        ) : (
+            <Button onClick={handleAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Ajouter un article
+            </Button>
+        )}
       </PageHeader>
       
       {isLoading ? (
@@ -130,7 +159,12 @@ export default function ArticlesPage() {
           <CardHeader>
             <CardTitle>Tous les articles</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent onClick={(e) => {
+             // Clicks inside the card but outside a row deselects
+              if (e.target === e.currentTarget) {
+                 setSelectedArticle(null);
+              }
+          }}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -139,15 +173,15 @@ export default function ArticlesPage() {
                   <TableHead>Fournisseur</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead className="text-right">Prix</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(articles || []).map((article) => (
                   <TableRow
                     key={article.id}
+                    onClick={() => handleSelectArticle(article)}
                     onDoubleClick={() => handleEdit(article)}
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", selectedArticle?.id === article.id && 'bg-muted/50')}
                   >
                     <TableCell className="font-medium">{article.code}</TableCell>
                     <TableCell>{article.name}</TableCell>
@@ -160,16 +194,6 @@ export default function ArticlesPage() {
                         style: 'currency',
                         currency: 'EUR',
                       }).format(article.price)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(article);}}>
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Modifier</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDeleteRequest(article);}}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            <span className="sr-only">Supprimer</span>
-                        </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -209,5 +233,3 @@ export default function ArticlesPage() {
     </div>
   );
 }
-
-    
