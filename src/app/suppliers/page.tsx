@@ -299,6 +299,7 @@ export default function SuppliersPage() {
         onOpenChange={setDialogOpen}
         supplier={editingSupplier}
         lastSupplierCodeNumber={lastSupplierCodeNumber}
+        suppliers={suppliers || []}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -52,6 +52,7 @@ type SupplierDialogProps = {
   supplier?: Supplier;
   lastSupplierCodeNumber?: number;
   onSupplierCreated?: (supplier: Supplier) => void;
+  suppliers: Supplier[];
 };
 
 export function SupplierDialog({ 
@@ -59,7 +60,8 @@ export function SupplierDialog({
     onOpenChange, 
     supplier, 
     lastSupplierCodeNumber = 0,
-    onSupplierCreated 
+    onSupplierCreated,
+    suppliers,
 }: SupplierDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -92,6 +94,19 @@ export function SupplierDialog({
 
   const onSubmit = async (data: SupplierFormValues) => {
     if (!firestore) return;
+
+    // Check for unique ICE
+    const iceExists = suppliers.some(
+      s => s.ice === data.ice && s.id !== supplier?.id
+    );
+
+    if (iceExists) {
+      form.setError('ice', {
+        type: 'manual',
+        message: 'Cet ICE est déjà utilisé par un autre fournisseur.',
+      });
+      return;
+    }
     
     if (isEditMode && supplier) {
       const supplierDocRef = doc(firestore, 'suppliers', supplier.id);

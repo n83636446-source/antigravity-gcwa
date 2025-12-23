@@ -469,6 +469,7 @@ export function PurchaseInvoiceDialog({
         onOpenChange={setSupplierDialogOpen}
         lastSupplierCodeNumber={lastSupplierCodeNumber}
         onSupplierCreated={handleSupplierCreated}
+        suppliers={allSuppliers || []}
     />
     </>
   );
