@@ -335,9 +335,20 @@ export function PurchaseOrderDialog({
                   </Button>
                 )}
               </div>
-              <Button type="submit">
-                {isEditMode ? 'Enregistrer' : 'Créer le bon de commande'}
-              </Button>
+              <div className="flex gap-2">
+                {isEditMode && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Fermer
+                  </Button>
+                )}
+                <Button type="submit">
+                  {isEditMode ? 'Enregistrer' : 'Créer le bon de commande'}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
