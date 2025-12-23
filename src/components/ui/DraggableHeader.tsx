@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { TableHead } from '@/components/ui/table';
-import { GripVertical } from 'lucide-react';
 
 export const DraggableHeader = React.forwardRef<
   HTMLTableCellElement,
@@ -36,8 +35,7 @@ export const DraggableHeader = React.forwardRef<
       {...attributes}
       {...listeners}
     >
-      <div className="flex items-center gap-2">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center">
         {children}
       </div>
     </TableHead>
