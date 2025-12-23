@@ -41,9 +41,9 @@ const menuItems = [
 ];
 
 const achatSubMenuItems = [
-    { href: '/purchases/orders', label: 'Bon de commande' },
-    { href: '/purchases/receipts', label: 'Bon de réception' },
-    { href: '/purchases/invoices', label: 'Facture' },
+    { href: '/purchases/orders', label: 'Bons de commande' },
+    { href: '/purchases/receipts', label: 'Bons de réception' },
+    { href: '/purchases/invoices', label: 'Factures' },
 ];
 
 export function AppSidebar() {
