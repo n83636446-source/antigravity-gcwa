@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -135,8 +135,18 @@ export function PurchaseInvoiceDialog({
   });
 
   const purchaseOrderId = form.watch('purchaseOrderId');
-  const watchedItems = form.watch('items');
-  const [total, setTotal] = useState(0);
+  const watchedItems = useWatch({ control: form.control, name: "items" });
+  
+  const liveTotal = useMemo(() => {
+    if (!watchedItems || !products) return 0;
+    return watchedItems.reduce((sum, item) => {
+      if (item && item.productId && item.quantity > 0) {
+        const product = products.find(p => p.id === item.productId);
+        return sum + (item.quantity * (product?.price || 0));
+      }
+      return sum;
+    }, 0);
+  }, [watchedItems, products]);
 
   
   useEffect(() => {
@@ -182,17 +192,6 @@ export function PurchaseInvoiceDialog({
 
 
   useEffect(() => {
-    const newTotal = watchedItems?.reduce((acc, item) => {
-        if(item && item.productId && item.quantity > 0) {
-            const product = products?.find(p => p.id === item.productId);
-            return acc + (product ? product.price * item.quantity : 0);
-        }
-        return acc;
-    }, 0) || 0;
-    setTotal(newTotal);
-  }, [watchedItems, products]);
-  
-  useEffect(() => {
     if (!isOpen) {
       form.reset({
         purchaseOrderId: '',
@@ -208,6 +207,11 @@ export function PurchaseInvoiceDialog({
   const onSubmit = (data: PurchaseInvoiceFormValues) => {
     if (!firestore) return;
 
+    const totalAmount = data.items.reduce((sum, item) => {
+        const product = products?.find(p => p.id === item.productId);
+        return sum + ((item.quantity || 0) * (product?.price || 0));
+    }, 0);
+
     const invoiceData = {
         purchaseOrderId: data.purchaseOrderId,
         supplierId: data.supplierId,
@@ -217,7 +221,7 @@ export function PurchaseInvoiceDialog({
             ...item,
             price: products?.find(p => p.id === item.productId)?.price || 0
         })),
-        totalAmount: total,
+        totalAmount: totalAmount,
     };
 
     if (isEditMode && invoice) {
@@ -478,7 +482,7 @@ export function PurchaseInvoiceDialog({
                     {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
                         currency: 'EUR',
-                    }).format(total)}
+                    }).format(liveTotal)}
                 </span>
             </div>
 
