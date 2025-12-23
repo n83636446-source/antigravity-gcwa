@@ -80,12 +80,10 @@ export default function PurchaseReceiptsPage() {
 
   const handleRowDoubleClick = (receipt: PurchaseReceipt) => {
     if (receipt.status === 'Validé') {
-        toast({
-            variant: 'destructive',
-            title: 'Action impossible',
-            description: 'Vous ne pouvez pas modifier un bon de réception qui est déjà validé.',
-        });
-        return;
+      toast({
+        title: 'Bon de réception validé',
+        description: 'Ce document est en lecture seule car il a été validé.',
+      });
     }
     setEditingReceipt(receipt);
     setDialogOpen(true);
@@ -93,7 +91,16 @@ export default function PurchaseReceiptsPage() {
   
   const handleEditClick = () => {
     if (selectedReceipt) {
-      handleRowDoubleClick(selectedReceipt);
+      if (selectedReceipt.status === 'Validé') {
+        toast({
+            variant: 'destructive',
+            title: 'Action impossible',
+            description: 'Vous ne pouvez pas modifier un bon de réception qui est déjà validé.',
+        });
+        return;
+      }
+      setEditingReceipt(selectedReceipt);
+      setDialogOpen(true);
     }
   };
 
