@@ -35,6 +35,10 @@ import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder } from '@/lib/types';
 import { format } from 'date-fns';
 import { Separator } from './ui/separator';
+import { ProductDialog } from './product-dialog';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+
 
 const orderItemSchema = z.object({
   productId: z.string().nonempty('Veuillez sélectionner un produit.'),
@@ -51,20 +55,19 @@ type PurchaseOrderFormValues = z.infer<typeof purchaseOrderSchema>;
 
 type PurchaseOrderDialogProps = {
   suppliers: Supplier[];
-  products: Product[];
   onOrderCreated: (order: PurchaseOrder) => void;
   lastOrderNumber: number;
 };
 
 export function PurchaseOrderDialog({ 
     suppliers, 
-    products: allProducts,
     onOrderCreated,
     lastOrderNumber 
 }: PurchaseOrderDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  
+  const firestore = useFirestore();
+
   const form = useForm<PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: {
@@ -80,25 +83,31 @@ export function PurchaseOrderDialog({
   });
   
   const supplierId = form.watch('supplierId');
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
+
+  const productsRef = useMemoFirebase(
+    () =>
+      firestore && supplierId
+        ? query(collection(firestore, `suppliers/${supplierId}/products`))
+        : null,
+    [firestore, supplierId]
+  );
+  
+  const { data: filteredProducts, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
+
 
   useEffect(() => {
     if (supplierId) {
-      const supplierProducts = allProducts.filter(p => p.supplierId === supplierId);
-      setFilteredProducts(supplierProducts);
       form.setValue('items', [{ productId: '', quantity: 1 }]);
-    } else {
-      setFilteredProducts([]);
     }
-  }, [supplierId, allProducts, form]);
+  }, [supplierId, form]);
 
   useEffect(() => {
     const subscription = form.watch((values) => {
         const currentItems = values.items || [];
         const newTotal = currentItems.reduce((acc, item) => {
             if(item && item.productId && item.quantity > 0) {
-                const product = allProducts.find(p => p.id === item.productId);
+                const product = filteredProducts?.find(p => p.id === item.productId);
                 return acc + (product ? product.price * item.quantity : 0);
             }
             return acc;
@@ -106,7 +115,7 @@ export function PurchaseOrderDialog({
         setTotal(newTotal);
     });
     return () => subscription.unsubscribe();
-  }, [form, allProducts]);
+  }, [form, filteredProducts]);
 
 
   const onSubmit = (data: PurchaseOrderFormValues) => {
@@ -119,7 +128,7 @@ export function PurchaseOrderDialog({
         status: 'Brouillon',
         items: data.items.map(item => ({
             ...item,
-            price: allProducts.find(p => p.id === item.productId)?.price || 0
+            price: filteredProducts?.find(p => p.id === item.productId)?.price || 0
         })),
         totalAmount: total,
     };
@@ -206,18 +215,22 @@ export function PurchaseOrderDialog({
                     name={`items.${index}.productId`}
                     render={({ field: itemField }) => (
                       <FormItem className="flex-1">
-                        <Select onValueChange={itemField.onChange} defaultValue={itemField.value} disabled={!supplierId}>
+                        <Select onValueChange={itemField.onChange} defaultValue={itemField.value} disabled={!supplierId || isLoadingProducts}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Sélectionnez un produit" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {filteredProducts.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
+                            {isLoadingProducts ? (
+                                <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                            ) : (
+                                filteredProducts?.map((product) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                    {product.name}
+                                </SelectItem>
+                                ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -241,6 +254,14 @@ export function PurchaseOrderDialog({
                   </Button>
                 </div>
               ))}
+               {supplierId && !isLoadingProducts && (!filteredProducts || filteredProducts.length === 0) && (
+                <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
+                    Aucun produit trouvé pour ce fournisseur.
+                    <ProductDialog suppliers={suppliers.filter(s => s.id === supplierId)} isChild>
+                         <Button variant="link" className="p-1 h-auto">Créer un produit</Button>
+                    </ProductDialog>
+                </div>
+              )}
               <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })} disabled={!supplierId}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un article
               </Button>

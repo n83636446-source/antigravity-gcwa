@@ -12,7 +12,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
-import { products, purchaseOrders as initialPurchaseOrders } from '@/lib/data';
 import type { PurchaseOrder, Supplier } from '@/lib/types';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -21,7 +20,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export default function PurchaseOrdersPage() {
-  const [orders, setOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const firestore = useFirestore();
 
   const suppliersRef = useMemoFirebase(
@@ -61,7 +60,6 @@ export default function PurchaseOrdersPage() {
       >
         <PurchaseOrderDialog
           suppliers={suppliers || []}
-          products={products}
           onOrderCreated={addOrder}
           lastOrderNumber={orders.length}
         />

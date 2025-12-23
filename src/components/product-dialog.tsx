@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -51,9 +51,11 @@ type ProductFormValues = z.infer<typeof productSchema>;
 
 type ProductDialogProps = {
   suppliers: Supplier[];
+  isChild?: boolean;
+  children?: ReactNode;
 };
 
-export function ProductDialog({ suppliers }: ProductDialogProps) {
+export function ProductDialog({ suppliers, isChild = false, children }: ProductDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -66,7 +68,7 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
       price: 0,
       stock: 0,
       lowStockThreshold: 10,
-      supplierId: '',
+      supplierId: suppliers.length === 1 ? suppliers[0].id : '',
     },
   });
 
@@ -91,14 +93,20 @@ export function ProductDialog({ suppliers }: ProductDialogProps) {
     form.reset();
   };
 
+  const Trigger = isChild ? (
+    <DialogTrigger asChild>{children}</DialogTrigger>
+  ) : (
+    <DialogTrigger asChild>
+      <Button>
+        <PlusCircle className="mr-2 h-4 w-4" />
+        Ajouter un produit
+      </Button>
+    </DialogTrigger>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Ajouter un produit
-        </Button>
-      </DialogTrigger>
+      {Trigger}
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
