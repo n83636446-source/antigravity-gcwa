@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Product, Supplier } from '@/lib/types';
+import type { Article, Supplier } from '@/lib/types';
 import {
   Table,
   TableHeader,
@@ -16,20 +16,21 @@ import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 type InventoryTableProps = {
-  products: Product[];
+  articles: Article[];
   suppliers: Supplier[];
+  onRowDoubleClick?: (article: Article) => void;
 };
 
-export function InventoryTable({ products, suppliers }: InventoryTableProps) {
-  const getStockStatus = (product: Product) => {
-    if (product.stock === 0) {
+export function InventoryTable({ articles, suppliers, onRowDoubleClick }: InventoryTableProps) {
+  const getStockStatus = (article: Article) => {
+    if (article.stock === 0) {
       return {
         label: 'En rupture',
         variant: 'destructive',
         icon: <XCircle className="mr-2 h-4 w-4" />,
       } as const;
     }
-    if (product.stock <= product.lowStockThreshold) {
+    if (article.stock <= article.lowStockThreshold) {
       return {
         label: 'Stock faible',
         variant: 'secondary',
@@ -60,13 +61,17 @@ export function InventoryTable({ products, suppliers }: InventoryTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => {
-              const status = getStockStatus(product);
-              const supplier = suppliers.find((s) => s.id === product.supplierId);
+            {articles.map((article) => {
+              const status = getStockStatus(article);
+              const supplier = suppliers.find((s) => s.id === article.supplierId);
               return (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell className="text-right">{product.stock}</TableCell>
+                <TableRow 
+                  key={article.id}
+                  onDoubleClick={() => onRowDoubleClick?.(article)}
+                  className={onRowDoubleClick ? "cursor-pointer" : ""}
+                >
+                  <TableCell className="font-medium">{article.name}</TableCell>
+                  <TableCell className="text-right">{article.stock}</TableCell>
                   <TableCell>
                     <Badge variant={status.variant} className="items-center">
                       {status.icon}
@@ -77,11 +82,11 @@ export function InventoryTable({ products, suppliers }: InventoryTableProps) {
                     {new Intl.NumberFormat('fr-FR', {
                       style: 'currency',
                       currency: 'EUR',
-                    }).format(product.price)}
+                    }).format(article.price)}
                   </TableCell>
                   <TableCell className="text-center">
                     {status.label === 'Stock faible' && supplier && (
-                      <EstimateStockDialog product={product} supplier={supplier} />
+                      <EstimateStockDialog article={article} supplier={supplier} />
                     )}
                   </TableCell>
                 </TableRow>

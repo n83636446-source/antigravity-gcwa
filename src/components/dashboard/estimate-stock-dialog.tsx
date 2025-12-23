@@ -15,18 +15,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Bot, Loader2, BarChartBig, ShoppingCart, HelpCircle } from 'lucide-react';
-import type { Product, Supplier } from '@/lib/types';
+import type { Article, Supplier } from '@/lib/types';
 import { runStockEstimation } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { StockLevelEstimationOutput } from '@/ai/flows/stock-level-estimation';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 type EstimateStockDialogProps = {
-  product: Product;
+  article: Article;
   supplier: Supplier;
 };
 
-export function EstimateStockDialog({ product, supplier }: EstimateStockDialogProps) {
+export function EstimateStockDialog({ article, supplier }: EstimateStockDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StockLevelEstimationOutput | null>(null);
@@ -38,7 +38,7 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
     setResult(null);
 
     const formData = new FormData(event.currentTarget);
-    const response = await runStockEstimation(product.name, product.stock, formData);
+    const response = await runStockEstimation(article.name, article.stock, formData);
 
     if (response.success && response.data) {
       setResult(response.data);
@@ -65,7 +65,7 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
           <DialogHeader>
             <DialogTitle>Estimation de stock par IA</DialogTitle>
             <DialogDescription>
-              Estimez les besoins de réapprovisionnement pour '{product.name}' en utilisant l'IA.
+              Estimez les besoins de réapprovisionnement pour '{article.name}' en utilisant l'IA.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -77,7 +77,7 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
                 id="safetyStockLevel"
                 name="safetyStockLevel"
                 type="number"
-                defaultValue={product.lowStockThreshold}
+                defaultValue={article.lowStockThreshold}
                 className="col-span-3"
                 required
               />

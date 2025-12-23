@@ -1,24 +1,24 @@
 import { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DollarSign, Package, AlertCircle } from 'lucide-react';
-import type { Product } from '@/lib/types';
+import type { Article } from '@/lib/types';
 
 type StatsCardsProps = {
-  products: Product[];
+  articles: Article[];
 };
 
-export function StatsCards({ products }: StatsCardsProps) {
+export function StatsCards({ articles }: StatsCardsProps) {
   const stats = useMemo(() => {
-    const totalValue = products.reduce(
-      (acc, product) => acc + product.price * product.stock,
+    const totalValue = articles.reduce(
+      (acc, article) => acc + article.price * article.stock,
       0
     );
-    const lowStockItems = products.filter(
+    const lowStockItems = articles.filter(
       (p) => p.stock <= p.lowStockThreshold && p.stock > 0
     ).length;
-    const totalProducts = products.length;
-    return { totalValue, lowStockItems, totalProducts };
-  }, [products]);
+    const totalArticles = articles.length;
+    return { totalValue, lowStockItems, totalArticles };
+  }, [articles]);
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -45,7 +45,7 @@ export function StatsCards({ products }: StatsCardsProps) {
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalProducts}</div>
+          <div className="text-2xl font-bold">{stats.totalArticles}</div>
           <p className="text-xs text-muted-foreground">
             Nombre d'articles uniques
           </p>
