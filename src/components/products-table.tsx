@@ -41,7 +41,7 @@ export function ProductsTable({ products, suppliers }: ProductsTableProps) {
               <TableRow key={product.id}>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>{getSupplierName(product.supplierId)}</TableCell>
-                <TableCell className="text-right">{product.stock}</TableCell>
+                <TableCell className="text-right">{product.stockLevel}</TableCell>
                 <TableCell className="text-right">
                   {new Intl.NumberFormat('fr-FR', {
                     style: 'currency',

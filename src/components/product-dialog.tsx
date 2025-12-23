@@ -42,8 +42,8 @@ const productSchema = z.object({
   name: z.string().min(2, "Le nom de l'article doit contenir au moins 2 caractères."),
   description: z.string().optional(),
   price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
-  stock: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
-  lowStockThreshold: z.coerce.number().int().min(0, 'Le seuil doit être un entier non négatif.'),
+  stockLevel: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
+  reorderThreshold: z.coerce.number().int().min(0, 'Le seuil doit être un entier non négatif.'),
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
 });
 
@@ -66,8 +66,8 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
       name: '',
       description: '',
       price: 0,
-      stock: 0,
-      lowStockThreshold: 10,
+      stockLevel: 0,
+      reorderThreshold: 10,
       supplierId: suppliers.length === 1 ? suppliers[0].id : '',
     },
   });
@@ -80,8 +80,8 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
         name: data.name,
         description: data.description || '',
         price: data.price,
-        stock: data.stock,
-        lowStockThreshold: data.lowStockThreshold,
+        stockLevel: data.stockLevel,
+        reorderThreshold: data.reorderThreshold,
         supplierId: data.supplierId,
     });
 
@@ -172,7 +172,7 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
               />
               <FormField
                 control={form.control}
-                name="stock"
+                name="stockLevel"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stock</FormLabel>
@@ -187,7 +187,7 @@ export function ProductDialog({ suppliers, isChild = false, children }: ProductD
 
             <FormField
               control={form.control}
-              name="lowStockThreshold"
+              name="reorderThreshold"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Seuil de stock bas</FormLabel>
