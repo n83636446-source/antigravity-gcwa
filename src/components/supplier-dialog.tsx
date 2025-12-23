@@ -107,6 +107,19 @@ export function SupplierDialog({
       });
       return;
     }
+
+    // Check for unique phone number
+    const phoneExists = suppliers.some(
+      s => s.contactPhone === data.contactPhone && s.id !== supplier?.id
+    );
+
+    if (phoneExists) {
+      form.setError('contactPhone', {
+        type: 'manual',
+        message: 'Ce numéro de téléphone est déjà utilisé par un autre fournisseur.',
+      });
+      return;
+    }
     
     if (isEditMode && supplier) {
       const supplierDocRef = doc(firestore, 'suppliers', supplier.id);
