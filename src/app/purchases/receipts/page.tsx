@@ -151,7 +151,7 @@ export default function PurchaseReceiptsPage() {
   }
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('tr, button')) {
+    if ((e.target as HTMLElement).closest('tr, button, [role=menu], [role=tooltip]')) {
       return;
     }
     setSelectedReceipt(null);
@@ -189,6 +189,7 @@ export default function PurchaseReceiptsPage() {
         title: 'Bon de réception validé',
         description: 'Le stock a été mis à jour avec succès.',
       });
+      setSelectedReceipt(prev => prev ? { ...prev, status: 'Validé' } : null);
     } catch (error) {
       console.error("Validation failed: ", error);
       toast({
@@ -226,6 +227,7 @@ export default function PurchaseReceiptsPage() {
         title: 'Validation annulée',
         description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
       });
+      setSelectedReceipt(prev => prev ? { ...prev, status: 'Brouillon' } : null);
     } catch (error) {
        console.error("Validation cancellation failed: ", error);
       toast({

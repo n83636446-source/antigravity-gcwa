@@ -146,7 +146,7 @@ export function PurchaseReceiptDialog({
           });
         }
       }
-    } else {
+    } else if (!isTriggeredExternally) {
       form.reset({
         purchaseOrderId: '',
         receiptDate: new Date().toISOString().split('T')[0],
@@ -154,7 +154,7 @@ export function PurchaseReceiptDialog({
         items: [],
       });
     }
-  }, [isOpen, purchaseOrder, watchedOrderId, receipt, isEditMode, purchaseOrders, form, onOpenChange]);
+  }, [isOpen, purchaseOrder, watchedOrderId, receipt, isEditMode, purchaseOrders, form, isTriggeredExternally]);
 
 
   const getProductName = (productId: string) => {
@@ -361,7 +361,7 @@ export function PurchaseReceiptDialog({
                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
-              <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
+              <Button type="submit" disabled={isEditMode && receipt?.status === 'Validé'}>{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
             </DialogFooter>
           </form>
         </Form>
