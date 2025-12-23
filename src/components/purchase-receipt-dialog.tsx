@@ -471,10 +471,10 @@ export function PurchaseReceiptDialog({
             <div className="space-y-4">
               <div
                 className={cn(
-                  'grid items-center gap-2',
+                  'grid items-center gap-2 pr-[44px]',
                   fromBC
-                    ? 'grid-cols-[1fr_100px_100px_100px]'
-                    : 'grid-cols-[1fr_100px_100px_auto]'
+                    ? 'grid-cols-[1fr_120px_120px_100px]'
+                    : 'grid-cols-[1fr_120px_100px]'
                 )}
               >
                 <FormLabel>Article</FormLabel>
@@ -483,7 +483,6 @@ export function PurchaseReceiptDialog({
                 )}
                 <FormLabel className="text-center">Qté Reçue</FormLabel>
                 <FormLabel className="text-right">Prix</FormLabel>
-                {!fromBC && <div />}
               </div>
 
               {fields.map((field, index) => (
@@ -492,8 +491,8 @@ export function PurchaseReceiptDialog({
                   className={cn(
                     'grid items-start gap-2',
                     fromBC
-                      ? 'grid-cols-[1fr_100px_100px_100px]'
-                      : 'grid-cols-[1fr_100px_100px_auto]'
+                      ? 'grid-cols-[1fr_120px_120px_100px_44px]'
+                      : 'grid-cols-[1fr_120px_100px_44px]'
                   )}
                 >
                   {fromBC ? (
@@ -564,7 +563,7 @@ export function PurchaseReceiptDialog({
                     control={form.control}
                     name={`items.${index}.price`}
                     render={({ field: itemField }) => (
-                      <FormItem>
+                      <FormItem className={cn(fromBC && 'col-start-4')}>
                         <FormControl>
                           <Input
                             type="number"
