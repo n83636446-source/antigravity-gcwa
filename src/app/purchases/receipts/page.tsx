@@ -79,6 +79,14 @@ export default function PurchaseReceiptsPage() {
   };
 
   const handleRowDoubleClick = (receipt: PurchaseReceipt) => {
+    if (receipt.status === 'Validé') {
+        toast({
+            variant: 'destructive',
+            title: 'Action impossible',
+            description: 'Vous ne pouvez pas modifier un bon de réception qui est déjà validé.',
+        });
+        return;
+    }
     setEditingReceipt(receipt);
     setDialogOpen(true);
   };
@@ -195,12 +203,12 @@ export default function PurchaseReceiptsPage() {
   };
   
   const handleCancelValidation = async () => {
-    if (!firestore || !products) return;
+    if (!firestore || !products || !invoices || !suppliers) return;
   
     const receiptToCancel = editingReceipt || selectedReceipt;
     if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
   
-    const isFactured = (invoices || []).some(
+    const isFactured = invoices.some(
       (invoice) => invoice.purchaseOrderId && invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
     );
   

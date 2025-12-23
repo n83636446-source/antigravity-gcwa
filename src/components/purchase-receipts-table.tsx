@@ -79,12 +79,10 @@ export function PurchaseReceiptsTable({
       const savedColumns = localStorage.getItem('purchaseReceiptsColumns');
       if (savedColumns) {
         const parsedColumns: Column[] = JSON.parse(savedColumns);
-        // Add new 'status' column if it's not there for backward compatibility
         const columnIds = new Set(parsedColumns.map(c => c.id));
         if (!columnIds.has('status')) {
           parsedColumns.push({ id: 'status', label: 'Statut' });
         }
-        // Basic validation
         if (parsedColumns.length > 0) {
             setColumns(parsedColumns);
         } else {
@@ -124,11 +122,12 @@ export function PurchaseReceiptsTable({
   }
 
   const enrichedReceipts = useMemo(() => {
-    return (receipts || []).map(receipt => {
+    if (!receipts || !suppliers) return [];
+    return receipts.map(receipt => {
       let orderNumber: string | undefined = 'N/A';
       const supplier = suppliers.find((s) => s.id === receipt.supplierId);
       
-      if (receipt.purchaseOrderId) {
+      if (receipt.purchaseOrderId && purchaseOrders) {
           const order = purchaseOrders.find((o) => o.id === receipt.purchaseOrderId);
           orderNumber = order?.orderNumber;
       }
@@ -167,7 +166,7 @@ export function PurchaseReceiptsTable({
 
   return (
     <>
-        {receipts.length > 0 ? (
+        {enrichedReceipts.length > 0 ? (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
