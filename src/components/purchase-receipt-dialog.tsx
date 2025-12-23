@@ -139,14 +139,12 @@ export function PurchaseReceiptDialog({
     };
 
     const receiptRef = collection(firestore, 'purchaseReceipts');
-    const orderRef = doc(firestore, 'purchaseOrders', data.purchaseOrderId);
-
+    
     const batch = writeBatch(firestore);
 
     const newReceiptDocRef = doc(receiptRef);
     batch.set(newReceiptDocRef, newReceiptData);
 
-    batch.update(orderRef, { status: 'Reçu' });
 
     // Update stock levels
     data.items.forEach((item) => {

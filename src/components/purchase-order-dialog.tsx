@@ -152,7 +152,6 @@ export function PurchaseOrderDialog({
         updateDocumentNonBlocking(orderDocRef, {
             ...orderData,
             orderNumber: order.orderNumber, // keep original order number
-            status: order.status, // keep original status unless changed
         });
         toast({
             title: 'Bon de commande modifié',
@@ -164,12 +163,11 @@ export function PurchaseOrderDialog({
         addDocumentNonBlocking(purchaseOrdersRef, {
             ...orderData,
             orderNumber: newOrderNumber,
-            status: 'Brouillon' as const,
         });
 
         toast({
           title: 'Bon de commande créé',
-          description: `Le bon de commande "${newOrderNumber}" a été créé en tant que brouillon.`,
+          description: `Le bon de commande "${newOrderNumber}" a été créé.`,
         });
     }
     

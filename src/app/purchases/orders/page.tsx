@@ -9,7 +9,6 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
 import type { PurchaseOrder, Supplier, Product } from '@/lib/types';
@@ -49,21 +48,6 @@ export default function PurchaseOrdersPage() {
 
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
-  };
-
-  const getStatusVariant = (status: PurchaseOrder['status']) => {
-    switch (status) {
-      case 'Brouillon':
-        return 'secondary';
-      case 'Envoyé':
-        return 'default';
-      case 'Reçu':
-        return 'outline';
-      case 'Annulé':
-        return 'destructive';
-      default:
-        return 'default';
-    }
   };
 
   const handleAdd = () => {
@@ -107,7 +91,6 @@ export default function PurchaseOrdersPage() {
                           <TableHead>Fournisseur</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead className="text-right">Montant</TableHead>
-                          <TableHead>Statut</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -121,9 +104,6 @@ export default function PurchaseOrdersPage() {
                                   style: 'currency',
                                   currency: 'EUR',
                                 }).format(order.totalAmount)}
-                             </TableCell>
-                             <TableCell>
-                               <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
                              </TableCell>
                            </TableRow>
                         ))}

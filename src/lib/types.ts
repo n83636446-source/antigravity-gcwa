@@ -1,3 +1,4 @@
+'use client';
 
 export type Supplier = {
   id: string;
@@ -41,7 +42,6 @@ export type PurchaseOrder = {
   supplierId: string;
   orderDate: string; // ISO string
   totalAmount: number;
-  status: 'Brouillon' | 'Envoyé' | 'Reçu' | 'Annulé';
   items: PurchaseOrderItem[];
 };
 

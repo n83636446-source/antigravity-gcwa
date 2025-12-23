@@ -29,10 +29,6 @@ export default function PurchaseInvoicesPage() {
   );
   const { data: purchaseOrders } = useCollection<PurchaseOrder>(ordersRef);
 
-  const receivedOrders = useMemoFirebase(
-    () => purchaseOrders?.filter((order) => order.status === 'Reçu') || [],
-    [purchaseOrders]
-  );
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -41,7 +37,7 @@ export default function PurchaseInvoicesPage() {
         description="Gérez vos factures fournisseurs."
       >
         <PurchaseInvoiceDialog
-            purchaseOrders={receivedOrders}
+            purchaseOrders={purchaseOrders || []}
             lastInvoiceNumber={invoices?.length || 0}
         />
       </PageHeader>

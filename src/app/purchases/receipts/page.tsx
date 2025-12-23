@@ -6,7 +6,7 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder } from '@/lib/ty
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, collectionGroup } from 'firebase/firestore';
+import { collection, query, collectionGroup } from 'firebase/firestore';
 
 export default function PurchaseReceiptsPage() {
   const firestore = useFirestore();
@@ -17,12 +17,6 @@ export default function PurchaseReceiptsPage() {
   );
   const { data: receipts } = useCollection<PurchaseReceipt>(receiptsRef);
   
-  const ordersRef = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'purchaseOrders'), where('status', '==', 'Envoyé')) : null),
-    [firestore]
-  );
-  const { data: availableOrders } = useCollection<PurchaseOrder>(ordersRef);
-
   const allOrdersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseOrders') : null),
     [firestore]
@@ -50,7 +44,7 @@ export default function PurchaseReceiptsPage() {
         description="Gérez vos bons de réception."
       >
         <PurchaseReceiptDialog
-          purchaseOrders={availableOrders || []}
+          purchaseOrders={allOrders || []}
           products={products || []}
           lastReceiptNumber={receipts?.length || 0}
         />
