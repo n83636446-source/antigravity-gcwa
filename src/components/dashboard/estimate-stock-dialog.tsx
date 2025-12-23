@@ -60,7 +60,7 @@ export function EstimateStockDialog({ product, supplier }: EstimateStockDialogPr
           Estimer le besoin
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[80vw]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Estimation de stock par IA</DialogTitle>
