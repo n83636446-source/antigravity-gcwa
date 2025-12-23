@@ -85,7 +85,8 @@ export default function ArticlesPage() {
     setDeleteDialogOpen(true);
   };
   
-  const handleSelectArticle = (article: Article) => {
+  const handleSelectArticle = (e: React.MouseEvent, article: Article) => {
+    e.stopPropagation();
     if (selectedArticle?.id === article.id) {
       setSelectedArticle(null); // Deselect if clicking the same row
     } else {
@@ -117,12 +118,7 @@ export default function ArticlesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={(e) => {
-        // Deselect if the click is on the root div itself
-        if (e.target === e.currentTarget) {
-            setSelectedArticle(null);
-        }
-    }}>
+    <div className="flex flex-col gap-8 p-4 md:p-6" onClick={() => setSelectedArticle(null)}>
       <PageHeader
         title="Articles"
         description="Gérez votre inventaire d'articles."
@@ -143,7 +139,7 @@ export default function ArticlesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card onClick={(e) => e.stopPropagation()}>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Tous les articles</CardTitle>
             {selectedArticle ? (
@@ -159,12 +155,7 @@ export default function ArticlesPage() {
               </div>
             ) : null}
           </CardHeader>
-          <CardContent onClick={(e) => {
-             // Clicks inside the card but outside a row also deselect
-              if (e.target === e.currentTarget) {
-                 setSelectedArticle(null);
-              }
-          }}>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -179,7 +170,7 @@ export default function ArticlesPage() {
                 {(articles || []).map((article) => (
                   <TableRow
                     key={article.id}
-                    onClick={() => handleSelectArticle(article)}
+                    onClick={(e) => handleSelectArticle(e, article)}
                     onDoubleClick={() => handleEdit(article)}
                     className={cn("cursor-pointer", selectedArticle?.id === article.id && 'bg-muted/50')}
                   >
