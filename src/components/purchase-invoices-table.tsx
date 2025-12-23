@@ -19,7 +19,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
+import { useMemo, ReactNode } from 'react';
+import { DraggableHeader } from './ui/DraggableHeader';
+
+
+type Column = {
+    id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalAmount' | 'status';
+    label: string;
+};
 
 type PurchaseInvoicesTableProps = {
   invoices: PurchaseInvoice[];
@@ -28,6 +35,8 @@ type PurchaseInvoicesTableProps = {
   onRowClick: (invoice: PurchaseInvoice) => void;
   onRowDoubleClick: (invoice: PurchaseInvoice) => void;
   selectedInvoiceId?: string | null;
+  columns: Column[];
+  columnIds: ('invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalAmount' | 'status')[];
 };
 
 export function PurchaseInvoicesTable({
@@ -37,6 +46,8 @@ export function PurchaseInvoicesTable({
   onRowClick,
   onRowDoubleClick,
   selectedInvoiceId,
+  columns,
+  columnIds,
 }: PurchaseInvoicesTableProps) {
   const getOrderDetails = (orderId: string) => {
     const order = purchaseOrders.find((o) => o.id === orderId);
@@ -67,6 +78,38 @@ export function PurchaseInvoicesTable({
     return [...(invoices || [])].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
   }, [invoices]);
 
+  const renderCellContent = (invoice: PurchaseInvoice, columnId: Column['id']): ReactNode => {
+    const key = `${invoice.id}-${columnId}`;
+    const { orderNumber, supplierName } = getOrderDetails(invoice.purchaseOrderId);
+
+    switch (columnId) {
+      case 'invoiceNumber':
+        return <TableCell key={key} className="font-medium">{invoice.invoiceNumber}</TableCell>;
+      case 'orderNumber':
+        return <TableCell key={key}>{orderNumber}</TableCell>;
+      case 'supplierName':
+        return <TableCell key={key}>{supplierName}</TableCell>;
+      case 'invoiceDate':
+        return <TableCell key={key}>{format(new Date(invoice.invoiceDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>;
+      case 'dueDate':
+        return <TableCell key={key}>{format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>;
+      case 'totalAmount':
+        return (
+          <TableCell key={key} className="text-right">
+            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.totalAmount)}
+          </TableCell>
+        );
+      case 'status':
+        return (
+          <TableCell key={key}>
+            <Badge variant={getStatusVariant(invoice.status)}>{invoice.status}</Badge>
+          </TableCell>
+        );
+      default:
+        return <TableCell key={key}></TableCell>;
+    }
+  };
+
 
   return (
         <>
@@ -74,20 +117,15 @@ export function PurchaseInvoicesTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Numéro Facture</TableHead>
-                <TableHead>Numéro BC</TableHead>
-                <TableHead>Fournisseur</TableHead>
-                <TableHead>Date Facture</TableHead>
-                <TableHead>Date d'échéance</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
-                <TableHead>Statut</TableHead>
+                {columns.map(({ id, label }) => (
+                    <DraggableHeader key={id} id={id} className={cn(id === 'totalAmount' && 'text-right')}>
+                        {label}
+                    </DraggableHeader>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedInvoices.map((invoice) => {
-                const { orderNumber, supplierName } = getOrderDetails(
-                  invoice.purchaseOrderId
-                );
                 return (
                   <TableRow 
                     key={invoice.id}
@@ -95,30 +133,7 @@ export function PurchaseInvoicesTable({
                     onDoubleClick={() => onRowDoubleClick(invoice)}
                     className={cn("cursor-pointer", selectedInvoiceId === invoice.id && 'bg-muted/50')}
                   >
-                    <TableCell className="font-medium">
-                      {invoice.invoiceNumber}
-                    </TableCell>
-                    <TableCell>{orderNumber}</TableCell>
-                    <TableCell>{supplierName}</TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.invoiceDate), 'dd/MM/yyyy', {
-                        locale: fr,
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.dueDate), 'dd/MM/yyyy', {
-                        locale: fr,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                       {new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      }).format(invoice.totalAmount)}
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={getStatusVariant(invoice.status)}>{invoice.status}</Badge>
-                    </TableCell>
+                     {columnIds.map((columnId) => renderCellContent(invoice, columnId))}
                   </TableRow>
                 );
               })}

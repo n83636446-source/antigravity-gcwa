@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseInvoice, Supplier, PurchaseOrder } from '@/lib/types';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
@@ -24,6 +24,39 @@ import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { DraggableHeader } from '@/components/ui/DraggableHeader';
+import { cn } from '@/lib/utils';
+
+type Column = {
+    id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalAmount' | 'status';
+    label: string;
+};
+
+const initialColumns: Column[] = [
+    { id: 'invoiceNumber', label: 'Numéro Facture' },
+    { id: 'orderNumber', label: 'Numéro BC' },
+    { id: 'supplierName', label: 'Fournisseur' },
+    { id: 'invoiceDate', label: 'Date Facture' },
+    { id: 'dueDate', label: 'Date d\'échéance' },
+    { id: 'totalAmount', label: 'Montant' },
+    { id: 'status', label: 'Statut' },
+];
+
 
 export default function PurchaseInvoicesPage() {
   const firestore = useFirestore();
@@ -33,6 +66,50 @@ export default function PurchaseInvoicesPage() {
   const [editingInvoice, setEditingInvoice] = useState<PurchaseInvoice | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<PurchaseInvoice | null>(null);
+  const [columns, setColumns] = useState<Column[]>(initialColumns);
+
+  useEffect(() => {
+    try {
+      const savedColumns = localStorage.getItem('purchaseInvoicesColumns');
+      if (savedColumns) {
+        const parsedColumns: Column[] = JSON.parse(savedColumns);
+        const savedColumnIds = new Set(parsedColumns.map(c => c.id));
+        const initialColumnIds = new Set(initialColumns.map(c => c.id));
+        if (parsedColumns.length === initialColumns.length && [...savedColumnIds].every(id => initialColumnIds.has(id))) {
+          setColumns(parsedColumns);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load or parse columns from localStorage", error);
+    }
+  }, []);
+
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setColumns((items) => {
+        const oldIndex = columnIds.indexOf(active.id as any);
+        const newIndex = columnIds.indexOf(over.id as any);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        try {
+          localStorage.setItem('purchaseInvoicesColumns', JSON.stringify(newOrder));
+        } catch (error) {
+          console.error("Failed to save columns to localStorage", error);
+        }
+        return newOrder;
+      });
+    }
+  }
+
 
   const invoicesRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
@@ -205,14 +282,24 @@ export default function PurchaseInvoicesPage() {
             )}
           </CardHeader>
           <CardContent>
-            <PurchaseInvoicesTable 
-              invoices={invoices || []}
-              purchaseOrders={purchaseOrders || []}
-              suppliers={suppliers || []}
-              onRowClick={handleRowClick}
-              onRowDoubleClick={handleRowDoubleClick}
-              selectedInvoiceId={selectedInvoice?.id}
-            />
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+                    <PurchaseInvoicesTable 
+                        invoices={invoices || []}
+                        purchaseOrders={purchaseOrders || []}
+                        suppliers={suppliers || []}
+                        onRowClick={handleRowClick}
+                        onRowDoubleClick={handleRowDoubleClick}
+                        selectedInvoiceId={selectedInvoice?.id}
+                        columns={columns}
+                        columnIds={columnIds}
+                    />
+                </SortableContext>
+            </DndContext>
           </CardContent>
         </Card>
       )}
