@@ -74,3 +74,13 @@ export type PurchaseInvoice = {
   totalAmount: number;
   status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
 };
+
+export type CreditNote = {
+    id: string;
+    creditNoteNumber: string;
+    supplierId: string;
+    creditNoteDate: string; // ISO string
+    amount: number;
+    reason: string;
+    status: 'Brouillon' | 'Appliqué';
+};
