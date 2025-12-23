@@ -5,8 +5,8 @@ import { PageHeader } from '@/components/page-header';
 import type { PurchaseInvoice, Supplier, PurchaseOrder, Product } from '@/lib/types';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { PurchaseInvoicesTable } from '@/components/purchase-invoices-table';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, collectionGroup } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, collectionGroup, writeBatch, increment } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -202,13 +202,38 @@ export default function PurchaseInvoicesPage() {
   
   const handleValidateInvoice = async () => {
     if (!firestore || !selectedInvoice || selectedInvoice.status !== 'Brouillon') return;
+
+    const batch = writeBatch(firestore);
     const invoiceRef = doc(firestore, 'purchaseInvoices', selectedInvoice.id);
-    updateDocumentNonBlocking(invoiceRef, { status: 'Non payée' });
-    toast({
-      title: 'Facture validée',
-      description: `La facture "${selectedInvoice.invoiceNumber}" est maintenant marquée comme "Non payée".`,
-    });
-    setSelectedInvoice(prev => prev ? { ...prev, status: 'Non payée' } : null);
+
+    // Update status
+    batch.update(invoiceRef, { status: 'Non payée' });
+
+    // Update stock only if the invoice is NOT linked to a purchase order
+    if (!selectedInvoice.purchaseOrderId) {
+      selectedInvoice.items.forEach(item => {
+        if (item.quantity > 0) {
+          const productRef = doc(firestore, 'suppliers', selectedInvoice.supplierId, 'products', item.productId);
+          batch.update(productRef, { stockLevel: increment(item.quantity) });
+        }
+      });
+    }
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'Facture validée',
+        description: `La facture "${selectedInvoice.invoiceNumber}" est maintenant "Non payée".${!selectedInvoice.purchaseOrderId ? ' Le stock a été mis à jour.' : ''}`,
+      });
+      setSelectedInvoice(prev => prev ? { ...prev, status: 'Non payée' } : null);
+    } catch (error) {
+      console.error("Validation failed: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de validation',
+        description: 'La validation a échoué. Veuillez réessayer.',
+      });
+    }
   };
 
   const handleCancelValidation = async () => {
