@@ -160,11 +160,18 @@ export default function PurchaseReceiptsPage() {
   }, [selectedReceipt, allOrders]);
 
   const handleValidateReceipt = async () => {
-    if (!firestore || !selectedReceipt || !allOrders) return;
+    if (!firestore || !selectedReceipt) return;
     if (selectedReceipt.status === 'Validé') return;
     
-    const order = allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
-    if (!order) return;
+    const order = allOrders?.find(o => o.id === selectedReceipt.purchaseOrderId);
+    if (!order) {
+        toast({
+            variant: 'destructive',
+            title: 'Erreur de validation',
+            description: 'Le bon de commande associé est introuvable.',
+        });
+        return;
+    };
 
     const batch = writeBatch(firestore);
 
@@ -196,23 +203,33 @@ export default function PurchaseReceiptsPage() {
   };
   
   const handleCancelValidation = async () => {
-    if (!firestore || !selectedReceipt || !allOrders) return;
+    if (!firestore || !selectedReceipt) return;
     if (selectedReceipt.status === 'Brouillon') return;
-
-    const order = allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
-    if (!order) return;
 
     const batch = writeBatch(firestore);
     
     const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
     batch.update(receiptRef, { status: 'Brouillon' });
 
+    let allItemsHaveSupplierId = true;
     selectedReceipt.items.forEach(item => {
-      if (item.quantityReceived > 0) {
-        const productRef = doc(firestore, 'suppliers', order.supplierId, 'products', item.productId);
+      if (!item.supplierId) {
+        allItemsHaveSupplierId = false;
+      }
+      if (item.quantityReceived > 0 && item.supplierId) {
+        const productRef = doc(firestore, 'suppliers', item.supplierId, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
       }
     });
+
+    if (!allItemsHaveSupplierId) {
+        toast({
+            variant: 'destructive',
+            title: 'Erreur d\'annulation',
+            description: 'Données de fournisseur manquantes dans ce bon de réception. Impossible de restaurer le stock. Veuillez contacter le support.',
+        });
+        return;
+    }
 
     try {
       await batch.commit();

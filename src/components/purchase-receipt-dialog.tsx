@@ -178,8 +178,9 @@ export function PurchaseReceiptDialog({
             receiptDate: new Date(data.receiptDate).toISOString(),
             notes: data.notes,
             items: data.items.map(
-              ({ productId, quantityOrdered, quantityReceived }) => ({
+              ({ productId, supplierId, quantityOrdered, quantityReceived }) => ({
                 productId,
+                supplierId,
                 quantityOrdered,
                 quantityReceived,
               })
@@ -204,8 +205,9 @@ export function PurchaseReceiptDialog({
           notes: data.notes,
           status: 'Brouillon',
           items: data.items.map(
-            ({ productId, quantityOrdered, quantityReceived }) => ({
+            ({ productId, supplierId, quantityOrdered, quantityReceived }) => ({
               productId,
+              supplierId,
               quantityOrdered,
               quantityReceived,
             })

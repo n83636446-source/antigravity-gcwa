@@ -55,6 +55,7 @@ export type Client = {
 
 export type PurchaseReceiptItem = {
   productId: string;
+  supplierId: string;
   quantityOrdered: number;
   quantityReceived: number;
 };
