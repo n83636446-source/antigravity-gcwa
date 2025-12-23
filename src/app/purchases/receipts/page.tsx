@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 
@@ -89,6 +89,14 @@ export default function PurchaseReceiptsPage() {
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
       clickTimeoutRef.current = null;
+    }
+    if (receipt.status === 'Validé') {
+        toast({
+            variant: 'destructive',
+            title: 'Action impossible',
+            description: 'Vous ne pouvez pas modifier un bon de réception qui est déjà validé.',
+        });
+        return;
     }
     setEditingReceipt(receipt);
     setDialogOpen(true);
@@ -308,7 +316,7 @@ export default function PurchaseReceiptsPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest}>
+                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt.status === 'Validé'}>
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Supprimer</span>
                     </Button>
@@ -343,7 +351,7 @@ export default function PurchaseReceiptsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer ce bon de réception ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible et ne remettra pas à jour le stock. Le bon de réception "{receiptToDelete?.receiptNumber}" sera définitivement supprimé.
+              Cette action est irréversible et ne remettra pas à jour le stock si le bon a déjà été validé. Le bon de réception "{receiptToDelete?.receiptNumber}" sera définitivement supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

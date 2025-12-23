@@ -87,7 +87,12 @@ export function PurchaseReceiptsTable({
         if (!columnIds.has('status')) {
           parsedColumns.push({ id: 'status', label: 'Statut' });
         }
-        setColumns(parsedColumns);
+        // Basic validation
+        if (parsedColumns.length > 0) {
+            setColumns(parsedColumns);
+        } else {
+            setColumns(initialColumns);
+        }
       }
     } catch (error) {
       console.error("Failed to load or parse columns from localStorage", error);
