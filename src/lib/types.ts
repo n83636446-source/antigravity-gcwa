@@ -56,6 +56,7 @@ export type PurchaseReceiptItem = {
   productId: string;
   quantityOrdered?: number; // Now optional
   quantityReceived: number;
+  price: number;
 };
 
 export type PurchaseReceipt = {
@@ -67,6 +68,7 @@ export type PurchaseReceipt = {
   notes?: string;
   items: PurchaseReceiptItem[];
   status: 'Brouillon' | 'Validé';
+  totalAmount: number;
 };
 
 export type PurchaseInvoiceItem = {

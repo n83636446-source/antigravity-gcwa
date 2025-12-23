@@ -311,11 +311,15 @@
               },
               "quantityReceived": {
                 "type": "number"
+              },
+              "price": {
+                "type": "number"
               }
             },
             "required": [
               "productId",
-              "quantityReceived"
+              "quantityReceived",
+              "price"
             ]
           }
         },
@@ -326,6 +330,10 @@
             "Brouillon",
             "Validé"
           ]
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the receipt."
         }
       },
       "required": [
@@ -333,7 +341,8 @@
         "supplierId",
         "receiptDate",
         "items",
-        "status"
+        "status",
+        "totalAmount"
       ]
     },
     "PurchaseInvoice": {

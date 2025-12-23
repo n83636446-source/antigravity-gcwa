@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,7 @@ const receiptItemSchema = z.object({
     .number()
     .int()
     .min(0, 'La quantité doit être un entier non négatif.'),
+  price: z.number().optional(),
 });
 
 const purchaseReceiptSchema = z.object({
@@ -159,9 +160,19 @@ export function PurchaseReceiptDialog({
     name: 'items',
   });
 
+  const watchedItems = useWatch({ control: form.control, name: 'items' });
   const watchedOrderId = form.watch('purchaseOrderId');
-  const watchedItems = form.watch('items');
   const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
+
+  const liveTotal = useMemo(() => {
+    if (!watchedItems || !products) return 0;
+    return watchedItems.reduce((sum, item) => {
+      const product = products.find(p => p.id === item.productId);
+      const price = item.price ?? product?.price ?? 0;
+      return sum + ((item.quantityReceived || 0) * price);
+    }, 0);
+  }, [watchedItems, products]);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -186,6 +197,7 @@ export function PurchaseReceiptDialog({
           productId: item.productId,
           quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
           quantityReceived: item.quantityReceived,
+          price: item.price,
         })),
       });
     } else if (purchaseOrder) {
@@ -199,6 +211,7 @@ export function PurchaseReceiptDialog({
           productId: item.productId,
           quantityOrdered: item.quantity,
           quantityReceived: item.quantity,
+          price: item.price
         })),
       });
     } else {
@@ -210,6 +223,7 @@ export function PurchaseReceiptDialog({
             productId: item.productId,
             quantityOrdered: item.quantity,
             quantityReceived: item.quantity,
+            price: item.price
         })));
       } else {
          // Reset for manual creation
@@ -218,7 +232,7 @@ export function PurchaseReceiptDialog({
             supplierId: '',
             receiptDate: new Date().toISOString().split('T')[0],
             notes: '',
-            items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0 }],
+            items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0 }],
          });
       }
     }
@@ -233,15 +247,26 @@ export function PurchaseReceiptDialog({
   const onSubmit = async (data: PurchaseReceiptFormValues) => {
     if (!firestore) return;
     
+    const totalAmount = data.items.reduce((sum, item) => {
+        const product = products?.find(p => p.id === item.productId);
+        const price = item.price ?? product?.price ?? 0;
+        return sum + ((item.quantityReceived || 0) * price);
+    }, 0);
+
     const receiptData = {
       purchaseOrderId: data.purchaseOrderId,
       supplierId: data.supplierId,
       receiptDate: new Date(data.receiptDate).toISOString(),
       notes: data.notes,
-      items: data.items.map(({ productId, quantityReceived }) => ({
-        productId,
-        quantityReceived,
-      })),
+      items: data.items.map(({ productId, quantityReceived }) => {
+        const product = products?.find(p => p.id === productId);
+        return {
+          productId,
+          quantityReceived,
+          price: product?.price ?? 0,
+        }
+      }),
+      totalAmount: totalAmount,
     };
 
 
@@ -311,7 +336,13 @@ export function PurchaseReceiptDialog({
       articleCreationIndex.current = index;
       setArticleDialogOpen(true);
     } else {
-      update(index, { ...watchedItems[index], productId: value });
+      const product = products.find(p => p.id === value);
+      const currentItem = watchedItems[index];
+      update(index, { 
+          ...currentItem,
+          productId: value,
+          price: product?.price ?? 0 
+      });
     }
   };
 
@@ -319,7 +350,11 @@ export function PurchaseReceiptDialog({
     if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
       const index = articleCreationIndex.current;
       setTimeout(() => {
-        update(index, { ...watchedItems[index], productId: newArticle.id });
+        update(index, { 
+            ...watchedItems[index], 
+            productId: newArticle.id,
+            price: newArticle.price
+        });
       }, 100);
     }
     articleCreationIndex.current = null;
@@ -434,20 +469,21 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-4">
-              <div className={cn("grid items-center gap-4", fromBC ? "grid-cols-3" : "grid-cols-[1fr_auto_auto]")}>
+              <div className={cn("grid items-center gap-4", fromBC ? "grid-cols-[1fr_auto_auto_auto]" : "grid-cols-[1fr_auto_auto_auto]")}>
                 <FormLabel>Article</FormLabel>
                 {fromBC && <FormLabel className="text-center">Qté Commandée</FormLabel>}
                 <FormLabel className="text-center">Qté Reçue</FormLabel>
+                <FormLabel className="text-right">Prix</FormLabel>
                 {!fromBC && <div />}
               </div>
 
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className={cn("grid items-center gap-4", fromBC ? "grid-cols-3" : "grid-cols-[1fr_auto_auto]")}
+                  className={cn("grid items-start gap-4", fromBC ? "grid-cols-[1fr_auto_auto_auto]" : "grid-cols-[1fr_auto_auto_auto_auto]")}
                 >
                   {fromBC ? (
-                     <p className="text-sm font-medium">
+                     <p className="text-sm font-medium pt-2">
                         {getProductName(field.productId)}
                      </p>
                   ) : (
@@ -510,6 +546,24 @@ export function PurchaseReceiptDialog({
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.price`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Prix"
+                            className="w-full text-right"
+                            disabled
+                            value={itemField.value ?? ''}
+                          />
+                        </FormControl>
+                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   {!fromBC && !readOnly && (
                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -518,7 +572,7 @@ export function PurchaseReceiptDialog({
                 </div>
               ))}
                {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0 })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
                 </Button>
               )}
@@ -541,6 +595,19 @@ export function PurchaseReceiptDialog({
                 </FormItem>
               )}
             />
+            
+            <Separator />
+            
+            <div className="flex justify-end items-center space-x-4">
+                <span className="text-lg font-semibold">Total :</span>
+                <span className="text-lg font-bold text-primary">
+                    {new Intl.NumberFormat('fr-FR', {
+                        style: 'currency',
+                        currency: 'EUR',
+                    }).format(liveTotal)}
+                </span>
+            </div>
+
 
             <DialogFooter className="sm:justify-end">
               <div className='flex gap-2'>
