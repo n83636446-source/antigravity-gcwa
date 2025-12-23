@@ -40,6 +40,7 @@ import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { ArticleDialog } from './article-dialog';
 import { SupplierDialog } from './supplier-dialog';
+import { Label } from '@/components/ui/label';
 
 
 const receiptItemSchema = z.object({
@@ -77,6 +78,8 @@ type PurchaseReceiptDialogProps = {
 
 const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
+
+const gridLayout = "grid-cols-[1fr_120px_120px_100px_44px] gap-2 items-end";
 
 
 export function PurchaseReceiptDialog({
@@ -165,11 +168,6 @@ export function PurchaseReceiptDialog({
   const watchedOrderId = form.watch('purchaseOrderId');
   const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
   
-  const gridLayout = fromBC 
-    ? "grid-cols-[1fr_120px_120px_100px] gap-2 items-end"
-    : "grid-cols-[1fr_120px_100px_44px] gap-2 items-end";
-
-
   const liveTotal = useMemo(() => {
     if (!watchedItems || !products) return 0;
     return watchedItems.reduce((sum, item) => {
@@ -480,7 +478,7 @@ export function PurchaseReceiptDialog({
                   {fromBC && <Label className="text-center">Qté Cmdée</Label>}
                   <Label className="text-center">Qté Reçue</Label>
                   <Label className="text-right">Prix</Label>
-                  {!fromBC && <div></div>}
+                  {!fromBC && <div />}
                 </div>
               {fields.map((field, index) => (
                 <div key={field.id} className={cn('grid', gridLayout)}>
