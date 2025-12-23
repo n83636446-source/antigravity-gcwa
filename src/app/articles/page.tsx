@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, collectionGroup, query } from 'firebase/firestore';
+import { collection, collectionGroup, query, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Article, Supplier } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
@@ -10,9 +10,12 @@ import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ArticlesPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | undefined>();
 
@@ -42,6 +45,16 @@ export default function ArticlesPage() {
     setEditingArticle(article);
     setDialogOpen(true);
   };
+  
+  const handleDelete = (article: Article) => {
+      if(!firestore) return;
+      const articleDocRef = doc(firestore, 'suppliers', article.supplierId, 'articles', article.id);
+      deleteDocumentNonBlocking(articleDocRef);
+      toast({
+          title: "Article supprimé",
+          description: `L'article "${article.name}" a été supprimé.`,
+      })
+  }
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -63,6 +76,8 @@ export default function ArticlesPage() {
         <ArticlesTable
           articles={articles || []}
           suppliers={suppliers || []}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
           onRowDoubleClick={handleEdit}
         />
       )}
