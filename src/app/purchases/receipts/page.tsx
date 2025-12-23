@@ -24,6 +24,7 @@ import {
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default function PurchaseReceiptsPage() {
   const firestore = useFirestore();
@@ -38,7 +39,7 @@ export default function PurchaseReceiptsPage() {
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const receiptsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
+    () => (firestore ? query(collection(firestore, 'purchaseReceipts'),) : null),
     [firestore]
   );
   const { data: receipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(receiptsRef);
@@ -264,15 +265,10 @@ export default function PurchaseReceiptsPage() {
           <Skeleton className="h-48 w-full" />
         </div>
       ) : (
-        <PurchaseReceiptsTable
-          receipts={receipts || []}
-          purchaseOrders={allOrders || []}
-          suppliers={suppliers || []}
-          onRowClick={handleSingleClick}
-          onRowDoubleClick={handleDoubleClick}
-          selectedReceiptId={selectedReceipt?.id}
-          actionHeaderContent={
-            selectedReceipt && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Bons de réception récents</CardTitle>
+            {selectedReceipt && (
               <div className="flex items-center gap-2">
                 {selectedReceipt.status === 'Brouillon' && (
                    <Tooltip>
@@ -324,9 +320,19 @@ export default function PurchaseReceiptsPage() {
                   <TooltipContent>Supprimer</TooltipContent>
                 </Tooltip>
               </div>
-            )
-          }
-        />
+            )}
+          </CardHeader>
+          <CardContent>
+            <PurchaseReceiptsTable
+              receipts={receipts || []}
+              purchaseOrders={allOrders || []}
+              suppliers={suppliers || []}
+              onRowClick={handleSingleClick}
+              onRowDoubleClick={handleDoubleClick}
+              selectedReceiptId={selectedReceipt?.id}
+            />
+          </CardContent>
+        </Card>
       )}
       <PurchaseReceiptDialog
           isOpen={dialogOpen}

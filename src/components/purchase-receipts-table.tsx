@@ -14,7 +14,6 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -63,7 +62,6 @@ type PurchaseReceiptsTableProps = {
   onRowClick?: (receipt: PurchaseReceipt) => void;
   onRowDoubleClick?: (receipt: PurchaseReceipt) => void;
   selectedReceiptId?: string | null;
-  actionHeaderContent?: ReactNode;
 };
 
 export function PurchaseReceiptsTable({
@@ -73,7 +71,6 @@ export function PurchaseReceiptsTable({
   onRowClick,
   onRowDoubleClick,
   selectedReceiptId,
-  actionHeaderContent,
 }: PurchaseReceiptsTableProps) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
 
@@ -146,7 +143,7 @@ export function PurchaseReceiptsTable({
         supplierName,
         formattedDate: format(new Date(receipt.receiptDate), 'dd/MM/yyyy', { locale: fr }),
       };
-    });
+    }).sort((a, b) => new Date(b.receiptDate).getTime() - new Date(a.receiptDate).getTime());
   }, [receipts, purchaseOrders, suppliers]);
   
   const getStatusVariant = (status: PurchaseReceipt['status']) => {
@@ -173,12 +170,7 @@ export function PurchaseReceiptsTable({
 
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Bons de réception récents</CardTitle>
-        {actionHeaderContent}
-      </CardHeader>
-      <CardContent>
+    <>
         {receipts.length > 0 ? (
           <DndContext
             sensors={sensors}
@@ -223,7 +215,6 @@ export function PurchaseReceiptsTable({
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </>
   );
 }
