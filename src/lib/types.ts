@@ -70,10 +70,18 @@ export type PurchaseReceipt = {
   status: 'Brouillon' | 'Validé';
 };
 
+export type PurchaseInvoiceItem = {
+    productId: string;
+    quantity: number;
+    price: number;
+};
+
 export type PurchaseInvoice = {
   id: string;
   invoiceNumber: string;
-  purchaseOrderId: string;
+  purchaseOrderId?: string; // Made optional
+  supplierId: string; // Added to directly link to supplier
+  items: PurchaseInvoiceItem[]; // Added items
   invoiceDate: string; // ISO string
   dueDate: string; // ISO string
   totalAmount: number;

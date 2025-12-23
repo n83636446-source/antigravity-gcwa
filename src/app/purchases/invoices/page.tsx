@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseInvoice, Supplier, PurchaseOrder } from '@/lib/types';
+import type { PurchaseInvoice, Supplier, PurchaseOrder, Product } from '@/lib/types';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { PurchaseInvoicesTable } from '@/components/purchase-invoices-table';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, collectionGroup } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -129,7 +129,13 @@ export default function PurchaseInvoicesPage() {
   );
   const { data: purchaseOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(ordersRef);
   
-  const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingOrders;
+  const productsQuery = useMemoFirebase(
+    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
+    [firestore]
+  );
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+  
+  const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingOrders || isLoadingProducts;
 
   const handleRowClick = (invoice: PurchaseInvoice) => {
     if (selectedInvoice?.id === invoice.id) {
@@ -225,6 +231,8 @@ export default function PurchaseInvoicesPage() {
       >
         <PurchaseInvoiceDialog
             purchaseOrders={purchaseOrders || []}
+            suppliers={suppliers || []}
+            products={products || []}
             lastInvoiceNumber={invoices?.length || 0}
         />
       </PageHeader>
@@ -307,6 +315,8 @@ export default function PurchaseInvoicesPage() {
           isOpen={dialogOpen}
           onOpenChange={handleOpenChange}
           purchaseOrders={purchaseOrders || []}
+          suppliers={suppliers || []}
+          products={products || []}
           lastInvoiceNumber={invoices?.length || 0}
           invoice={editingInvoice}
         />

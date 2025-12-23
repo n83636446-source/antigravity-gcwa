@@ -49,14 +49,23 @@ export function PurchaseInvoicesTable({
   columns,
   columnIds,
 }: PurchaseInvoicesTableProps) {
-  const getOrderDetails = (orderId: string) => {
-    const order = purchaseOrders.find((o) => o.id === orderId);
-    if (!order) return { orderNumber: 'Inconnu', supplierName: 'Inconnu' };
-    const supplier = suppliers.find((s) => s.id === order.supplierId);
-    return {
-      orderNumber: order.orderNumber,
-      supplierName: supplier?.name ?? 'Inconnu',
-    };
+  const getInvoiceDetails = (invoice: PurchaseInvoice) => {
+    let orderNumber = 'N/A';
+    let supplierName = 'Inconnu';
+    
+    const supplier = suppliers.find((s) => s.id === invoice.supplierId);
+    if (supplier) {
+      supplierName = supplier.name;
+    }
+
+    if (invoice.purchaseOrderId) {
+      const order = purchaseOrders.find((o) => o.id === invoice.purchaseOrderId);
+      if (order) {
+        orderNumber = order.orderNumber;
+      }
+    }
+    
+    return { orderNumber, supplierName };
   };
   
     const getStatusVariant = (status: PurchaseInvoice['status']) => {
@@ -80,7 +89,7 @@ export function PurchaseInvoicesTable({
 
   const renderCellContent = (invoice: PurchaseInvoice, columnId: Column['id']): ReactNode => {
     const key = `${invoice.id}-${columnId}`;
-    const { orderNumber, supplierName } = getOrderDetails(invoice.purchaseOrderId);
+    const { orderNumber, supplierName } = getInvoiceDetails(invoice);
 
     switch (columnId) {
       case 'invoiceNumber':

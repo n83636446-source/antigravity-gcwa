@@ -340,6 +340,85 @@
         "items",
         "status"
       ]
+    },
+    "PurchaseInvoice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PurchaseInvoice",
+      "type": "object",
+      "description": "Represents a purchase invoice from a supplier.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the purchase invoice."
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "description": "The unique number for the purchase invoice."
+        },
+        "purchaseOrderId": {
+          "type": "string",
+          "description": "Optional reference to the PurchaseOrder."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to the Supplier."
+        },
+        "invoiceDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the invoice was issued."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the invoice is due."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the invoice."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Brouillon",
+            "Non payée",
+            "Payée",
+            "En retard"
+          ],
+          "description": "Status of the invoice."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "price": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "productId",
+              "quantity",
+              "price"
+            ]
+          }
+        }
+      },
+      "required": [
+        "invoiceNumber",
+        "supplierId",
+        "invoiceDate",
+        "dueDate",
+        "totalAmount",
+        "status",
+        "items"
+      ]
     }
   },
   "auth": {
@@ -470,6 +549,22 @@
             {
               "name": "purchaseReceiptId",
               "description": "Unique identifier for the purchase receipt."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/purchaseInvoices/{purchaseInvoiceId}",
+        "definition": {
+          "entityName": "PurchaseInvoice",
+          "schema": {
+            "$ref": "#/backend/entities/PurchaseInvoice"
+          },
+          "description": "Stores purchase invoice information. `purchaseInvoiceId` is the unique identifier for the purchase invoice.",
+          "params": [
+            {
+              "name": "purchaseInvoiceId",
+              "description": "Unique identifier for the purchase invoice."
             }
           ]
         }
