@@ -6,7 +6,7 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, writeBatch, increment } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, increment, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { FileText, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
@@ -37,7 +37,7 @@ export default function PurchaseReceiptsPage() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
   const receiptsRef = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'purchaseReceipts'),) : null),
+    () => (firestore ? query(collection(firestore, 'purchaseReceipts')) : null),
     [firestore]
   );
   const { data: receipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(receiptsRef);
@@ -54,13 +54,11 @@ export default function PurchaseReceiptsPage() {
   );
   const { data: invoices, isLoading: isLoadingInvoices } = useCollection<PurchaseInvoice>(invoicesRef);
 
-
   const productsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'products') : null),
     [firestore]
   );
   const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
-
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
@@ -168,7 +166,6 @@ export default function PurchaseReceiptsPage() {
     }
   };
 
-
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
     if (!open) {
@@ -182,16 +179,13 @@ export default function PurchaseReceiptsPage() {
   }, [selectedReceipt, allOrders]);
 
   const handleValidateReceipt = async () => {
-    if (!firestore) return;
-    const receiptToValidate = selectedReceipt;
-    if (!receiptToValidate || receiptToValidate.status === 'Validé') return;
+    if (!firestore || !selectedReceipt || selectedReceipt.status === 'Validé') return;
     
     const batch = writeBatch(firestore);
-
-    const receiptRef = doc(firestore, 'purchaseReceipts', receiptToValidate.id);
+    const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
     batch.update(receiptRef, { status: 'Validé' });
 
-    receiptToValidate.items.forEach(item => {
+    selectedReceipt.items.forEach(item => {
       if (item.quantityReceived > 0) {
         const productRef = doc(firestore, 'products', item.productId);
         batch.update(productRef, { stockLevel: increment(item.quantityReceived) });
@@ -204,7 +198,7 @@ export default function PurchaseReceiptsPage() {
         title: 'Bon de réception validé',
         description: 'Le stock a été mis à jour avec succès.',
       });
-      const updatedReceipt = { ...receiptToValidate, status: 'Validé' as const };
+      const updatedReceipt = { ...selectedReceipt, status: 'Validé' as const };
       setSelectedReceipt(updatedReceipt);
     } catch (error) {
       console.error("Validation failed: ", error);
@@ -216,26 +210,19 @@ export default function PurchaseReceiptsPage() {
     }
   };
   
- const handleCancelValidation = async () => {
-    // Critical Guard: Ensure all required data collections are loaded.
-    if (!firestore || !products || !invoices) {
+  const handleCancelValidation = async () => {
+    const receiptToCancel = selectedReceipt;
+    if (!firestore || !receiptToCancel || receiptToCancel.status === 'Brouillon' || !invoices) {
       toast({
-        variant: 'destructive',
-        title: 'Erreur de données',
-        description: 'Les données nécessaires (produits, factures) ne sont pas encore chargées. Veuillez patienter.',
+        variant: "destructive",
+        title: "Action impossible",
+        description: "Les données requises ne sont pas disponibles ou le bon de réception est déjà en brouillon.",
       });
       return;
     }
 
-    const receiptToCancel = selectedReceipt;
-    if (!receiptToCancel || receiptToCancel.status === 'Brouillon') return;
-
-    // Check if the related PO has been invoiced
     if (receiptToCancel.purchaseOrderId) {
-      const isFactured = invoices.some(
-        (invoice) => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId
-      );
-
+      const isFactured = invoices.some(invoice => invoice.purchaseOrderId === receiptToCancel.purchaseOrderId);
       if (isFactured) {
         toast({
           variant: 'destructive',
@@ -246,58 +233,67 @@ export default function PurchaseReceiptsPage() {
       }
     }
 
-    // Defensive check: Ensure all products in the receipt exist and have enough stock.
-    for (const item of receiptToCancel.items) {
-      const product = products.find(p => p.id === item.productId);
-      if (!product) {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: `L'article avec l'ID "${item.productId}" est introuvable. Annulation impossible.`,
-          duration: 7000,
-        });
-        return; // Stop the entire operation
-      }
-      if (product.stockLevel < item.quantityReceived) {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: `Stock insuffisant pour l'article "${product.name}" pour annuler la réception. Stock actuel: ${product.stockLevel}, Quantité reçue: ${item.quantityReceived}.`,
-          duration: 7000,
-        });
-        return; // Stop the entire operation
-      }
-    }
-
-    // If all checks pass, proceed with the batch update.
-    const batch = writeBatch(firestore);
-    const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
-    batch.update(receiptRef, { status: 'Brouillon' });
-
-    receiptToCancel.items.forEach(item => {
-      if (item.quantityReceived > 0) {
-        const productRef = doc(firestore, 'products', item.productId);
-        batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
-      }
-    });
-
     try {
-      await batch.commit();
-      toast({
-        title: 'Validation annulée',
-        description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
-      });
-      const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
-      setSelectedReceipt(updatedReceipt);
-    } catch (error) {
-      console.error("Validation cancellation failed: ", error);
-      toast({
-        variant: 'destructive',
-        title: 'Erreur d\'annulation',
-        description: 'L\'annulation a échoué. Veuillez réessayer.',
-      });
+      const batch = writeBatch(firestore);
+      const productChecks: Promise<any>[] = [];
+      const stockErrors: string[] = [];
+
+      for (const item of receiptToCancel.items) {
+        const productRef = doc(firestore, 'products', item.productId);
+        const check = getDoc(productRef).then(productDoc => {
+          if (!productDoc.exists()) {
+            throw new Error(`L'article avec l'ID "${item.productId}" est introuvable.`);
+          }
+          const productData = productDoc.data() as Product;
+          if (productData.stockLevel < item.quantityReceived) {
+            stockErrors.push(`Stock insuffisant pour "${productData.name}" (Actuel: ${productData.stockLevel}, Reçu: ${item.quantityReceived})`);
+          }
+        });
+        productChecks.push(check);
+      }
+
+      await Promise.all(productChecks);
+
+      if (stockErrors.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: stockErrors.join(' '),
+          duration: 7000,
+        });
+        return;
+      }
+      
+      if (stockErrors.length === 0) {
+        const receiptRef = doc(firestore, 'purchaseReceipts', receiptToCancel.id);
+        batch.update(receiptRef, { status: 'Brouillon' });
+
+        receiptToCancel.items.forEach(item => {
+          if (item.quantityReceived > 0) {
+            const productRef = doc(firestore, 'products', item.productId);
+            batch.update(productRef, { stockLevel: increment(-item.quantityReceived) });
+          }
+        });
+        
+        await batch.commit();
+
+        toast({
+          title: 'Validation annulée',
+          description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
+        });
+        const updatedReceipt = { ...receiptToCancel, status: 'Brouillon' as const };
+        setSelectedReceipt(updatedReceipt);
+      }
+
+    } catch (error: any) {
+        console.error("Validation cancellation failed: ", error);
+        toast({
+            variant: 'destructive',
+            title: "Erreur d'annulation",
+            description: error.message || "L'annulation a échoué. Veuillez réessayer.",
+        });
     }
-};
+  };
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
