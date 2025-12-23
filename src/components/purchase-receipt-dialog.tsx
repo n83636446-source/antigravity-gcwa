@@ -469,9 +469,18 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-4">
-              <div className={cn("grid items-center gap-4", fromBC ? "grid-cols-[1fr_auto_auto_auto]" : "grid-cols-[1fr_auto_auto_auto]")}>
+              <div
+                className={cn(
+                  'grid items-center gap-2',
+                  fromBC
+                    ? 'grid-cols-[1fr_100px_100px_100px]'
+                    : 'grid-cols-[1fr_100px_100px_auto]'
+                )}
+              >
                 <FormLabel>Article</FormLabel>
-                {fromBC && <FormLabel className="text-center">Qté Commandée</FormLabel>}
+                {fromBC && (
+                  <FormLabel className="text-center">Qté Commandée</FormLabel>
+                )}
                 <FormLabel className="text-center">Qté Reçue</FormLabel>
                 <FormLabel className="text-right">Prix</FormLabel>
                 {!fromBC && <div />}
@@ -480,10 +489,15 @@ export function PurchaseReceiptDialog({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className={cn("grid items-start gap-4", fromBC ? "grid-cols-[1fr_auto_auto_auto]" : "grid-cols-[1fr_auto_auto_auto_auto]")}
+                  className={cn(
+                    'grid items-start gap-2',
+                    fromBC
+                      ? 'grid-cols-[1fr_100px_100px_100px]'
+                      : 'grid-cols-[1fr_100px_100px_auto]'
+                  )}
                 >
                   {fromBC ? (
-                     <p className="text-sm font-medium pt-2">
+                     <p className="text-sm font-medium pt-2 h-10 flex items-center">
                         {getProductName(field.productId)}
                      </p>
                   ) : (
