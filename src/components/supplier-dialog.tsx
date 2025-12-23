@@ -120,6 +120,19 @@ export function SupplierDialog({
       });
       return;
     }
+
+    // Check for unique email
+    const emailExists = suppliers.some(
+        s => s.contactEmail === data.contactEmail && s.id !== supplier?.id
+    );
+
+    if (emailExists) {
+        form.setError('contactEmail', {
+            type: 'manual',
+            message: 'Cet e-mail est déjà utilisé par un autre fournisseur.',
+        });
+        return;
+    }
     
     if (isEditMode && supplier) {
       const supplierDocRef = doc(firestore, 'suppliers', supplier.id);
