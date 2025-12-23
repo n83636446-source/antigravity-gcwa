@@ -13,11 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
 import type { PurchaseOrder, Supplier, Product } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, collectionGroup } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -33,11 +33,11 @@ export default function PurchaseOrdersPage() {
   );
   const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
 
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
+  const productsQuery = useMemoFirebase(
+    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
     [firestore]
   );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
+  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
 
   const ordersRef = useMemoFirebase(

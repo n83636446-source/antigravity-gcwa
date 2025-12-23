@@ -85,6 +85,13 @@ service cloud.firestore {
     }
 
     /**
+     * @description Allows listing products across all suppliers for authenticated users.
+     */
+    match /{path=**}/products/{productId} {
+      allow list: if isSignedIn();
+    }
+
+    /**
      * @description Manages stock alerts, nested under a specific product. Any
      * authenticated user can manage stock alerts.
      * @path /suppliers/{supplierId}/products/{productId}/stockAlerts/{stockAlertId}

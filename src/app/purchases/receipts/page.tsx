@@ -6,7 +6,7 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder } from '@/lib/ty
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where, collectionGroup } from 'firebase/firestore';
 
 export default function PurchaseReceiptsPage() {
   const firestore = useFirestore();
@@ -29,11 +29,12 @@ export default function PurchaseReceiptsPage() {
   );
   const { data: allOrders } = useCollection<PurchaseOrder>(allOrdersRef);
 
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
+  const productsQuery = useMemoFirebase(
+    () => (firestore ? query(collectionGroup(firestore, 'products')) : null),
     [firestore]
   );
-  const { data: products } = useCollection<Product>(productsRef);
+  const { data: products } = useCollection<Product>(productsQuery);
+
 
   const suppliersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'suppliers') : null),
