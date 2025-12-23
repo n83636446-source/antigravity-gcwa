@@ -357,7 +357,7 @@ export default function PurchaseReceiptsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer ce bon de réception ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible et ne remettra pas à jour le stock si le bon a déjà été validé. Le bon de réception "{receiptToDelete?.receiptNumber}" sera définitivement supprimé.
+              Cette action est irréversible. Le bon de réception "{receiptToDelete?.receiptNumber}" sera définitivement supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
