@@ -35,7 +35,6 @@ import { Button } from './ui/button';
 const menuItems = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/articles', label: 'Articles', icon: Boxes },
-  { href: '/suppliers', label: 'Fournisseurs', icon: Warehouse },
 ];
 
 const achatSubMenuItems = [
@@ -48,6 +47,7 @@ const achatSubMenuItems = [
 const tiersSubMenuItems = [
     { href: '/clients', label: 'Clients', icon: Contact },
     { href: '/prospects', label: 'Prospects', icon: UserPlus },
+    { href: '/suppliers', label: 'Fournisseurs', icon: Warehouse },
     { href: '/representants', label: 'Représentants', icon: UserCheck },
 ]
 
@@ -106,7 +106,7 @@ export function AppSidebar() {
                 <SidebarMenuSub>
                     {tiersSubMenuItems.map(subItem => (
                         <SidebarMenuItem key={subItem.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                            <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
                                 <Link href={subItem.href}>
                                     {subItem.label}
                                 </Link>
