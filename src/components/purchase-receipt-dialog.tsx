@@ -487,10 +487,10 @@ export function PurchaseReceiptDialog({
                 <div className={cn('grid text-sm font-medium', gridLayout)}>
                    <Label>Article</Label>
                    {fromBC && <Label>Qté Cmdée</Label>}
-                   <Label>Qté Reçue</Label>
+                   <Label>Qté</Label>
                    <Label>Prix</Label>
                    <Label>TVA (%)</Label>
-                   <Label>Total HT</Label>
+                   <Label className="text-right">Total HT</Label>
                    {!fromBC && !readOnly && <div className="w-[50px]"></div>}
                 </div>
               {fields.map((field, index) => {
