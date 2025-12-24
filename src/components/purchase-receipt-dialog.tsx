@@ -347,7 +347,6 @@ export function PurchaseReceiptDialog({
     } else {
         const newReceiptData = {
           ...receiptData,
-          receiptNumber: data.receiptNumber,
           status: 'Brouillon' as const,
         };
 
@@ -478,14 +477,14 @@ export function PurchaseReceiptDialog({
                         />
                     </div>
                 </div>
-                <div className="relative col-span-8 rounded-md border border-primary p-4 pt-6">
+                <div className="relative col-span-8 space-y-2 rounded-md border border-primary p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
                      <FormField
                           control={form.control}
                           name="supplierId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="sr-only">Fournisseur</FormLabel>
+                              <FormLabel>Fournisseur</FormLabel>
                               <Select
                                 onValueChange={handleSupplierChange}
                                 value={field.value}
