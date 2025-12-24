@@ -80,6 +80,8 @@ type PurchaseReceiptDialogProps = {
 const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
+const gridLayout = "grid grid-cols-[1fr_120px_130px_50px] gap-4 items-end text-left";
+
 
 export function PurchaseReceiptDialog({
   purchaseOrders,
@@ -102,8 +104,6 @@ export function PurchaseReceiptDialog({
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
-
-  const gridLayout = "grid grid-cols-[1fr_120px_120px_130px_50px] gap-4 items-end text-left";
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
@@ -289,6 +289,9 @@ export function PurchaseReceiptDialog({
         updateDocumentNonBlocking(receiptDocRef, {
             ...receiptData,
             status: receipt.status,
+            totalHT: totalHT,
+            tvaRate: data.tvaRate,
+            totalTTC: totalTTC,
         });
         toast({
             title: 'Bon de réception modifié',
@@ -401,7 +404,7 @@ export function PurchaseReceiptDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="purchaseOrderId"
@@ -442,6 +445,29 @@ export function PurchaseReceiptDialog({
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+               <FormField
+                  control={form.control}
+                  name="tvaRate"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>TVA (%)</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(parseFloat(value))} value={field.value.toString()} disabled={readOnly || fromBC}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  <SelectItem value="20">20%</SelectItem>
+                                  <SelectItem value="10">10%</SelectItem>
+                                  <SelectItem value="5.5">5.5%</SelectItem>
+                                  <SelectItem value="0">0%</SelectItem>
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                  )}
               />
             </div>
              <FormField
@@ -491,7 +517,7 @@ export function PurchaseReceiptDialog({
                    <div className="w-[50px]"></div>
                 </div>
               {fields.map((field, index) => (
-                <div key={field.id} className={gridLayout}>
+                <div key={field.id} className={cn(gridLayout)}>
                   {fromBC ? (
                     <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
                   ) : (
@@ -554,7 +580,7 @@ export function PurchaseReceiptDialog({
                       render={({ field: itemField }) => (
                         <FormItem>
                           <FormControl>
-                            <Input type="number" placeholder="Prix" className="w-full" disabled value={itemField.value ?? ''} />
+                            <Input type="number" placeholder="Prix" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
                           </FormControl>
                            <FormMessage />
                         </FormItem>
@@ -575,33 +601,6 @@ export function PurchaseReceiptDialog({
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
                 </Button>
               )}
-            </div>
-
-             <div className="grid grid-cols-2 gap-4">
-                <div />
-                <FormField
-                    control={form.control}
-                    name="tvaRate"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>TVA (%)</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseFloat(value))} value={field.value.toString()} disabled={readOnly || fromBC}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="20">20%</SelectItem>
-                                    <SelectItem value="10">10%</SelectItem>
-                                    <SelectItem value="5.5">5.5%</SelectItem>
-                                    <SelectItem value="0">0%</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
             </div>
             
             <Separator />
@@ -654,5 +653,3 @@ export function PurchaseReceiptDialog({
     </>
   );
 }
-
-    
