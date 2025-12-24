@@ -137,8 +137,14 @@ service cloud.firestore {
      * @description Manages article family documents. Any authenticated user can manage them.
      */
     match /articleFamilies/{familyId} {
-        allow get, write: if isSignedIn();
-        allow list: if isSignedIn();
+      allow read, write: if isSignedIn();
+    }
+    
+    /**
+     * @description Manages representative documents. Any authenticated user can manage them.
+     */
+    match /representatives/{representativeId} {
+      allow read, write: if isSignedIn();
     }
   }
 }

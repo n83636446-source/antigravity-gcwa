@@ -273,6 +273,27 @@
               "tvaRate"
             ]
           }
+        },
+        "paymentMode": {
+          "type": "string",
+          "description": "The payment mode for the order."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The due date for the payment."
+        },
+        "representativeId": {
+          "type": "string",
+          "description": "Reference to the Representative."
+        },
+        "reference": {
+          "type": "string",
+          "description": "A reference number for the order."
+        },
+        "remarks": {
+          "type": "string",
+          "description": "Any remarks about the order."
         }
       },
       "required": [
@@ -310,10 +331,6 @@
           "type": "string",
           "format": "date-time",
           "description": "Date the goods were received."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Notes about the receipt."
         },
         "items": {
           "type": "array",
@@ -356,6 +373,27 @@
         "totalTTC": {
           "type": "number",
           "description": "Total amount of the receipt including tax."
+        },
+        "paymentMode": {
+          "type": "string",
+          "description": "The payment mode for the receipt."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The due date for the payment."
+        },
+        "representativeId": {
+          "type": "string",
+          "description": "Reference to the Representative."
+        },
+        "reference": {
+          "type": "string",
+          "description": "A reference number for the receipt."
+        },
+        "remarks": {
+          "type": "string",
+          "description": "Any remarks about the receipt."
         }
       },
       "required": [
@@ -394,11 +432,6 @@
           "type": "string",
           "format": "date-time",
           "description": "Date the invoice was issued."
-        },
-        "dueDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Date the invoice is due."
         },
         "totalHT": {
           "type": "number",
@@ -443,6 +476,27 @@
               "tvaRate"
             ]
           }
+        },
+        "paymentMode": {
+          "type": "string",
+          "description": "The payment mode for the invoice."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The due date for the payment."
+        },
+        "representativeId": {
+          "type": "string",
+          "description": "Reference to the Representative."
+        },
+        "reference": {
+          "type": "string",
+          "description": "A reference number for the invoice."
+        },
+        "remarks": {
+          "type": "string",
+          "description": "Any remarks about the invoice."
         }
       },
       "required": [
@@ -524,6 +578,27 @@
               "tvaRate"
             ]
           }
+        },
+        "paymentMode": {
+          "type": "string",
+          "description": "The payment mode for the credit note."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The due date for the payment."
+        },
+        "representativeId": {
+          "type": "string",
+          "description": "Reference to the Representative."
+        },
+        "reference": {
+          "type": "string",
+          "description": "A reference number for the credit note."
+        },
+        "remarks": {
+          "type": "string",
+          "description": "Any remarks about the credit note."
         }
       },
       "required": [
@@ -560,6 +635,32 @@
         "id",
         "code",
         "name"
+      ]
+    },
+    "Representative": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Representative",
+      "type": "object",
+      "description": "Represents a sales representative.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the representative."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the representative."
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email for the representative.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
       ]
     }
   },
@@ -734,8 +835,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/representatives/{representativeId}",
+        "definition": {
+          "entityName": "Representative",
+          "schema": {
+            "$ref": "#/backend/entities/Representative"
+          },
+          "description": "Stores sales representative information. `representativeId` is the unique identifier for the representative.",
+          "params": [
+            {
+              "name": "representativeId",
+              "description": "Unique identifier for the representative."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`, `articleFamilies`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`, `articleFamilies`, `representatives`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
   }
 }

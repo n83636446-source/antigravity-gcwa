@@ -51,6 +51,11 @@ export type PurchaseOrder = {
   items: PurchaseOrderItem[];
   totalHT: number;
   totalTTC: number;
+  paymentMode?: string;
+  dueDate?: string;
+  representativeId?: string;
+  reference?: string;
+  remarks?: string;
 };
 
 export type Client = {
@@ -75,11 +80,15 @@ export type PurchaseReceipt = {
   purchaseOrderId?: string; // Made optional
   supplierId: string; // Added to directly link to supplier
   receiptDate: string; // ISO string
-  notes?: string;
   items: PurchaseReceiptItem[];
   status: 'Brouillon' | 'Validé';
   totalHT: number;
   totalTTC: number;
+  paymentMode?: string;
+  dueDate?: string;
+  representativeId?: string;
+  reference?: string;
+  remarks?: string;
 };
 
 export type PurchaseInvoiceItem = {
@@ -96,10 +105,14 @@ export type PurchaseInvoice = {
   supplierId: string; // Added to directly link to supplier
   items: PurchaseInvoiceItem[]; // Added items
   invoiceDate: string; // ISO string
-  dueDate: string; // ISO string
+  status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
   totalHT: number;
   totalTTC: number;
-  status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
+  paymentMode?: string;
+  dueDate?: string;
+  representativeId?: string;
+  reference?: string;
+  remarks?: string;
 };
 
 export type CreditNoteItem = {
@@ -119,6 +132,17 @@ export type CreditNote = {
     items: CreditNoteItem[];
     totalHT: number;
     totalTTC: number;
+    paymentMode?: string;
+    dueDate?: string;
+    representativeId?: string;
+    reference?: string;
+    remarks?: string;
 };
 
-export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote | ArticleFamily;
+export type Representative = {
+    id: string;
+    name: string;
+    email: string;
+};
+
+export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote | ArticleFamily | Representative;
