@@ -267,7 +267,7 @@ export function PurchaseReceiptDialog({
          form.reset({
             purchaseOrderId: '',
             supplierId: '',
-            receiptDate: new Date().toISOString().split('T[0]'),
+            receiptDate: new Date().toISOString().split('T')[0],
             items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0, tvaRate: 20 }],
             paymentMode: 'Espèces',
             dueDate: '',
@@ -424,10 +424,11 @@ export function PurchaseReceiptDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="border p-4 rounded-md space-y-4 mb-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="relative rounded-md border p-4 pt-6">
+                <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
                 <div className="space-y-2">
-                    <FormField
+                   <FormField
                       control={form.control}
                       name="receiptDate"
                       render={({ field }) => (
@@ -436,56 +437,6 @@ export function PurchaseReceiptDialog({
                           <FormControl>
                             <Input type="date" {...field} disabled={readOnly} />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="dueDate"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Date d'échéance</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                </div>
-                <div className="space-y-2">
-                    <FormField
-                      control={form.control}
-                      name="supplierId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fournisseur</FormLabel>
-                          <Select
-                            onValueChange={handleSupplierChange}
-                            value={field.value}
-                            disabled={readOnly || fromBC}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez un fournisseur" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                                <div className="flex items-center gap-2">
-                                  <PlusCircle className="h-4 w-4" />
-                                  <span>Créer un nouveau fournisseur</span>
-                                </div>
-                              </SelectItem>
-                              <Separator />
-                              {suppliers?.map((supplier) => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                  {supplier.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -520,29 +471,90 @@ export function PurchaseReceiptDialog({
                     />
                 </div>
               </div>
-                <div className="grid grid-cols-4 gap-4">
-                     <FormField
-                        control={form.control}
-                        name="paymentMode"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Mode de paiement</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Mode de paiement" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <SelectItem value="Espèces">Espèces</SelectItem>
-                                <SelectItem value="Chèque">Chèque</SelectItem>
-                                <SelectItem value="Virement">Virement</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
+              <div className="relative rounded-md border p-4 pt-6">
+                <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
+                 <FormField
+                      control={form.control}
+                      name="supplierId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fournisseur</FormLabel>
+                          <Select
+                            onValueChange={handleSupplierChange}
+                            value={field.value}
+                            disabled={readOnly || fromBC}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez un fournisseur" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                <div className="flex items-center gap-2">
+                                  <PlusCircle className="h-4 w-4" />
+                                  <span>Créer un nouveau fournisseur</span>
+                                </div>
+                              </SelectItem>
+                              <Separator />
+                              {suppliers?.map((supplier) => (
+                                <SelectItem key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-12 gap-4">
+                <div className="relative col-span-4 rounded-md border p-4 pt-6">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
+                    <div className="space-y-2">
+                        <FormField
+                            control={form.control}
+                            name="paymentMode"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Mode de paiement</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Mode de paiement" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="Espèces">Espèces</SelectItem>
+                                    <SelectItem value="Chèque">Chèque</SelectItem>
+                                    <SelectItem value="Virement">Virement</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
                         />
+                        <FormField
+                            control={form.control}
+                            name="dueDate"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Date d'échéance</FormLabel>
+                                <FormControl>
+                                    <Input type="date" {...field} disabled={readOnly} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </div>
+                <div className="relative col-span-8 rounded-md border p-4 pt-6">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
+                    <div className="grid grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
                             name="representativeId"
@@ -577,20 +589,21 @@ export function PurchaseReceiptDialog({
                                 <FormMessage />
                                 </FormItem>
                             )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="remarks"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Remarques</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Remarques" {...field} disabled={readOnly} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
                         />
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name="remarks"
+                        render={({ field }) => (
+                            <FormItem className="mt-2">
+                            <FormLabel>Remarques</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Remarques" {...field} disabled={readOnly} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </div>
             </div>
 
