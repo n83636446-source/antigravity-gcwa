@@ -58,6 +58,7 @@ const purchaseReceiptSchema = z.object({
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   receiptDate: z.string({ required_error: 'La date est requise.' }),
   notes: z.string().optional(),
+  tvaRate: z.coerce.number().min(0),
   items: z.array(receiptItemSchema).min(1, 'Le bon de réception doit contenir au moins un article.'),
 });
 
@@ -102,7 +103,7 @@ export function PurchaseReceiptDialog({
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
 
-  const gridLayout = "grid grid-cols-[1fr_120px_120px_130px_50px] gap-2 items-end text-left";
+  const gridLayout = "grid grid-cols-[1fr_120px_120px_130px_50px] gap-4 items-end text-left";
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
@@ -154,6 +155,7 @@ export function PurchaseReceiptDialog({
       supplierId: '',
       receiptDate: new Date().toISOString().split('T')[0],
       notes: '',
+      tvaRate: 20,
       items: [],
     },
   });
@@ -164,17 +166,23 @@ export function PurchaseReceiptDialog({
   });
 
   const watchedItems = useWatch({ control: form.control, name: 'items' });
+  const watchedTvaRate = useWatch({ control: form.control, name: 'tvaRate' });
   const watchedOrderId = form.watch('purchaseOrderId');
   const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
   
-  const liveTotal = useMemo(() => {
-    if (!watchedItems || !products) return 0;
-    return watchedItems.reduce((sum, item) => {
-      const product = products.find(p => p.id === item.productId);
-      const price = item.price ?? product?.price ?? 0;
-      return sum + ((item.quantityReceived || 0) * price);
-    }, 0);
-  }, [watchedItems, products]);
+  const liveTotals = useMemo(() => {
+    const totalHT = watchedItems?.reduce((sum, item) => {
+        const product = products.find(p => p.id === item.productId);
+        const price = item.price ?? product?.price ?? 0;
+        return sum + ((item.quantityReceived || 0) * price);
+    }, 0) || 0;
+
+    const tvaRate = watchedTvaRate / 100;
+    const totalTVA = totalHT * tvaRate;
+    const totalTTC = totalHT + totalTVA;
+
+    return { totalHT, totalTVA, totalTTC };
+  }, [watchedItems, products, watchedTvaRate]);
 
 
   useEffect(() => {
@@ -184,6 +192,7 @@ export function PurchaseReceiptDialog({
         supplierId: '',
         receiptDate: new Date().toISOString().split('T')[0],
         notes: '',
+        tvaRate: 20,
         items: [],
       });
       return;
@@ -196,6 +205,7 @@ export function PurchaseReceiptDialog({
         supplierId: receipt.supplierId,
         receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
         notes: receipt.notes || '',
+        tvaRate: receipt.tvaRate,
         items: receipt.items.map(item => ({
           productId: item.productId,
           quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
@@ -210,6 +220,7 @@ export function PurchaseReceiptDialog({
         supplierId: purchaseOrder.supplierId,
         receiptDate: new Date().toISOString().split('T')[0],
         notes: '',
+        tvaRate: purchaseOrder.tvaRate,
         items: purchaseOrder.items.map(item => ({
           productId: item.productId,
           quantityOrdered: item.quantity,
@@ -222,6 +233,7 @@ export function PurchaseReceiptDialog({
       const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
+        form.setValue('tvaRate', selectedPO.tvaRate);
         replace(selectedPO.items.map(item => ({
             productId: item.productId,
             quantityOrdered: item.quantity,
@@ -235,6 +247,7 @@ export function PurchaseReceiptDialog({
             supplierId: '',
             receiptDate: new Date().toISOString().split('T')[0],
             notes: '',
+            tvaRate: 20,
             items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0 }],
          });
       }
@@ -250,17 +263,14 @@ export function PurchaseReceiptDialog({
   const onSubmit = async (data: PurchaseReceiptFormValues) => {
     if (!firestore) return;
     
-    const totalAmount = data.items.reduce((sum, item) => {
-        const product = products?.find(p => p.id === item.productId);
-        const price = item.price ?? product?.price ?? 0;
-        return sum + ((item.quantityReceived || 0) * price);
-    }, 0);
+    const { totalHT, totalTTC } = liveTotals;
 
     const receiptData = {
       purchaseOrderId: data.purchaseOrderId,
       supplierId: data.supplierId,
       receiptDate: new Date(data.receiptDate).toISOString(),
       notes: data.notes,
+      tvaRate: data.tvaRate,
       items: data.items.map(({ productId, quantityReceived }) => {
         const product = products?.find(p => p.id === productId);
         return {
@@ -269,7 +279,8 @@ export function PurchaseReceiptDialog({
           price: product?.price ?? 0,
         }
       }),
-      totalAmount: totalAmount,
+      totalHT: totalHT,
+      totalTTC: totalTTC,
     };
 
 
@@ -472,12 +483,12 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-2">
-                <div className={cn('text-sm font-medium', gridLayout)}>
+                <div className={cn('grid text-sm font-medium', gridLayout)}>
                    <Label>Article</Label>
                    {fromBC && <Label>Qté Cmdée</Label>}
                    <Label>Qté Reçue</Label>
                    <Label>Prix</Label>
-                   {!fromBC && !readOnly && <div className="w-[50px]"></div>}
+                   <div className="w-[50px]"></div>
                 </div>
               {fields.map((field, index) => (
                 <div key={field.id} className={gridLayout}>
@@ -520,7 +531,7 @@ export function PurchaseReceiptDialog({
                         readOnly
                         disabled
                         value={field.quantityOrdered}
-                        className="w-full text-center"
+                        className="w-full"
                       />
                   )}
 
@@ -566,34 +577,50 @@ export function PurchaseReceiptDialog({
               )}
             </div>
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Ajouter des notes sur la réception..."
-                      {...field}
-                       disabled={readOnly}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <div className="grid grid-cols-2 gap-4">
+                <div />
+                <FormField
+                    control={form.control}
+                    name="tvaRate"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>TVA (%)</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseFloat(value))} value={field.value.toString()} disabled={readOnly || fromBC}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="20">20%</SelectItem>
+                                    <SelectItem value="10">10%</SelectItem>
+                                    <SelectItem value="5.5">5.5%</SelectItem>
+                                    <SelectItem value="0">0%</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
             
             <Separator />
             
-            <div className="flex justify-end items-center space-x-4">
-                <span className="text-lg font-semibold">Total :</span>
-                <span className="text-lg font-bold text-primary">
-                    {new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                    }).format(liveTotal)}
-                </span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="text-right font-medium">Total HT:</div>
+                <div className="text-right font-semibold">
+                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalHT)}
+                </div>
+
+                <div className="text-right font-medium">TVA ({watchedTvaRate}%):</div>
+                <div className="text-right font-semibold">
+                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTVA)}
+                </div>
+
+                <div className="text-right font-bold text-lg border-t pt-2 mt-1">Total TTC:</div>
+                <div className="text-right font-bold text-lg text-primary border-t pt-2 mt-1">
+                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
+                </div>
             </div>
 
 
@@ -627,3 +654,5 @@ export function PurchaseReceiptDialog({
     </>
   );
 }
+
+    

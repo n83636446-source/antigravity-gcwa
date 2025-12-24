@@ -40,8 +40,10 @@ export type PurchaseOrder = {
   orderNumber: string;
   supplierId: string;
   orderDate: string; // ISO string
-  totalAmount: number;
   items: PurchaseOrderItem[];
+  totalHT: number;
+  tvaRate: number;
+  totalTTC: number;
 };
 
 export type Client = {
@@ -68,7 +70,9 @@ export type PurchaseReceipt = {
   notes?: string;
   items: PurchaseReceiptItem[];
   status: 'Brouillon' | 'Validé';
-  totalAmount: number;
+  totalHT: number;
+  tvaRate: number;
+  totalTTC: number;
 };
 
 export type PurchaseInvoiceItem = {
@@ -85,7 +89,9 @@ export type PurchaseInvoice = {
   items: PurchaseInvoiceItem[]; // Added items
   invoiceDate: string; // ISO string
   dueDate: string; // ISO string
-  totalAmount: number;
+  totalHT: number;
+  tvaRate: number;
+  totalTTC: number;
   status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
 };
 
@@ -100,3 +106,5 @@ export type CreditNote = {
 };
 
 export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote;
+
+    

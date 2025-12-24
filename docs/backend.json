@@ -235,9 +235,17 @@
           "format": "date-time",
           "description": "Date the order was placed."
         },
-        "totalAmount": {
+        "totalHT": {
           "type": "number",
-          "description": "Total amount of the order."
+          "description": "Total amount of the order before tax."
+        },
+        "tvaRate": {
+          "type": "number",
+          "description": "VAT rate for the order."
+        },
+        "totalTTC": {
+          "type": "number",
+          "description": "Total amount of the order including tax."
         },
         "items": {
           "type": "array",
@@ -266,7 +274,9 @@
         "orderNumber",
         "supplierId",
         "orderDate",
-        "totalAmount",
+        "totalHT",
+        "tvaRate",
+        "totalTTC",
         "items"
       ]
     },
@@ -331,9 +341,17 @@
             "Validé"
           ]
         },
-        "totalAmount": {
+        "totalHT": {
           "type": "number",
-          "description": "Total amount of the receipt."
+          "description": "Total amount of the receipt before tax."
+        },
+        "tvaRate": {
+          "type": "number",
+          "description": "VAT rate for the receipt."
+        },
+        "totalTTC": {
+          "type": "number",
+          "description": "Total amount of the receipt including tax."
         }
       },
       "required": [
@@ -342,7 +360,9 @@
         "receiptDate",
         "items",
         "status",
-        "totalAmount"
+        "totalHT",
+        "tvaRate",
+        "totalTTC"
       ]
     },
     "PurchaseInvoice": {
@@ -377,9 +397,17 @@
           "format": "date-time",
           "description": "Date the invoice is due."
         },
-        "totalAmount": {
+        "totalHT": {
           "type": "number",
-          "description": "Total amount of the invoice."
+          "description": "Total amount of the invoice before tax."
+        },
+        "tvaRate": {
+          "type": "number",
+          "description": "VAT rate for the invoice."
+        },
+        "totalTTC": {
+          "type": "number",
+          "description": "Total amount of the invoice including tax."
         },
         "status": {
           "type": "string",
@@ -419,7 +447,9 @@
         "supplierId",
         "invoiceDate",
         "dueDate",
-        "totalAmount",
+        "totalHT",
+        "tvaRate",
+        "totalTTC",
         "status",
         "items"
       ]
@@ -569,3 +599,5 @@
     "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
   }
 }
+
+    
