@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, PurchaseOrder, PurchaseReceipt, Supplier } from '@/lib/types';
+import type { Product, PurchaseOrder, PurchaseReceipt, Supplier, Representative } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
@@ -49,7 +49,7 @@ const receiptItemSchema = z.object({
     .number()
     .int()
     .min(0, 'La quantité doit être un entier non négatif.'),
-  price: z.number().optional(),
+  price: z.coerce.number().optional(),
   tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
 });
 
@@ -57,8 +57,12 @@ const purchaseReceiptSchema = z.object({
   purchaseOrderId: z.string().optional(),
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   receiptDate: z.string({ required_error: 'La date est requise.' }),
-  notes: z.string().optional(),
   items: z.array(receiptItemSchema).min(1, 'Le bon de réception doit contenir au moins un article.'),
+  paymentMode: z.string().optional(),
+  dueDate: z.string().optional(),
+  representativeId: z.string().optional(),
+  reference: z.string().optional(),
+  remarks: z.string().optional(),
 });
 
 type PurchaseReceiptFormValues = z.infer<typeof purchaseReceiptSchema>;
@@ -111,6 +115,10 @@ export function PurchaseReceiptDialog({
   const productsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'products') : null), [firestore]);
   const { data: allProducts } = useCollection<Product>(productsRef);
 
+  const representativesRef = useMemoFirebase(() => (firestore ? collection(firestore, 'representatives') : null), [firestore]);
+  const { data: representatives } = useCollection<Representative>(representativesRef);
+
+
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
   
@@ -154,8 +162,12 @@ export function PurchaseReceiptDialog({
       purchaseOrderId: '',
       supplierId: '',
       receiptDate: new Date().toISOString().split('T')[0],
-      notes: '',
       items: [],
+      paymentMode: 'Espèces',
+      dueDate: '',
+      representativeId: '',
+      reference: '',
+      remarks: '',
     },
   });
 
@@ -195,7 +207,6 @@ export function PurchaseReceiptDialog({
         purchaseOrderId: '',
         supplierId: '',
         receiptDate: new Date().toISOString().split('T')[0],
-        notes: '',
         items: [],
       });
       return;
@@ -207,7 +218,6 @@ export function PurchaseReceiptDialog({
         purchaseOrderId: receipt.purchaseOrderId,
         supplierId: receipt.supplierId,
         receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
-        notes: receipt.notes || '',
         items: receipt.items.map(item => ({
           productId: item.productId,
           quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
@@ -215,6 +225,11 @@ export function PurchaseReceiptDialog({
           price: item.price,
           tvaRate: item.tvaRate,
         })),
+        paymentMode: receipt.paymentMode,
+        dueDate: receipt.dueDate ? new Date(receipt.dueDate).toISOString().split('T')[0] : '',
+        representativeId: receipt.representativeId,
+        reference: receipt.reference,
+        remarks: receipt.remarks,
       });
     } else if (purchaseOrder) {
       // Case: Transfer from a specific PO
@@ -222,7 +237,6 @@ export function PurchaseReceiptDialog({
         purchaseOrderId: purchaseOrder.id,
         supplierId: purchaseOrder.supplierId,
         receiptDate: new Date().toISOString().split('T')[0],
-        notes: '',
         items: purchaseOrder.items.map(item => ({
           productId: item.productId,
           quantityOrdered: item.quantity,
@@ -230,6 +244,11 @@ export function PurchaseReceiptDialog({
           price: item.price,
           tvaRate: item.tvaRate,
         })),
+        paymentMode: purchaseOrder.paymentMode,
+        dueDate: purchaseOrder.dueDate ? new Date(purchaseOrder.dueDate).toISOString().split('T')[0] : '',
+        representativeId: purchaseOrder.representativeId,
+        reference: purchaseOrder.reference,
+        remarks: purchaseOrder.remarks,
       });
     } else {
       // Case: Creating a new BR from scratch or after selecting a PO in dialog
@@ -248,9 +267,13 @@ export function PurchaseReceiptDialog({
          form.reset({
             purchaseOrderId: '',
             supplierId: '',
-            receiptDate: new Date().toISOString().split('T')[0],
-            notes: '',
+            receiptDate: new Date().toISOString().split('T[0]'),
             items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0, tvaRate: 20 }],
+            paymentMode: 'Espèces',
+            dueDate: '',
+            representativeId: '',
+            reference: '',
+            remarks: '',
          });
       }
     }
@@ -268,18 +291,17 @@ export function PurchaseReceiptDialog({
     const { totalHT, totalTTC } = liveTotals;
 
     const receiptData = {
-      purchaseOrderId: data.purchaseOrderId,
-      supplierId: data.supplierId,
-      receiptDate: new Date(data.receiptDate).toISOString(),
-      notes: data.notes,
-      items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
-        productId,
-        quantityReceived,
-        price: price ?? 0,
-        tvaRate: tvaRate ?? 20,
-      })),
-      totalHT,
-      totalTTC,
+        ...data,
+        receiptDate: new Date(data.receiptDate).toISOString(),
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
+            productId,
+            quantityReceived,
+            price: price ?? 0,
+            tvaRate: tvaRate ?? 20,
+        })),
+        totalHT,
+        totalTTC,
     };
 
 
@@ -402,84 +424,175 @@ export function PurchaseReceiptDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="purchaseOrderId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bon de commande (Optionnel)</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ''}
-                      disabled={isTriggeredExternally || isEditMode}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un bon de commande" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availablePurchaseOrders.map((order) => (
-                          <SelectItem key={order.id} value={order.id}>
-                            {order.orderNumber}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="receiptDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date de réception</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} disabled={readOnly} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="border p-4 rounded-md space-y-4 mb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <FormField
+                      control={form.control}
+                      name="receiptDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date de réception</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} disabled={readOnly} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="dueDate"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Date d'échéance</FormLabel>
+                            <FormControl>
+                                <Input type="date" {...field} disabled={readOnly} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                </div>
+                <div className="space-y-2">
+                    <FormField
+                      control={form.control}
+                      name="supplierId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fournisseur</FormLabel>
+                          <Select
+                            onValueChange={handleSupplierChange}
+                            value={field.value}
+                            disabled={readOnly || fromBC}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez un fournisseur" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                <div className="flex items-center gap-2">
+                                  <PlusCircle className="h-4 w-4" />
+                                  <span>Créer un nouveau fournisseur</span>
+                                </div>
+                              </SelectItem>
+                              <Separator />
+                              {suppliers?.map((supplier) => (
+                                <SelectItem key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="purchaseOrderId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bon de commande (Optionnel)</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ''}
+                            disabled={isTriggeredExternally || isEditMode}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez un bon de commande" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availablePurchaseOrders.map((order) => (
+                                <SelectItem key={order.id} value={order.id}>
+                                  {order.orderNumber}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+              </div>
+                <div className="grid grid-cols-4 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="paymentMode"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Mode de paiement</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Mode de paiement" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value="Espèces">Espèces</SelectItem>
+                                <SelectItem value="Chèque">Chèque</SelectItem>
+                                <SelectItem value="Virement">Virement</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="representativeId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Représentant</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Représentant" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {(representatives || []).map(rep => (
+                                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="reference"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Référence</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Référence" {...field} disabled={readOnly} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="remarks"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Remarques</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Remarques" {...field} disabled={readOnly} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                </div>
             </div>
-             <FormField
-                control={form.control}
-                name="supplierId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fournisseur</FormLabel>
-                    <Select
-                      onValueChange={handleSupplierChange}
-                      value={field.value}
-                      disabled={readOnly || fromBC}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un fournisseur" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                          <div className="flex items-center gap-2">
-                            <PlusCircle className="h-4 w-4" />
-                            <span>Créer un nouveau fournisseur</span>
-                          </div>
-                        </SelectItem>
-                        <Separator />
-                        {suppliers?.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
             <Separator />
 
