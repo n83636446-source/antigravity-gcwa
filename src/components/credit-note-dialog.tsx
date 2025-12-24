@@ -90,7 +90,7 @@ export function CreditNoteDialog({
 
   const watchedItems = useWatch({ control: form.control, name: 'items' });
   
-  const gridLayout = "grid grid-cols-[1fr_80px_100px_80px_120px_50px] gap-2 items-end text-left";
+  const gridLayout = "grid grid-cols-[1fr_80px_100px_80px_100px_50px] gap-3 items-end";
   
   const liveTotals = useMemo(() => {
     const totalHT = watchedItems?.reduce((sum, item) => sum + (item.quantity || 0) * (item.price || 0), 0) || 0;
@@ -244,9 +244,8 @@ export function CreditNoteDialog({
             <Separator />
             
             <div className="space-y-2">
-                <div className={cn("grid text-sm font-medium", gridLayout)}>
+                <div className={cn("text-sm font-medium", gridLayout)}>
                    <Label>Article</Label>
-                   <div></div>
                    <Label>Qté</Label>
                    <Label>Prix</Label>
                    <Label>TVA (%)</Label>
@@ -263,7 +262,7 @@ export function CreditNoteDialog({
                           control={form.control}
                           name={`items.${index}.productId`}
                           render={({ field: itemField }) => (
-                          <FormItem className="col-span-2">
+                          <FormItem>
                               <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value}>
                               <FormControl>
                                   <SelectTrigger>
