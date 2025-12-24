@@ -431,30 +431,30 @@ export function PurchaseReceiptDialog({
             <div className="grid grid-cols-12 gap-4">
                 <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                    <div className="space-y-2">
-                       <FormField
-                          control={form.control}
-                          name="receiptNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Numéro</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ex: BR-0001" {...field} disabled />
-                              </FormControl>
-                              <FormMessage />
+                    <div className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="receiptNumber"
+                            render={({ field }) => (
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                <FormLabel className="text-right">Numéro</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ex: BR-0001" {...field} disabled />
+                                </FormControl>
+                                <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
-                          )}
+                            )}
                         />
                        <FormField
                           control={form.control}
                           name="receiptDate"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Date</FormLabel>
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                              <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
                                 <Input type="date" {...field} disabled={readOnly} />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
                           )}
                         />
@@ -467,7 +467,7 @@ export function PurchaseReceiptDialog({
                           name="supplierId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fournisseur</FormLabel>
+                              <FormLabel className="sr-only">Fournisseur</FormLabel>
                               <Select
                                 onValueChange={handleSupplierChange}
                                 value={field.value}
@@ -503,13 +503,13 @@ export function PurchaseReceiptDialog({
             <div className="grid grid-cols-12 gap-4">
                 <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         <FormField
                             control={form.control}
                             name="paymentMode"
                             render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Mode de paiement</FormLabel>
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                     <FormControl>
                                     <SelectTrigger>
@@ -522,7 +522,7 @@ export function PurchaseReceiptDialog({
                                     <SelectItem value="Virement">Virement</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
+                                <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
                             )}
                         />
@@ -530,12 +530,12 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="dueDate"
                             render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Date d'échéance</FormLabel>
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
                                     <Input type="date" {...field} disabled={readOnly} />
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
                             )}
                         />
@@ -547,8 +547,8 @@ export function PurchaseReceiptDialog({
                         control={form.control}
                         name="representativeId"
                         render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Représentant</FormLabel>
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                            <FormLabel className="text-right">Représentant</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                 <FormControl>
                                 <SelectTrigger>
@@ -561,7 +561,7 @@ export function PurchaseReceiptDialog({
                                 ))}
                                 </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
                         )}
                     />
@@ -569,12 +569,12 @@ export function PurchaseReceiptDialog({
                         control={form.control}
                         name="reference"
                         render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Référence</FormLabel>
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                            <FormLabel className="text-right">Référence</FormLabel>
                             <FormControl>
                                 <Input placeholder="Référence" {...field} disabled={readOnly} />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
                         )}
                     />
@@ -582,12 +582,12 @@ export function PurchaseReceiptDialog({
                         control={form.control}
                         name="remarks"
                         render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Remarques</FormLabel>
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                            <FormLabel className="text-right">Remarques</FormLabel>
                             <FormControl>
                                 <Input placeholder="Remarques" {...field} disabled={readOnly} />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
                         )}
                     />
