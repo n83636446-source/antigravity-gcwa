@@ -325,7 +325,7 @@ export function PurchaseReceiptDialog({
         totalHT,
         totalTTC,
         paymentMode: data.paymentMode,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        dueDate: data.dueDate,
         representativeId: data.representativeId,
         reference: data.reference,
         remarks: data.remarks,
@@ -455,7 +455,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} className="w-[90%] border-black" disabled={readOnly} />
+                                    <Input placeholder="Ex: BR-0001" {...field} className="w-full border-black" disabled={readOnly} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -468,7 +468,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                               <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} className="w-[90%] border-black" />
+                                <Input type="date" {...field} disabled={readOnly} className="w-full border-black" />
                               </FormControl>
                               <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -528,7 +528,7 @@ export function PurchaseReceiptDialog({
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
                                     <FormControl>
-                                    <SelectTrigger className="w-[90%] border-black">
+                                    <SelectTrigger className="w-full border-black">
                                         <SelectValue placeholder="Mode de paiement" />
                                     </SelectTrigger>
                                     </FormControl>
@@ -549,7 +549,7 @@ export function PurchaseReceiptDialog({
                                 <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={readOnly} className="w-[90%] border-black" />
+                                    <Input type="date" {...field} disabled={readOnly} className="w-full border-black" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
