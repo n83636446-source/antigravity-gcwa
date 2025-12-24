@@ -78,7 +78,7 @@ export function AppSidebar() {
               <Warehouse className="size-5" />
             </div>
             <span className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              GérerStock
+              Gestion Commerciale
             </span>
           </div>
         </div>
