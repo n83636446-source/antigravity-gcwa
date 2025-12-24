@@ -456,6 +456,87 @@
         "items"
       ]
     },
+    "CreditNote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CreditNote",
+      "type": "object",
+      "description": "Represents a credit note from a supplier.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the credit note."
+        },
+        "creditNoteNumber": {
+          "type": "string",
+          "description": "The unique number for the credit note."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to the Supplier."
+        },
+        "creditNoteDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date the credit note was issued."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for the credit note."
+        },
+        "totalHT": {
+          "type": "number",
+          "description": "Total amount of the credit note before tax."
+        },
+        "totalTTC": {
+          "type": "number",
+          "description": "Total amount of the credit note including tax."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Brouillon",
+            "Appliqué"
+          ],
+          "description": "Status of the credit note."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "price": {
+                "type": "number"
+              },
+              "tvaRate": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "productId",
+              "quantity",
+              "price",
+              "tvaRate"
+            ]
+          }
+        }
+      },
+      "required": [
+        "creditNoteNumber",
+        "supplierId",
+        "creditNoteDate",
+        "reason",
+        "totalHT",
+        "totalTTC",
+        "status",
+        "items"
+      ]
+    },
     "ArticleFamily": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ArticleFamily",
@@ -618,6 +699,22 @@
             {
               "name": "purchaseInvoiceId",
               "description": "Unique identifier for the purchase invoice."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/creditNotes/{creditNoteId}",
+        "definition": {
+          "entityName": "CreditNote",
+          "schema": {
+            "$ref": "#/backend/entities/CreditNote"
+          },
+          "description": "Stores credit note information. `creditNoteId` is the unique identifier for the credit note.",
+          "params": [
+            {
+              "name": "creditNoteId",
+              "description": "Unique identifier for the credit note."
             }
           ]
         }

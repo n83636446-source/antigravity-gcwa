@@ -41,7 +41,7 @@ export function CreditNotesTable({ creditNotes, suppliers }: CreditNotesTablePro
                 <TableHead>Numéro</TableHead>
                 <TableHead>Fournisseur</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
+                <TableHead className="text-right">Montant TTC</TableHead>
                 <TableHead>Statut</TableHead>
               </TableRow>
             </TableHeader>
@@ -61,7 +61,7 @@ export function CreditNotesTable({ creditNotes, suppliers }: CreditNotesTablePro
                     {new Intl.NumberFormat('fr-FR', {
                       style: 'currency',
                       currency: 'EUR',
-                    }).format(note.amount)}
+                    }).format(note.totalTTC)}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(note.status)}>{note.status}</Badge>

@@ -102,16 +102,23 @@ export type PurchaseInvoice = {
   status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
 };
 
+export type CreditNoteItem = {
+  productId: string;
+  quantity: number;
+  price: number;
+  tvaRate: number;
+};
+
 export type CreditNote = {
     id: string;
     creditNoteNumber: string;
     supplierId: string;
     creditNoteDate: string; // ISO string
-    amount: number;
     reason: string;
     status: 'Brouillon' | 'Appliqué';
+    items: CreditNoteItem[];
+    totalHT: number;
+    totalTTC: number;
 };
 
 export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote | ArticleFamily;
-
-    

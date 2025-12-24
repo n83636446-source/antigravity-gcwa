@@ -38,6 +38,8 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Label } from './ui/label';
 
 
 const orderItemSchema = z.object({
@@ -102,6 +104,8 @@ export function PurchaseOrderDialog({
     control: form.control,
     name: 'items',
   });
+  
+  const gridLayout = "grid grid-cols-[1fr_80px_100px_80px_120px_50px] gap-2 items-end text-left";
 
   const liveTotals = useMemo(() => {
     const totalHT = watchedItems?.reduce((sum, item) => {
@@ -273,84 +277,105 @@ export function PurchaseOrderDialog({
 
             <Separator />
 
-            <div className="space-y-4">
-              <FormLabel>Articles</FormLabel>
-              {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-[1fr_80px_100px_80px_auto] items-end gap-2">
-                   <FormField
-                    control={form.control}
-                    name={`items.${index}.productId`}
-                    render={({ field: itemField }) => (
-                      <FormItem>
-                        <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionnez un article" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
-                                <div className="flex items-center gap-2">
-                                    <PlusCircle className="h-4 w-4" />
-                                    <span>Créer un nouvel article</span>
-                                </div>
-                            </SelectItem>
-                            <Separator />
-                            {products?.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                  {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.quantity`}
-                    render={({ field: itemField }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Qté</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Qté" {...itemField} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.price`}
-                    render={({ field: itemField }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Prix U.</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="Prix" {...itemField} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.tvaRate`}
-                    render={({ field: itemField }) => (
-                      <FormItem>
-                         <FormLabel className="text-xs">TVA (%)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="TVA %" {...itemField} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+            <div className="space-y-2">
+                <div className={cn("grid text-sm font-medium", gridLayout)}>
+                   <Label>Article</Label>
+                   <div></div>
+                   <Label>Qté</Label>
+                   <Label>Prix</Label>
+                   <Label>TVA (%)</Label>
+                   <Label className="text-right">Total HT</Label>
+                   <div className="w-[50px]"></div>
                 </div>
-              ))}
+
+              {fields.map((field, index) => {
+                  const item = watchedItems[index];
+                  const lineTotal = (item?.quantity || 0) * (item?.price || 0);
+                  return (
+                    <div key={field.id} className={cn(gridLayout)}>
+                      <FormField
+                          control={form.control}
+                          name={`items.${index}.productId`}
+                          render={({ field: itemField }) => (
+                          <FormItem className="col-span-2">
+                              <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionnez un article" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                      <div className="flex items-center gap-2">
+                                          <PlusCircle className="h-4 w-4" />
+                                          <span>Créer un nouvel article</span>
+                                      </div>
+                                  </SelectItem>
+                                  <Separator />
+                                  {products?.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                      {product.name}
+                                  </SelectItem>
+                                  ))}
+                              </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name={`items.${index}.quantity`}
+                          render={({ field: itemField }) => (
+                          <FormItem>
+                              <FormControl>
+                              <Input type="number" placeholder="Qté" {...itemField} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name={`items.${index}.price`}
+                          render={({ field: itemField }) => (
+                          <FormItem>
+                              <FormControl>
+                              <Input type="number" step="0.01" placeholder="Prix" {...itemField} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name={`items.${index}.tvaRate`}
+                          render={({ field: itemField }) => (
+                          <FormItem>
+                              <FormControl>
+                              <Input type="number" placeholder="TVA %" {...itemField} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <Input
+                        readOnly
+                        disabled
+                        value={new Intl.NumberFormat('fr-FR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        }).format(lineTotal)}
+                        className="w-full text-right"
+                       />
+                       <div className="flex justify-center">
+                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    </div>
+                  );
+              })}
                {(!products || products.length === 0) && (
                 <div className="text-sm text-muted-foreground p-2 text-center border border-dashed rounded-md">
                     Aucun article trouvé.
