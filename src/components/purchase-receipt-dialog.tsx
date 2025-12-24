@@ -60,7 +60,7 @@ const purchaseReceiptSchema = z.object({
   receiptDate: z.string({ required_error: 'La date est requise.' }),
   items: z.array(receiptItemSchema).min(1, 'Le bon de réception doit contenir au moins un article.'),
   paymentMode: z.string().optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.string({ required_error: "La date d'échéance est requise." }).nonempty("La date d'échéance est requise."),
   representativeId: z.string().optional(),
   reference: z.string().optional(),
   remarks: z.string().optional(),
