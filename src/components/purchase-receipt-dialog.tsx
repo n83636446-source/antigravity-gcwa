@@ -451,10 +451,10 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="receiptNumber"
                             render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} className="w-full" />
+                                    <Input placeholder="Ex: BR-0001" {...field} className="w-[90%]" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -464,10 +464,10 @@ export function PurchaseReceiptDialog({
                           control={form.control}
                           name="receiptDate"
                           render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                               <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} className="w-full" />
+                                <Input type="date" {...field} disabled={readOnly} className="w-[90%]" />
                               </FormControl>
                               <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -523,11 +523,11 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="paymentMode"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
                                     <FormControl>
-                                    <SelectTrigger className="w-full">
+                                    <SelectTrigger className="w-[90%]">
                                         <SelectValue placeholder="Mode de paiement" />
                                     </SelectTrigger>
                                     </FormControl>
@@ -545,10 +545,10 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="dueDate"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={readOnly} className="w-full" />
+                                    <Input type="date" {...field} disabled={readOnly} className="w-[90%]" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
