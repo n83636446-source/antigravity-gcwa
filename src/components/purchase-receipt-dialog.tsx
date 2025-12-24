@@ -541,50 +541,48 @@ export function PurchaseReceiptDialog({
                         />
                     </div>
                 </div>
-                <div className="relative col-span-8 rounded-md border border-primary p-4 pt-6">
+                <div className="relative col-span-8 rounded-md border border-primary p-4 pt-6 grid grid-cols-1 gap-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="representativeId"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Représentant</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Représentant" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {(representatives || []).map(rep => (
-                                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="reference"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Référence</FormLabel>
+                    <FormField
+                        control={form.control}
+                        name="representativeId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Représentant</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                 <FormControl>
-                                    <Input placeholder="Référence" {...field} disabled={readOnly} />
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Représentant" />
+                                </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
+                                <SelectContent>
+                                {(representatives || []).map(rep => (
+                                    <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="reference"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Référence</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Référence" {...field} disabled={readOnly} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                      <FormField
                         control={form.control}
                         name="remarks"
                         render={({ field }) => (
-                            <FormItem className="mt-2">
+                            <FormItem>
                             <FormLabel>Remarques</FormLabel>
                             <FormControl>
                                 <Input placeholder="Remarques" {...field} disabled={readOnly} />
