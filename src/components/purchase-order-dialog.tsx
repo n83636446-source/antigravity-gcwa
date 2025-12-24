@@ -43,18 +43,14 @@ import { PlusCircle } from 'lucide-react';
 const orderItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
   quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
-  price: z.number(),
+  price: z.coerce.number().min(0, "Le prix doit être positif."),
   tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
 });
 
 const purchaseOrderSchema = z.object({
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
   orderDate: z.string({ required_error: 'La date est requise.' }),
-  items: z.array(z.object({
-      productId: z.string().nonempty("Veuillez sélectionner un article."),
-      quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
-      tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
-  })).min(1, 'Le bon de commande doit contenir au moins un article.'),
+  items: z.array(orderItemSchema).min(1, 'Le bon de commande doit contenir au moins un article.'),
 });
 
 
@@ -93,7 +89,7 @@ export function PurchaseOrderDialog({
     defaultValues: {
       supplierId: '',
       orderDate: new Date().toISOString().split('T')[0],
-      items: [{ productId: '', quantity: 1, tvaRate: 20 }],
+      items: [{ productId: '', quantity: 1, price: 0, tvaRate: 20 }],
     }
   });
 
@@ -109,13 +105,11 @@ export function PurchaseOrderDialog({
 
   const liveTotals = useMemo(() => {
     const totalHT = watchedItems?.reduce((sum, item) => {
-        const product = products?.find(p => p.id === item.productId);
-        return sum + ((item.quantity || 0) * (product?.price || 0));
+        return sum + ((item.quantity || 0) * (item.price || 0));
     }, 0) || 0;
 
     const totalTVA = watchedItems?.reduce((sum, item) => {
-        const product = products?.find(p => p.id === item.productId);
-        const itemHT = (item.quantity || 0) * (product?.price || 0);
+        const itemHT = (item.quantity || 0) * (item.price || 0);
         const tvaAmount = itemHT * ((item.tvaRate || 0) / 100);
         return sum + tvaAmount;
     }, 0) || 0;
@@ -123,7 +117,7 @@ export function PurchaseOrderDialog({
     const totalTTC = totalHT + totalTVA;
 
     return { totalHT, totalTVA, totalTTC };
-  }, [watchedItems, products]);
+  }, [watchedItems]);
 
 
   useEffect(() => {
@@ -132,13 +126,18 @@ export function PurchaseOrderDialog({
             form.reset({
                 supplierId: order.supplierId,
                 orderDate: new Date(order.orderDate).toISOString().split('T')[0],
-                items: order.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })),
+                items: order.items.map(item => ({ 
+                    productId: item.productId, 
+                    quantity: item.quantity, 
+                    price: item.price, 
+                    tvaRate: item.tvaRate 
+                })),
             });
         } else {
             form.reset({
                 supplierId: '',
                 orderDate: new Date().toISOString().split('T')[0],
-                items: [{ productId: '', quantity: 1, tvaRate: 20 }],
+                items: [{ productId: '', quantity: 1, price: 0, tvaRate: 20 }],
             });
         }
     }
@@ -153,10 +152,7 @@ export function PurchaseOrderDialog({
     const orderData = {
         supplierId: data.supplierId,
         orderDate: new Date(data.orderDate).toISOString(),
-        items: data.items.map(item => ({
-            ...item,
-            price: products.find(p => p.id === item.productId)?.price || 0
-        })),
+        items: data.items, // items now include price and tvaRate from the form
         totalHT,
         totalTTC,
     };
@@ -193,13 +189,23 @@ export function PurchaseOrderDialog({
       articleCreationIndex.current = index;
       setArticleDialogOpen(true);
     } else {
-      update(index, { ...fields[index], productId: value });
+      const product = products?.find(p => p.id === value);
+      update(index, { 
+        ...fields[index],
+        productId: value,
+        price: product?.price || 0
+      });
     }
   };
 
   const handleArticleCreated = (newArticle: Product) => {
     if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
-      update(articleCreationIndex.current, { ...fields[articleCreationIndex.current], productId: newArticle.id });
+      const index = articleCreationIndex.current;
+      update(index, { 
+        ...fields[index],
+        productId: newArticle.id,
+        price: newArticle.price
+      });
     }
     articleCreationIndex.current = null;
     setArticleDialogOpen(false);
@@ -270,7 +276,7 @@ export function PurchaseOrderDialog({
             <div className="space-y-4">
               <FormLabel>Articles</FormLabel>
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-[1fr_100px_80px_auto] items-end gap-2">
+                <div key={field.id} className="grid grid-cols-[1fr_80px_100px_80px_auto] items-end gap-2">
                    <FormField
                     control={form.control}
                     name={`items.${index}.productId`}
@@ -306,8 +312,22 @@ export function PurchaseOrderDialog({
                     name={`items.${index}.quantity`}
                     render={({ field: itemField }) => (
                       <FormItem>
+                        <FormLabel className="text-xs">Qté</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="Qté" {...itemField} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.price`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Prix U.</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="Prix" {...itemField} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -318,6 +338,7 @@ export function PurchaseOrderDialog({
                     name={`items.${index}.tvaRate`}
                     render={({ field: itemField }) => (
                       <FormItem>
+                         <FormLabel className="text-xs">TVA (%)</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="TVA %" {...itemField} />
                         </FormControl>
@@ -336,7 +357,7 @@ export function PurchaseOrderDialog({
                     <Button type="button" variant="link" className="p-1 h-auto" onClick={() => setArticleDialogOpen(true)}>Créer un article</Button>
                 </div>
               )}
-              <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1, tvaRate: 20 })}>
+              <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1, price: 0, tvaRate: 20 })}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un article
               </Button>
             </div>
