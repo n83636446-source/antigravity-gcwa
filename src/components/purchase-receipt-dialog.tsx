@@ -297,22 +297,24 @@ export function PurchaseReceiptDialog({
     if (!firestore) return;
 
     if (!isEditMode) {
-      const receiptExists = receipts.some(
-        (r) => r.receiptNumber === data.receiptNumber
-      );
-      if (receiptExists) {
-        form.setError('receiptNumber', {
-          type: 'manual',
-          message: 'Ce numéro de document est déjà utilisé.',
-        });
-        return;
-      }
+        const receiptExists = receipts.some(
+          (r) => r.receiptNumber === data.receiptNumber
+        );
+        if (receiptExists) {
+          form.setError('receiptNumber', {
+            type: 'manual',
+            message: 'Ce numéro de document est déjà utilisé.',
+          });
+          return;
+        }
     }
     
     const { totalHT, totalTTC } = liveTotals;
 
-    const receiptData: Partial<PurchaseReceipt> = {
-        ...data,
+    const receiptData: Omit<PurchaseReceipt, 'id' | 'status'> = {
+        receiptNumber: data.receiptNumber,
+        purchaseOrderId: data.purchaseOrderId,
+        supplierId: data.supplierId,
         receiptDate: new Date(data.receiptDate).toISOString(),
         items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
             productId,
@@ -322,20 +324,19 @@ export function PurchaseReceiptDialog({
         })),
         totalHT,
         totalTTC,
+        paymentMode: data.paymentMode,
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        representativeId: data.representativeId,
+        reference: data.reference,
+        remarks: data.remarks,
     };
     
-    if (data.dueDate) {
-        receiptData.dueDate = new Date(data.dueDate).toISOString();
-    }
-
 
     if (isEditMode && receipt) {
         const receiptDocRef = doc(firestore, 'purchaseReceipts', receipt.id);
         updateDocumentNonBlocking(receiptDocRef, {
             ...receiptData,
-            status: receipt.status,
-            totalHT: totalHT,
-            totalTTC: totalTTC,
+            status: receipt.status, // Preserve current status on edit
         });
         toast({
             title: 'Bon de réception modifié',
@@ -444,7 +445,7 @@ export function PurchaseReceiptDialog({
             </DialogHeader>
 
             <div className="grid grid-cols-12 gap-4">
-                <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
+                <div className="relative col-span-4 rounded-md border border-black p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
                     <div className="space-y-4">
                         <FormField
@@ -454,7 +455,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} className="w-[90%]" />
+                                    <Input placeholder="Ex: BR-0001" {...field} className="w-[90%]" disabled={readOnly} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -475,7 +476,7 @@ export function PurchaseReceiptDialog({
                         />
                     </div>
                 </div>
-                <div className="relative col-span-8 space-y-2 rounded-md border border-primary p-4 pt-6">
+                <div className="relative col-span-8 space-y-2 rounded-md border border-black p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
                      <FormField
                           control={form.control}
@@ -516,7 +517,7 @@ export function PurchaseReceiptDialog({
             </div>
             
             <div className="grid grid-cols-12 gap-4">
-                <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
+                <div className="relative col-span-4 rounded-md border border-black p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
                     <div className="space-y-4">
                         <FormField
@@ -556,7 +557,7 @@ export function PurchaseReceiptDialog({
                         />
                     </div>
                 </div>
-                <div className="relative col-span-8 rounded-md border border-primary p-4 pt-6 grid grid-cols-1 gap-4">
+                <div className="relative col-span-8 rounded-md border border-black p-4 pt-6 grid grid-cols-1 gap-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
                     <FormField
                         control={form.control}
