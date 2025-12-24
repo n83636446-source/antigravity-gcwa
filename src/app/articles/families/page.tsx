@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -32,6 +32,16 @@ export default function ArticleFamiliesPage() {
     setEditingFamily(family);
     setIsDialogOpen(true);
   };
+  
+  const lastFamilyCodeNumber = useMemo(() => {
+    if (!families || families.length === 0) {
+      return 0;
+    }
+    return families.reduce((max, s) => {
+      const codeNumber = parseInt((s.code || 'FAM0').replace('FAM', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [families]);
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -62,6 +72,7 @@ export default function ArticleFamiliesPage() {
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         family={editingFamily}
+        lastFamilyCodeNumber={lastFamilyCodeNumber}
       />
     </div>
   );

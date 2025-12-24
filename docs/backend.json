@@ -466,6 +466,10 @@
           "type": "string",
           "description": "Unique identifier for the article family."
         },
+        "code": {
+          "type": "string",
+          "description": "Unique code for the article family."
+        },
         "name": {
           "type": "string",
           "description": "Name of the article family."
@@ -473,6 +477,7 @@
       },
       "required": [
         "id",
+        "code",
         "name"
       ]
     }

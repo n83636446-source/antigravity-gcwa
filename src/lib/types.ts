@@ -15,6 +15,7 @@ export type Supplier = {
 
 export type ArticleFamily = {
   id: string;
+  code: string;
   name: string;
 };
 

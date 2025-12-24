@@ -29,6 +29,7 @@ import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const familySchema = z.object({
+  code: z.string().min(1, 'Le code de la famille est requis.'),
   name: z.string().min(2, 'Le nom de la famille doit contenir au moins 2 caractères.'),
 });
 
@@ -38,27 +39,29 @@ type ArticleFamilyDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   family?: ArticleFamily;
+  lastFamilyCodeNumber?: number;
 };
 
-export function ArticleFamilyDialog({ isOpen, onOpenChange, family }: ArticleFamilyDialogProps) {
+export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCodeNumber = 0 }: ArticleFamilyDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const isEditMode = !!family;
 
   const form = useForm<FamilyFormValues>({
     resolver: zodResolver(familySchema),
-    defaultValues: { name: '' },
+    defaultValues: { code: '', name: '' },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && family) {
-        form.reset({ name: family.name });
+        form.reset({ code: family.code, name: family.name });
       } else {
-        form.reset({ name: '' });
+        const nextCode = `FAM${(lastFamilyCodeNumber + 1).toString().padStart(3, '0')}`;
+        form.reset({ code: nextCode, name: '' });
       }
     }
-  }, [family, isEditMode, isOpen, form]);
+  }, [family, isEditMode, isOpen, form, lastFamilyCodeNumber]);
 
   const onSubmit = (data: FamilyFormValues) => {
     if (!firestore) return;
@@ -84,29 +87,44 @@ export function ArticleFamilyDialog({ isOpen, onOpenChange, family }: ArticleFam
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Modifier la famille' : 'Ajouter une famille'}</DialogTitle>
               <DialogDescription>
-                {isEditMode ? 'Modifiez le nom de la famille.' : 'Entrez le nom de la nouvelle famille.'}
+                {isEditMode ? 'Modifiez les informations de la famille.' : 'Entrez les informations de la nouvelle famille.'}
               </DialogDescription>
             </DialogHeader>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom de la famille</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ex: Périphériques" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: FAM001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom de la famille</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Périphériques" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

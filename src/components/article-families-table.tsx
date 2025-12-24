@@ -119,6 +119,7 @@ export function ArticleFamiliesTable({ families, onEdit }: ArticleFamiliesTableP
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
                 </TableRow>
               </TableHeader>
@@ -130,7 +131,8 @@ export function ArticleFamiliesTable({ families, onEdit }: ArticleFamiliesTableP
                     onDoubleClick={() => onEdit(family)}
                     className={cn('cursor-pointer', selectedFamily?.id === family.id && 'bg-muted/50')}
                   >
-                    <TableCell className="font-medium">{family.name}</TableCell>
+                    <TableCell className="font-medium">{family.code}</TableCell>
+                    <TableCell>{family.name}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
