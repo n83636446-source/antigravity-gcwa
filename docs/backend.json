@@ -33,6 +33,10 @@
         "reorderThreshold": {
           "type": "number",
           "description": "Threshold at which a reorder alert is triggered."
+        },
+        "familyId": {
+          "type": "string",
+          "description": "Reference to the ArticleFamily this product belongs to."
         }
       },
       "required": [
@@ -42,7 +46,8 @@
         "description",
         "price",
         "stockLevel",
-        "reorderThreshold"
+        "reorderThreshold",
+        "familyId"
       ]
     },
     "Supplier": {
@@ -450,6 +455,26 @@
         "status",
         "items"
       ]
+    },
+    "ArticleFamily": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ArticleFamily",
+      "type": "object",
+      "description": "Represents a category or family of articles.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the article family."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the article family."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
     }
   },
   "auth": {
@@ -591,8 +616,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/articleFamilies/{familyId}",
+        "definition": {
+          "entityName": "ArticleFamily",
+          "schema": {
+            "$ref": "#/backend/entities/ArticleFamily"
+          },
+          "description": "Stores article family (category) information. `familyId` is the unique identifier for the family.",
+          "params": [
+            {
+              "name": "familyId",
+              "description": "Unique identifier for the article family."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
+    "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`, `articleFamilies`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
   }
 }

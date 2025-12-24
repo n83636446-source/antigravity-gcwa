@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Article, PurchaseOrder, PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
+import type { Product as Article, PurchaseOrder, PurchaseReceipt, PurchaseInvoice, ArticleFamily } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { ArticleDialog } from '@/components/article-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,6 +48,12 @@ export default function ArticlesPage() {
   );
   const { data: articles, isLoading: isLoadingArticles } = useCollection<Article>(articlesRef);
 
+  const familiesRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'articleFamilies') : null),
+    [firestore]
+  );
+  const { data: families, isLoading: isLoadingFamilies } = useCollection<ArticleFamily>(familiesRef);
+
   const purchaseOrdersRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseOrders') : null),
     [firestore]
@@ -66,7 +72,7 @@ export default function ArticlesPage() {
   );
   const { data: purchaseInvoices } = useCollection<PurchaseInvoice>(purchaseInvoicesRef);
 
-  const isLoading = isLoadingArticles || !purchaseOrders || !purchaseReceipts || !purchaseInvoices;
+  const isLoading = isLoadingArticles || isLoadingFamilies || !purchaseOrders || !purchaseReceipts || !purchaseInvoices;
 
   const lastArticleCodeNumber = useMemo(() => {
     if (!articles || articles.length === 0) {
@@ -77,6 +83,11 @@ export default function ArticlesPage() {
       return codeNumber > max ? codeNumber : max;
     }, 0);
   }, [articles]);
+
+  const getFamilyName = (familyId?: string) => {
+    if (!familyId || !families) return 'N/A';
+    return families.find(f => f.id === familyId)?.name ?? 'Inconnu';
+  }
 
 
   const handleAdd = () => {
@@ -185,6 +196,7 @@ export default function ArticlesPage() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Nom</TableHead>
+                  <TableHead>Famille</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead className="text-right">Prix</TableHead>
                 </TableRow>
@@ -199,6 +211,7 @@ export default function ArticlesPage() {
                   >
                     <TableCell className="font-medium">{article.code}</TableCell>
                     <TableCell>{article.name}</TableCell>
+                    <TableCell>{getFamilyName(article.familyId)}</TableCell>
                     <TableCell className="text-right">
                       {article.stockLevel}
                     </TableCell>

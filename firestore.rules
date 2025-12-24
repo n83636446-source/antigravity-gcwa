@@ -132,5 +132,12 @@ service cloud.firestore {
     match /creditNotes/{creditNoteId} {
         allow read, write: if isSignedIn();
     }
+
+    /**
+     * @description Manages article family documents. Any authenticated user can manage them.
+     */
+    match /articleFamilies/{familyId} {
+        allow read, write: if isSignedIn();
+    }
   }
 }

@@ -25,14 +25,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Product as Article } from '@/lib/types';
-import { useFirestore } from '@/firebase';
+import type { Product as Article, ArticleFamily } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const articleSchema = z.object({
   code: z.string().min(1, "Le code de l'article est requis."),
   name: z.string().min(2, "Le nom de l'article doit contenir au moins 2 caractères."),
+  familyId: z.string().optional(),
   description: z.string().optional(),
   price: z.coerce.number().min(0, 'Le prix doit être un nombre positif.'),
   stockLevel: z.coerce.number().int().min(0, 'Le stock doit être un entier non négatif.'),
@@ -68,6 +70,8 @@ export function ArticleDialog({
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
 
+  const familiesRef = useMemoFirebase(() => (firestore ? collection(firestore, 'articleFamilies') : null), [firestore]);
+  const { data: families } = useCollection<ArticleFamily>(familiesRef);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -78,6 +82,7 @@ export function ArticleDialog({
       price: 0,
       stockLevel: 0,
       reorderThreshold: 10,
+      familyId: '',
     },
   });
 
@@ -91,6 +96,7 @@ export function ArticleDialog({
             price: article.price,
             stockLevel: article.stockLevel,
             reorderThreshold: article.reorderThreshold,
+            familyId: article.familyId || '',
         });
       } else {
         const nextCode = `ART${(lastArticleCodeNumber + 1).toString().padStart(3, '0')}`;
@@ -101,6 +107,7 @@ export function ArticleDialog({
           price: 0,
           stockLevel: 0,
           reorderThreshold: 10,
+          familyId: '',
         });
       }
     }
@@ -117,6 +124,7 @@ export function ArticleDialog({
         price: data.price,
         stockLevel: data.stockLevel,
         reorderThreshold: data.reorderThreshold,
+        familyId: data.familyId || '',
     };
 
     if (isEditMode && article) {
@@ -186,6 +194,31 @@ export function ArticleDialog({
                 )}
               />
             </div>
+
+             <FormField
+                control={form.control}
+                name="familyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Famille</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez une famille" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {families?.map((family) => (
+                          <SelectItem key={family.id} value={family.id}>
+                            {family.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

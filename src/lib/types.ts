@@ -13,6 +13,11 @@ export type Supplier = {
   ice: string;
 };
 
+export type ArticleFamily = {
+  id: string;
+  name: string;
+};
+
 export type Product = {
   id: string;
   code: string;
@@ -21,6 +26,7 @@ export type Product = {
   price: number;
   stockLevel: number;
   reorderThreshold: number;
+  familyId?: string;
 };
 
 export type SalesData = {
@@ -105,6 +111,6 @@ export type CreditNote = {
     status: 'Brouillon' | 'Appliqué';
 };
 
-export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote;
+export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | CreditNote | ArticleFamily;
 
     
