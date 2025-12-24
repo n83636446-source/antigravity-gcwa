@@ -326,8 +326,6 @@ export function PurchaseReceiptDialog({
     
     if (data.dueDate) {
         receiptData.dueDate = new Date(data.dueDate).toISOString();
-    } else {
-        delete receiptData.dueDate;
     }
 
 
@@ -453,10 +451,10 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="receiptNumber"
                             render={({ field }) => (
-                            <FormItem className="grid grid-cols-[100px_180px] items-center gap-4 space-y-0">
+                            <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} />
+                                    <Input placeholder="Ex: BR-0001" {...field} className="w-full" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -466,10 +464,10 @@ export function PurchaseReceiptDialog({
                           control={form.control}
                           name="receiptDate"
                           render={({ field }) => (
-                            <FormItem className="grid grid-cols-[100px_180px] items-center gap-4 space-y-0">
+                            <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
                               <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} />
+                                <Input type="date" {...field} disabled={readOnly} className="w-full" />
                               </FormControl>
                               <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -478,7 +476,7 @@ export function PurchaseReceiptDialog({
                     </div>
                 </div>
                 <div className="relative col-span-8 space-y-2 rounded-md border border-primary p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
                      <FormField
                           control={form.control}
                           name="supplierId"
@@ -525,9 +523,9 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="paymentMode"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[100px_180px] items-center gap-4">
+                                <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
                                     <FormControl>
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Mode de paiement" />
@@ -547,7 +545,7 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="dueDate"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[100px_180px] items-center gap-4">
+                                <FormItem className="grid grid-cols-[110px_140px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
                                     <Input type="date" {...field} disabled={readOnly} className="w-full" />
