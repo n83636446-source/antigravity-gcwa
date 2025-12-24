@@ -114,6 +114,8 @@ export function PurchaseReceiptDialog({
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
 
+  const gridLayout = "grid grid-cols-[1fr_120px_130px_50px] gap-4 items-end";
+
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
@@ -373,7 +375,6 @@ export function PurchaseReceiptDialog({
   ) : null;
   
   const readOnly = isEditMode && receipt?.status === 'Validé';
-  const gridLayout = "grid grid-cols-[1fr_100px_100px_100px_40px] gap-3 items-end";
 
 
   return (
@@ -477,7 +478,7 @@ export function PurchaseReceiptDialog({
                 {fromBC && <Label className="text-center">Qté Cmdée</Label>}
                 <Label className="text-center">Qté Reçue</Label>
                 <Label className="text-right">Prix</Label>
-                {!fromBC && <div className="w-[40px]"></div>}
+                {!fromBC && !readOnly && <div className="w-[50px]"></div>}
               </div>
               {fields.map((field, index) => (
                 <div key={field.id} className={gridLayout}>
@@ -551,9 +552,11 @@ export function PurchaseReceiptDialog({
                     />
 
                   {!fromBC && !readOnly && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                     <div className="flex justify-center">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                   )}
                 </div>
               ))}
