@@ -295,6 +295,19 @@ export function PurchaseReceiptDialog({
 
   const onSubmit = async (data: PurchaseReceiptFormValues) => {
     if (!firestore) return;
+
+    if (!isEditMode) {
+      const receiptExists = receipts.some(
+        (r) => r.receiptNumber === data.receiptNumber
+      );
+      if (receiptExists) {
+        form.setError('receiptNumber', {
+          type: 'manual',
+          message: 'Ce numéro de document est déjà utilisé.',
+        });
+        return;
+      }
+    }
     
     const { totalHT, totalTTC } = liveTotals;
 
