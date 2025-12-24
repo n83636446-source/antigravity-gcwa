@@ -102,6 +102,8 @@ export function PurchaseReceiptDialog({
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
 
+  const gridLayout = "grid grid-cols-[1fr_120px_120px_130px_50px] gap-2 items-end text-left";
+
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
   
@@ -113,9 +115,6 @@ export function PurchaseReceiptDialog({
 
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
-
-  const gridLayout = "grid grid-cols-[1fr_120px_130px_50px] gap-4 items-end";
-
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
@@ -473,13 +472,13 @@ export function PurchaseReceiptDialog({
             <Separator />
 
             <div className="space-y-2">
-              <div className={cn('text-sm font-medium', gridLayout)}>
-                <Label>Article</Label>
-                {fromBC && <Label className="text-center">Qté Cmdée</Label>}
-                <Label className="text-center">Qté Reçue</Label>
-                <Label className="text-right">Prix</Label>
-                {!fromBC && !readOnly && <div className="w-[50px]"></div>}
-              </div>
+                <div className={cn('text-sm font-medium', gridLayout)}>
+                   <Label>Article</Label>
+                   {fromBC && <Label>Qté Cmdée</Label>}
+                   <Label>Qté Reçue</Label>
+                   <Label>Prix</Label>
+                   {!fromBC && !readOnly && <div className="w-[50px]"></div>}
+                </div>
               {fields.map((field, index) => (
                 <div key={field.id} className={gridLayout}>
                   {fromBC ? (
@@ -531,7 +530,7 @@ export function PurchaseReceiptDialog({
                     render={({ field: itemField }) => (
                       <FormItem>
                         <FormControl>
-                          <Input type="number" placeholder="Qté reçue" className="w-full text-center" disabled={readOnly} {...itemField} />
+                          <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -544,7 +543,7 @@ export function PurchaseReceiptDialog({
                       render={({ field: itemField }) => (
                         <FormItem>
                           <FormControl>
-                            <Input type="number" placeholder="Prix" className="w-full text-right" disabled value={itemField.value ?? ''} />
+                            <Input type="number" placeholder="Prix" className="w-full" disabled value={itemField.value ?? ''} />
                           </FormControl>
                            <FormMessage />
                         </FormItem>
