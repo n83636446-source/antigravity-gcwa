@@ -44,7 +44,7 @@ import { SupplierDialog } from './supplier-dialog';
 const invoiceItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
   quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
-  price: z.number(),
+  price: z.coerce.number().min(0, "Le prix doit être un nombre positif."),
   tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
 });
 
@@ -53,11 +53,7 @@ const purchaseInvoiceSchema = z.object({
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   invoiceDate: z.string({ required_error: 'La date de facturation est requise.' }),
   dueDate: z.string({ required_error: "La date d'échéance est requise." }),
-  items: z.array(z.object({
-      productId: z.string().nonempty("Veuillez sélectionner un article."),
-      quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
-      tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
-  })).min(1, 'La facture doit contenir au moins un article.'),
+  items: z.array(invoiceItemSchema).min(1, 'La facture doit contenir au moins un article.'),
 });
 
 type PurchaseInvoiceFormValues = z.infer<typeof purchaseInvoiceSchema>;
@@ -141,13 +137,11 @@ export function PurchaseInvoiceDialog({
   
   const liveTotals = useMemo(() => {
     const totalHT = watchedItems?.reduce((sum, item) => {
-        const product = products?.find(p => p.id === item.productId);
-        return sum + ((item.quantity || 0) * (product?.price || 0));
+        return sum + ((item.quantity || 0) * (item.price || 0));
     }, 0) || 0;
 
     const totalTVA = watchedItems?.reduce((sum, item) => {
-        const product = products?.find(p => p.id === item.productId);
-        const itemHT = (item.quantity || 0) * (product?.price || 0);
+        const itemHT = (item.quantity || 0) * (item.price || 0);
         const tvaAmount = itemHT * ((item.tvaRate || 0) / 100);
         return sum + tvaAmount;
     }, 0) || 0;
@@ -155,7 +149,7 @@ export function PurchaseInvoiceDialog({
     const totalTTC = totalHT + totalTVA;
 
     return { totalHT, totalTVA, totalTTC };
-  }, [watchedItems, products]);
+  }, [watchedItems]);
 
   
   useEffect(() => {
@@ -166,7 +160,7 @@ export function PurchaseInvoiceDialog({
                 supplierId: invoice.supplierId,
                 invoiceDate: new Date(invoice.invoiceDate).toISOString().split('T')[0],
                 dueDate: new Date(invoice.dueDate).toISOString().split('T')[0],
-                items: invoice.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })),
+                items: invoice.items,
             });
         } else if (purchaseOrder) {
             form.reset({
@@ -174,7 +168,7 @@ export function PurchaseInvoiceDialog({
                 supplierId: purchaseOrder.supplierId,
                 invoiceDate: new Date().toISOString().split('T')[0],
                 dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
-                items: purchaseOrder.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })),
+                items: purchaseOrder.items.map(item => ({ ...item })),
             });
         } else {
             form.reset({
@@ -182,7 +176,7 @@ export function PurchaseInvoiceDialog({
                 supplierId: '',
                 invoiceDate: new Date().toISOString().split('T')[0],
                 dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
-                items: [{ productId: '', quantity: 1, tvaRate: 20 }],
+                items: [{ productId: '', quantity: 1, price: 0, tvaRate: 20 }],
             });
         }
     }
@@ -192,10 +186,10 @@ export function PurchaseInvoiceDialog({
     const po = purchaseOrders.find(o => o.id === purchaseOrderId);
     if (po) {
         form.setValue('supplierId', po.supplierId);
-        form.setValue('items', po.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })));
+        form.setValue('items', po.items.map(item => ({ ...item })));
     } else if (!isEditMode && !purchaseOrderId) {
         // When PO is deselected, clear items if not in edit mode
-        form.setValue('items', [{ productId: '', quantity: 1, tvaRate: 20 }]);
+        form.setValue('items', [{ productId: '', quantity: 1, price: 0, tvaRate: 20 }]);
     }
   }, [purchaseOrderId, purchaseOrders, form, isEditMode]);
 
@@ -223,12 +217,9 @@ export function PurchaseInvoiceDialog({
         supplierId: data.supplierId,
         invoiceDate: new Date(data.invoiceDate).toISOString(),
         dueDate: new Date(data.dueDate).toISOString(),
-        items: data.items.map(item => ({
-            ...item,
-            price: products.find(p => p.id === item.productId)?.price || 0
-        })),
-        totalHT: totalHT,
-        totalTTC: totalTTC,
+        items: data.items,
+        totalHT,
+        totalTTC,
     };
 
     if (isEditMode && invoice) {
@@ -285,15 +276,25 @@ export function PurchaseInvoiceDialog({
       articleCreationIndex.current = index;
       setArticleDialogOpen(true);
     } else {
-      update(index, { ...watchedItems[index], productId: value });
+      const product = products?.find(p => p.id === value);
+      update(index, { 
+        ...watchedItems[index], 
+        productId: value,
+        price: product?.price || 0
+      });
     }
   };
 
   const handleArticleCreated = (newArticle: Product) => {
     if (newArticle && newArticle.id && articleCreationIndex.current !== null) {
       // We need a slight delay to allow the `allProducts` collection to update
+      const index = articleCreationIndex.current;
       setTimeout(() => {
-        update(articleCreationIndex.current!, { ...watchedItems[articleCreationIndex.current!], productId: newArticle.id });
+        update(index, { 
+          ...watchedItems[index],
+          productId: newArticle.id,
+          price: newArticle.price
+        });
       }, 100);
     }
     articleCreationIndex.current = null;
@@ -334,7 +335,7 @@ export function PurchaseInvoiceDialog({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Bon de commande (Optionnel)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={readOnly}>
+                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={readOnly || isTriggeredExternally}>
                             <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Sélectionnez un bon de commande" />
@@ -418,7 +419,7 @@ export function PurchaseInvoiceDialog({
             <div className="space-y-4">
               <FormLabel>Articles</FormLabel>
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-[1fr_100px_80px_auto] items-end gap-2">
+                <div key={field.id} className="grid grid-cols-[1fr_80px_100px_80px_auto] items-end gap-2">
                    <FormField
                     control={form.control}
                     name={`items.${index}.productId`}
@@ -461,6 +462,18 @@ export function PurchaseInvoiceDialog({
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.price`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="Prix" {...itemField} disabled={fromBC || readOnly} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                    <FormField
                     control={form.control}
                     name={`items.${index}.tvaRate`}
@@ -487,7 +500,7 @@ export function PurchaseInvoiceDialog({
                 </div>
               )}
               {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1, tvaRate: 20 })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1, price: 0, tvaRate: 20 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un article
                 </Button>
               )}
