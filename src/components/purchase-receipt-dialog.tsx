@@ -311,7 +311,7 @@ export function PurchaseReceiptDialog({
     
     const { totalHT, totalTTC } = liveTotals;
 
-    const receiptData: any = {
+    const receiptData: Partial<PurchaseReceipt> = {
         ...data,
         receiptDate: new Date(data.receiptDate).toISOString(),
         items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
@@ -326,6 +326,8 @@ export function PurchaseReceiptDialog({
     
     if (data.dueDate) {
         receiptData.dueDate = new Date(data.dueDate).toISOString();
+    } else {
+        delete receiptData.dueDate;
     }
 
 
@@ -451,7 +453,7 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="receiptNumber"
                             render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                            <FormItem className="grid grid-cols-[100px_180px] items-center gap-4 space-y-0">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Ex: BR-0001" {...field} />
@@ -464,7 +466,7 @@ export function PurchaseReceiptDialog({
                           control={form.control}
                           name="receiptDate"
                           render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                            <FormItem className="grid grid-cols-[100px_180px] items-center gap-4 space-y-0">
                               <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
                                 <Input type="date" {...field} disabled={readOnly} />
@@ -523,7 +525,7 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="paymentMode"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[130px_240px] items-center gap-4">
+                                <FormItem className="grid grid-cols-[100px_180px] items-center gap-4">
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                     <FormControl>
@@ -545,7 +547,7 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="dueDate"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[130px_240px] items-center gap-4">
+                                <FormItem className="grid grid-cols-[100px_180px] items-center gap-4">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
                                     <Input type="date" {...field} disabled={readOnly} className="w-full" />
