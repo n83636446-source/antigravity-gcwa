@@ -424,91 +424,91 @@ export function PurchaseReceiptDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="relative rounded-md border border-primary p-4 pt-6">
-                <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                <div className="space-y-2">
-                   <FormField
-                      control={form.control}
-                      name="receiptDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date de réception</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} disabled={readOnly} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="purchaseOrderId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Bon de commande (Optionnel)</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ''}
-                            disabled={isTriggeredExternally || isEditMode}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez un bon de commande" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {availablePurchaseOrders.map((order) => (
-                                <SelectItem key={order.id} value={order.id}>
-                                  {order.orderNumber}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+            <div className="grid grid-cols-12 gap-4">
+                <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
+                    <div className="space-y-2">
+                       <FormField
+                          control={form.control}
+                          name="receiptDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date de réception</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} disabled={readOnly} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="purchaseOrderId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Bon de commande (Optionnel)</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value || ''}
+                                disabled={isTriggeredExternally || isEditMode}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez un bon de commande" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {availablePurchaseOrders.map((order) => (
+                                    <SelectItem key={order.id} value={order.id}>
+                                      {order.orderNumber}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                    </div>
                 </div>
-              </div>
-              <div className="relative rounded-md border border-primary p-4 pt-6">
-                <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
-                 <FormField
-                      control={form.control}
-                      name="supplierId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fournisseur</FormLabel>
-                          <Select
-                            onValueChange={handleSupplierChange}
-                            value={field.value}
-                            disabled={readOnly || fromBC}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez un fournisseur" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                                <div className="flex items-center gap-2">
-                                  <PlusCircle className="h-4 w-4" />
-                                  <span>Créer un nouveau fournisseur</span>
-                                </div>
-                              </SelectItem>
-                              <Separator />
-                              {suppliers?.map((supplier) => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                  {supplier.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-              </div>
+                <div className="relative col-span-8 rounded-md border border-primary p-4 pt-6">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
+                     <FormField
+                          control={form.control}
+                          name="supplierId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Fournisseur</FormLabel>
+                              <Select
+                                onValueChange={handleSupplierChange}
+                                value={field.value}
+                                disabled={readOnly || fromBC}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                    <div className="flex items-center gap-2">
+                                      <PlusCircle className="h-4 w-4" />
+                                      <span>Créer un nouveau fournisseur</span>
+                                    </div>
+                                  </SelectItem>
+                                  <Separator />
+                                  {suppliers?.map((supplier) => (
+                                    <SelectItem key={supplier.id} value={supplier.id}>
+                                      {supplier.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                </div>
             </div>
             
             <div className="grid grid-cols-12 gap-4">
