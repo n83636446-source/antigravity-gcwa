@@ -72,7 +72,7 @@ export function AppSidebar() {
     <>
       <SidebarRail />
       <SidebarHeader className="pb-[50px] pt-[50px]">
-        <div className="flex items-center gap-2 p-2 justify-between group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center gap-2 p-2 justify-center group-data-[collapsible=icon]:justify-center">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
               <Warehouse className="size-5" />
