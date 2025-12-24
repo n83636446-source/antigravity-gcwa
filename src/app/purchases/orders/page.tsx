@@ -270,7 +270,7 @@ export default function PurchaseOrdersPage() {
          <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
         </div>
-      ) : orders && orders.length > 0 ? (
+      ) : (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Bons de commande récents</CardTitle>
@@ -307,6 +307,7 @@ export default function PurchaseOrdersPage() {
                 )}
             </CardHeader>
             <CardContent>
+              {orders && orders.length > 0 ? (
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -338,19 +339,20 @@ export default function PurchaseOrdersPage() {
                     </Table>
                   </SortableContext>
                 </DndContext>
+              ) : (
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
+                  <div className="flex flex-col items-center gap-1 text-center">
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      Vous n'avez pas encore de bons de commande.
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Commencez par en créer un.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
         </Card>
-      ) : (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h3 className="text-2xl font-bold tracking-tight">
-              Vous n'avez pas encore de bons de commande.
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Commencez par en créer un.
-            </p>
-          </div>
-        </div>
       )}
       <PurchaseOrderDialog
         isOpen={dialogOpen}
