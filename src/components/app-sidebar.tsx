@@ -77,7 +77,7 @@ export function AppSidebar() {
             <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
               <Warehouse className="size-5" />
             </div>
-            <span className="text-lg font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+            <span className="text-base font-medium text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               Gestion Commerciale
             </span>
           </div>
