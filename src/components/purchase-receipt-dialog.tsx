@@ -79,8 +79,6 @@ type PurchaseReceiptDialogProps = {
 const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
-const gridLayout = "grid grid-cols-[1fr_100px_100px_80px_50px] gap-3 items-end text-left";
-
 
 export function PurchaseReceiptDialog({
   purchaseOrders,
@@ -115,6 +113,9 @@ export function PurchaseReceiptDialog({
 
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
+  
+  const gridLayout = "grid grid-cols-[1fr_120px_100px_80px_120px_50px] gap-2 items-end text-left";
+
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
@@ -271,17 +272,14 @@ export function PurchaseReceiptDialog({
       supplierId: data.supplierId,
       receiptDate: new Date(data.receiptDate).toISOString(),
       notes: data.notes,
-      items: data.items.map(({ productId, quantityReceived, tvaRate }) => {
-        const product = products?.find(p => p.id === productId);
-        return {
-          productId,
-          quantityReceived,
-          price: product?.price ?? 0,
-          tvaRate: tvaRate ?? 20,
-        }
-      }),
-      totalHT: totalHT,
-      totalTTC: totalTTC,
+      items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
+        productId,
+        quantityReceived,
+        price: price ?? 0,
+        tvaRate: tvaRate ?? 20,
+      })),
+      totalHT,
+      totalTTC,
     };
 
 
@@ -492,100 +490,117 @@ export function PurchaseReceiptDialog({
                    <Label>Qté Reçue</Label>
                    <Label>Prix</Label>
                    <Label>TVA (%)</Label>
-                   <div className="w-[50px]"></div>
+                   <Label>Total HT</Label>
+                   {!fromBC && !readOnly && <div className="w-[50px]"></div>}
                 </div>
-              {fields.map((field, index) => (
-                <div key={field.id} className={cn(gridLayout)}>
-                  {fromBC ? (
-                    <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
-                  ) : (
+              {fields.map((field, index) => {
+                const item = watchedItems[index];
+                const lineTotal = (item?.quantityReceived || 0) * (item?.price || 0);
+
+                return (
+                  <div key={field.id} className={cn(gridLayout)}>
+                    {fromBC ? (
+                      <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.productId`}
+                        render={({ field: itemField }) => (
+                          <FormItem>
+                            <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Article" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                  <div className="flex items-center gap-2">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span>Créer un article</span>
+                                  </div>
+                                </SelectItem>
+                                <Separator />
+                                {products?.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {fromBC && (
+                        <Input
+                          type="number"
+                          readOnly
+                          disabled
+                          value={field.quantityOrdered}
+                          className="w-full"
+                        />
+                    )}
+
                     <FormField
                       control={form.control}
-                      name={`items.${index}.productId`}
+                      name={`items.${index}.quantityReceived`}
                       render={({ field: itemField }) => (
                         <FormItem>
-                          <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Article" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
-                                <div className="flex items-center gap-2">
-                                  <PlusCircle className="h-4 w-4" />
-                                  <span>Créer un article</span>
-                                </div>
-                              </SelectItem>
-                              <Separator />
-                              {products?.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  )}
 
-                  {fromBC && (
-                      <Input
-                        type="number"
-                        readOnly
-                        disabled
-                        value={field.quantityOrdered}
-                        className="w-full"
+                    <FormField
+                        control={form.control}
+                        name={`items.${index}.price`}
+                        render={({ field: itemField }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input type="number" placeholder="Prix" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                  )}
+                    <FormField
+                        control={form.control}
+                        name={`items.${index}.tvaRate`}
+                        render={({ field: itemField }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    
+                    <Input
+                      readOnly
+                      disabled
+                      value={new Intl.NumberFormat('fr-FR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(lineTotal)}
+                      className="w-full text-right"
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.quantityReceived`}
-                    render={({ field: itemField }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+
+                    {!fromBC && !readOnly && (
+                      <div className="flex justify-center">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                     )}
-                  />
-
-                   <FormField
-                      control={form.control}
-                      name={`items.${index}.price`}
-                      render={({ field: itemField }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input type="number" placeholder="Prix" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
-                          </FormControl>
-                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  <FormField
-                      control={form.control}
-                      name={`items.${index}.tvaRate`}
-                      render={({ field: itemField }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
-                          </FormControl>
-                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                  {!fromBC && !readOnly && (
-                     <div className="flex justify-center">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                )
+              })}
               {!fromBC && !readOnly && (
                 <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
