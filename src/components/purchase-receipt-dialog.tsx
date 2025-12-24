@@ -297,16 +297,16 @@ export function PurchaseReceiptDialog({
     if (!firestore) return;
 
     if (!isEditMode) {
-        const receiptExists = receipts.some(
-          (r) => r.receiptNumber === data.receiptNumber
-        );
-        if (receiptExists) {
-          form.setError('receiptNumber', {
-            type: 'manual',
-            message: 'Ce numéro de document est déjà utilisé.',
-          });
-          return;
-        }
+      const receiptExists = receipts.some(
+        (r) => r.receiptNumber === data.receiptNumber
+      );
+      if (receiptExists) {
+        form.setError('receiptNumber', {
+          type: 'manual',
+          message: 'Ce numéro de document est déjà utilisé.',
+        });
+        return;
+      }
     }
     
     const { totalHT, totalTTC } = liveTotals;
@@ -326,8 +326,6 @@ export function PurchaseReceiptDialog({
     
     if (data.dueDate) {
         receiptData.dueDate = new Date(data.dueDate).toISOString();
-    } else {
-        delete receiptData.dueDate;
     }
 
 
@@ -456,7 +454,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} />
+                                    <Input placeholder="Ex: BR-0001" {...field} disabled={isEditMode} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -518,7 +516,7 @@ export function PurchaseReceiptDialog({
             </div>
             
             <div className="grid grid-cols-12 gap-4">
-                <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6 pr-10">
+                <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
                     <div className="space-y-4">
                         <FormField
@@ -529,7 +527,7 @@ export function PurchaseReceiptDialog({
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                     <FormControl>
-                                    <SelectTrigger className="w-full">
+                                    <SelectTrigger className="w-[180px]">
                                         <SelectValue placeholder="Mode de paiement" />
                                     </SelectTrigger>
                                     </FormControl>
@@ -550,7 +548,7 @@ export function PurchaseReceiptDialog({
                                 <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={readOnly} className="w-full" />
+                                    <Input type="date" {...field} disabled={readOnly} className="w-[180px]" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
