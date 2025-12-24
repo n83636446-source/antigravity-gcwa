@@ -297,16 +297,16 @@ export function PurchaseReceiptDialog({
     if (!firestore) return;
 
     if (!isEditMode) {
-      const receiptExists = receipts.some(
-        (r) => r.receiptNumber === data.receiptNumber
-      );
-      if (receiptExists) {
-        form.setError('receiptNumber', {
-          type: 'manual',
-          message: 'Ce numéro de document est déjà utilisé.',
-        });
-        return;
-      }
+        const receiptExists = receipts.some(
+          (r) => r.receiptNumber === data.receiptNumber
+        );
+        if (receiptExists) {
+          form.setError('receiptNumber', {
+            type: 'manual',
+            message: 'Ce numéro de document est déjà utilisé.',
+          });
+          return;
+        }
     }
     
     const { totalHT, totalTTC } = liveTotals;
@@ -456,7 +456,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} disabled={readOnly} />
+                                    <Input placeholder="Ex: BR-0001" {...field} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -483,8 +483,8 @@ export function PurchaseReceiptDialog({
                           control={form.control}
                           name="supplierId"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Fournisseur</FormLabel>
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                              <FormLabel className="text-right">Fournisseur</FormLabel>
                               <Select
                                 onValueChange={handleSupplierChange}
                                 value={field.value}
@@ -510,7 +510,7 @@ export function PurchaseReceiptDialog({
                                   ))}
                                 </SelectContent>
                               </Select>
-                              <FormMessage />
+                              <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
                           )}
                         />
