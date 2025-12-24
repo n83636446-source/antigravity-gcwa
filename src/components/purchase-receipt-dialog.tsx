@@ -487,8 +487,8 @@ export function PurchaseReceiptDialog({
                 <div className={cn('grid text-sm font-medium', gridLayout)}>
                    <Label>Article</Label>
                    {fromBC && <Label>Qté Cmdée</Label>}
-                   <Label>Qté</Label>
-                   <Label>Prix</Label>
+                   <Label>Qté Reçue</Label>
+                   <Label>Prix UHT</Label>
                    <Label>TVA (%)</Label>
                    <Label className="text-right">Total HT</Label>
                    {!fromBC && !readOnly && <div className="w-[50px]"></div>}
@@ -561,7 +561,7 @@ export function PurchaseReceiptDialog({
                         render={({ field: itemField }) => (
                           <FormItem>
                             <FormControl>
-                              <Input type="number" placeholder="Prix" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                              <Input type="number" placeholder="Prix UHT" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

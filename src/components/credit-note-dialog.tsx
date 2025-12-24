@@ -247,7 +247,7 @@ export function CreditNoteDialog({
                 <div className={cn("text-sm font-medium", gridLayout)}>
                    <Label>Article</Label>
                    <Label>Qté</Label>
-                   <Label>Prix</Label>
+                   <Label>Prix UHT</Label>
                    <Label>TVA (%)</Label>
                    <Label className="text-right">Total HT</Label>
                    <div className="w-[50px]"></div>
@@ -306,7 +306,7 @@ export function CreditNoteDialog({
                           render={({ field: itemField }) => (
                           <FormItem>
                               <FormControl>
-                              <Input type="number" step="0.01" placeholder="Prix" {...itemField} />
+                              <Input type="number" step="0.01" placeholder="Prix UHT" {...itemField} />
                               </FormControl>
                               <FormMessage />
                           </FormItem>
