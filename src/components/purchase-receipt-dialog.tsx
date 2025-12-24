@@ -425,7 +425,7 @@ export function PurchaseReceiptDialog({
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="relative rounded-md border p-4 pt-6">
+              <div className="relative rounded-md border border-primary p-4 pt-6">
                 <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
                 <div className="space-y-2">
                    <FormField
@@ -471,7 +471,7 @@ export function PurchaseReceiptDialog({
                     />
                 </div>
               </div>
-              <div className="relative rounded-md border p-4 pt-6">
+              <div className="relative rounded-md border border-primary p-4 pt-6">
                 <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
                  <FormField
                       control={form.control}
@@ -512,7 +512,7 @@ export function PurchaseReceiptDialog({
             </div>
             
             <div className="grid grid-cols-12 gap-4">
-                <div className="relative col-span-4 rounded-md border p-4 pt-6">
+                <div className="relative col-span-4 rounded-md border border-primary p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
                     <div className="space-y-2">
                         <FormField
@@ -552,7 +552,7 @@ export function PurchaseReceiptDialog({
                         />
                     </div>
                 </div>
-                <div className="relative col-span-8 rounded-md border p-4 pt-6">
+                <div className="relative col-span-8 rounded-md border border-primary p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
                     <div className="grid grid-cols-2 gap-4">
                         <FormField
