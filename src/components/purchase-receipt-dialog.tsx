@@ -436,7 +436,7 @@ export function PurchaseReceiptDialog({
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
-      <DialogContent className="sm:max-w-[80vw]">
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
@@ -457,7 +457,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} />
+                                    <Input placeholder="Ex: BR-0001" {...field} disabled={readOnly} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
