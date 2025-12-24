@@ -54,6 +54,7 @@ const receiptItemSchema = z.object({
 });
 
 const purchaseReceiptSchema = z.object({
+  receiptNumber: z.string().nonempty("Le numéro de document est requis."),
   purchaseOrderId: z.string().optional(),
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   receiptDate: z.string({ required_error: 'La date est requise.' }),
@@ -159,6 +160,7 @@ export function PurchaseReceiptDialog({
   const form = useForm<PurchaseReceiptFormValues>({
     resolver: zodResolver(purchaseReceiptSchema),
     defaultValues: {
+      receiptNumber: '',
       purchaseOrderId: '',
       supplierId: '',
       receiptDate: new Date().toISOString().split('T')[0],
@@ -204,6 +206,7 @@ export function PurchaseReceiptDialog({
   useEffect(() => {
     if (!isOpen) {
       form.reset({
+        receiptNumber: '',
         purchaseOrderId: '',
         supplierId: '',
         receiptDate: new Date().toISOString().split('T')[0],
@@ -215,6 +218,7 @@ export function PurchaseReceiptDialog({
     if (isEditMode && receipt) {
       const orderForReceipt = purchaseOrders.find(o => o.id === receipt.purchaseOrderId);
       form.reset({
+        receiptNumber: receipt.receiptNumber,
         purchaseOrderId: receipt.purchaseOrderId,
         supplierId: receipt.supplierId,
         receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
@@ -233,7 +237,9 @@ export function PurchaseReceiptDialog({
       });
     } else if (purchaseOrder) {
       // Case: Transfer from a specific PO
+      const newReceiptNumber = `BR-${(lastReceiptNumber + 1).toString().padStart(4, '0')}`;
       form.reset({
+        receiptNumber: newReceiptNumber,
         purchaseOrderId: purchaseOrder.id,
         supplierId: purchaseOrder.supplierId,
         receiptDate: new Date().toISOString().split('T')[0],
@@ -252,6 +258,7 @@ export function PurchaseReceiptDialog({
       });
     } else {
       // Case: Creating a new BR from scratch or after selecting a PO in dialog
+      const newReceiptNumber = `BR-${(lastReceiptNumber + 1).toString().padStart(4, '0')}`;
       const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
@@ -265,6 +272,7 @@ export function PurchaseReceiptDialog({
       } else {
          // Reset for manual creation
          form.reset({
+            receiptNumber: newReceiptNumber,
             purchaseOrderId: '',
             supplierId: '',
             receiptDate: new Date().toISOString().split('T')[0],
@@ -277,7 +285,7 @@ export function PurchaseReceiptDialog({
          });
       }
     }
-  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace]);
+  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace, lastReceiptNumber]);
 
 
   const getProductName = (productId: string) => {
@@ -319,13 +327,9 @@ export function PurchaseReceiptDialog({
         });
 
     } else {
-        const newReceiptNumber = `BR-${(lastReceiptNumber + 1)
-          .toString()
-          .padStart(4, '0')}`;
-
         const newReceiptData = {
           ...receiptData,
-          receiptNumber: newReceiptNumber,
+          receiptNumber: data.receiptNumber,
           status: 'Brouillon' as const,
         };
 
@@ -334,7 +338,7 @@ export function PurchaseReceiptDialog({
           .then((docRef) => {
              toast({
               title: 'Bon de réception créé',
-              description: `Le BR "${newReceiptNumber}" est enregistré en brouillon.`,
+              description: `Le BR "${data.receiptNumber}" est enregistré en brouillon.`,
             });
             onReceiptCreated?.();
           })
@@ -430,41 +434,26 @@ export function PurchaseReceiptDialog({
                     <div className="space-y-2">
                        <FormField
                           control={form.control}
-                          name="receiptDate"
+                          name="receiptNumber"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Date de réception</FormLabel>
+                              <FormLabel>Numéro</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} />
+                                <Input placeholder="Ex: BR-0001" {...field} disabled />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        <FormField
+                       <FormField
                           control={form.control}
-                          name="purchaseOrderId"
+                          name="receiptDate"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Bon de commande (Optionnel)</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value || ''}
-                                disabled={isTriggeredExternally || isEditMode}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionnez un bon de commande" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {availablePurchaseOrders.map((order) => (
-                                    <SelectItem key={order.id} value={order.id}>
-                                      {order.orderNumber}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormLabel>Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} disabled={readOnly} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
