@@ -454,7 +454,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} disabled={isEditMode} />
+                                    <Input placeholder="Ex: BR-0001" {...field} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -523,11 +523,11 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="paymentMode"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                <FormItem className="grid grid-cols-[130px_240px] items-center gap-4">
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                     <FormControl>
-                                    <SelectTrigger className="w-[180px]">
+                                    <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Mode de paiement" />
                                     </SelectTrigger>
                                     </FormControl>
@@ -545,10 +545,10 @@ export function PurchaseReceiptDialog({
                             control={form.control}
                             name="dueDate"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                <FormItem className="grid grid-cols-[130px_240px] items-center gap-4">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={readOnly} className="w-[180px]" />
+                                    <Input type="date" {...field} disabled={readOnly} className="w-full" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
