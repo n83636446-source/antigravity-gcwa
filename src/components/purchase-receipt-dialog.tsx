@@ -298,10 +298,9 @@ export function PurchaseReceiptDialog({
     
     const { totalHT, totalTTC } = liveTotals;
 
-    const receiptData = {
+    const receiptData: any = {
         ...data,
         receiptDate: new Date(data.receiptDate).toISOString(),
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
             productId,
             quantityReceived,
@@ -311,6 +310,12 @@ export function PurchaseReceiptDialog({
         totalHT,
         totalTTC,
     };
+    
+    if (data.dueDate) {
+        receiptData.dueDate = new Date(data.dueDate).toISOString();
+    } else {
+        delete receiptData.dueDate;
+    }
 
 
     if (isEditMode && receipt) {
