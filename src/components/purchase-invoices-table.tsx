@@ -24,7 +24,7 @@ import { DraggableHeader } from './ui/DraggableHeader';
 
 
 type Column = {
-    id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalAmount' | 'status';
+    id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalTTC' | 'status';
     label: string;
 };
 
@@ -36,7 +36,7 @@ type PurchaseInvoicesTableProps = {
   onRowDoubleClick: (invoice: PurchaseInvoice) => void;
   selectedInvoiceId?: string | null;
   columns: Column[];
-  columnIds: ('invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalAmount' | 'status')[];
+  columnIds: ('invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalTTC' | 'status')[];
 };
 
 export function PurchaseInvoicesTable({
@@ -102,10 +102,10 @@ export function PurchaseInvoicesTable({
         return <TableCell key={key}>{format(new Date(invoice.invoiceDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>;
       case 'dueDate':
         return <TableCell key={key}>{format(new Date(invoice.dueDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>;
-      case 'totalAmount':
+      case 'totalTTC':
         return (
           <TableCell key={key} className="text-right">
-            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.totalAmount)}
+            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.totalTTC)}
           </TableCell>
         );
       case 'status':
@@ -127,7 +127,7 @@ export function PurchaseInvoicesTable({
             <TableHeader>
               <TableRow>
                 {columns.map(({ id, label }) => (
-                    <DraggableHeader key={id} id={id} className={cn(id === 'totalAmount' && 'text-right')}>
+                    <DraggableHeader key={id} id={id} className={cn(id === 'totalTTC' && 'text-right')}>
                         {label}
                     </DraggableHeader>
                 ))}

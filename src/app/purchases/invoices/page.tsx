@@ -43,7 +43,7 @@ import { DraggableHeader } from '@/components/ui/DraggableHeader';
 import { cn } from '@/lib/utils';
 
 type Column = {
-    id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalAmount' | 'status';
+    id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalTTC' | 'status';
     label: string;
 };
 
@@ -53,7 +53,7 @@ const initialColumns: Column[] = [
     { id: 'supplierName', label: 'Fournisseur' },
     { id: 'invoiceDate', label: 'Date Facture' },
     { id: 'dueDate', label: 'Date d\'échéance' },
-    { id: 'totalAmount', label: 'Montant' },
+    { id: 'totalTTC', label: 'Montant TTC' },
     { id: 'status', label: 'Statut' },
 ];
 

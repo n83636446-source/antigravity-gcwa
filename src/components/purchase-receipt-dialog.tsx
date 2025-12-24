@@ -42,7 +42,6 @@ import { ArticleDialog } from './article-dialog';
 import { SupplierDialog } from './supplier-dialog';
 import { Label } from '@/components/ui/label';
 
-
 const receiptItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
   quantityOrdered: z.coerce.number().int().optional(),
@@ -51,6 +50,7 @@ const receiptItemSchema = z.object({
     .int()
     .min(0, 'La quantité doit être un entier non négatif.'),
   price: z.number().optional(),
+  tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
 });
 
 const purchaseReceiptSchema = z.object({
@@ -58,7 +58,6 @@ const purchaseReceiptSchema = z.object({
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   receiptDate: z.string({ required_error: 'La date est requise.' }),
   notes: z.string().optional(),
-  tvaRate: z.coerce.number().min(0),
   items: z.array(receiptItemSchema).min(1, 'Le bon de réception doit contenir au moins un article.'),
 });
 
@@ -80,7 +79,7 @@ type PurchaseReceiptDialogProps = {
 const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
-const gridLayout = "grid grid-cols-[1fr_120px_130px_50px] gap-4 items-end text-left";
+const gridLayout = "grid grid-cols-[1fr_100px_100px_80px_50px] gap-3 items-end text-left";
 
 
 export function PurchaseReceiptDialog({
@@ -155,7 +154,6 @@ export function PurchaseReceiptDialog({
       supplierId: '',
       receiptDate: new Date().toISOString().split('T')[0],
       notes: '',
-      tvaRate: 20,
       items: [],
     },
   });
@@ -166,7 +164,6 @@ export function PurchaseReceiptDialog({
   });
 
   const watchedItems = useWatch({ control: form.control, name: 'items' });
-  const watchedTvaRate = useWatch({ control: form.control, name: 'tvaRate' });
   const watchedOrderId = form.watch('purchaseOrderId');
   const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseOrderId);
   
@@ -177,12 +174,18 @@ export function PurchaseReceiptDialog({
         return sum + ((item.quantityReceived || 0) * price);
     }, 0) || 0;
 
-    const tvaRate = watchedTvaRate / 100;
-    const totalTVA = totalHT * tvaRate;
+    const totalTVA = watchedItems?.reduce((sum, item) => {
+        const product = products.find(p => p.id === item.productId);
+        const price = item.price ?? product?.price ?? 0;
+        const itemHT = (item.quantityReceived || 0) * price;
+        const tvaAmount = itemHT * ((item.tvaRate || 0) / 100);
+        return sum + tvaAmount;
+    }, 0) || 0;
+
     const totalTTC = totalHT + totalTVA;
 
     return { totalHT, totalTVA, totalTTC };
-  }, [watchedItems, products, watchedTvaRate]);
+  }, [watchedItems, products]);
 
 
   useEffect(() => {
@@ -192,7 +195,6 @@ export function PurchaseReceiptDialog({
         supplierId: '',
         receiptDate: new Date().toISOString().split('T')[0],
         notes: '',
-        tvaRate: 20,
         items: [],
       });
       return;
@@ -205,12 +207,12 @@ export function PurchaseReceiptDialog({
         supplierId: receipt.supplierId,
         receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
         notes: receipt.notes || '',
-        tvaRate: receipt.tvaRate,
         items: receipt.items.map(item => ({
           productId: item.productId,
           quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
           quantityReceived: item.quantityReceived,
           price: item.price,
+          tvaRate: item.tvaRate,
         })),
       });
     } else if (purchaseOrder) {
@@ -220,12 +222,12 @@ export function PurchaseReceiptDialog({
         supplierId: purchaseOrder.supplierId,
         receiptDate: new Date().toISOString().split('T')[0],
         notes: '',
-        tvaRate: purchaseOrder.tvaRate,
         items: purchaseOrder.items.map(item => ({
           productId: item.productId,
           quantityOrdered: item.quantity,
           quantityReceived: item.quantity,
-          price: item.price
+          price: item.price,
+          tvaRate: item.tvaRate,
         })),
       });
     } else {
@@ -233,12 +235,12 @@ export function PurchaseReceiptDialog({
       const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
-        form.setValue('tvaRate', selectedPO.tvaRate);
         replace(selectedPO.items.map(item => ({
             productId: item.productId,
             quantityOrdered: item.quantity,
             quantityReceived: item.quantity,
-            price: item.price
+            price: item.price,
+            tvaRate: item.tvaRate,
         })));
       } else {
          // Reset for manual creation
@@ -247,8 +249,7 @@ export function PurchaseReceiptDialog({
             supplierId: '',
             receiptDate: new Date().toISOString().split('T')[0],
             notes: '',
-            tvaRate: 20,
-            items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0 }],
+            items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0, tvaRate: 20 }],
          });
       }
     }
@@ -270,13 +271,13 @@ export function PurchaseReceiptDialog({
       supplierId: data.supplierId,
       receiptDate: new Date(data.receiptDate).toISOString(),
       notes: data.notes,
-      tvaRate: data.tvaRate,
-      items: data.items.map(({ productId, quantityReceived }) => {
+      items: data.items.map(({ productId, quantityReceived, tvaRate }) => {
         const product = products?.find(p => p.id === productId);
         return {
           productId,
           quantityReceived,
           price: product?.price ?? 0,
+          tvaRate: tvaRate ?? 20,
         }
       }),
       totalHT: totalHT,
@@ -290,7 +291,6 @@ export function PurchaseReceiptDialog({
             ...receiptData,
             status: receipt.status,
             totalHT: totalHT,
-            tvaRate: data.tvaRate,
             totalTTC: totalTTC,
         });
         toast({
@@ -404,7 +404,7 @@ export function PurchaseReceiptDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="purchaseOrderId"
@@ -445,29 +445,6 @@ export function PurchaseReceiptDialog({
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-               <FormField
-                  control={form.control}
-                  name="tvaRate"
-                  render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>TVA (%)</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseFloat(value))} value={field.value.toString()} disabled={readOnly || fromBC}>
-                              <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue />
-                              </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  <SelectItem value="20">20%</SelectItem>
-                                  <SelectItem value="10">10%</SelectItem>
-                                  <SelectItem value="5.5">5.5%</SelectItem>
-                                  <SelectItem value="0">0%</SelectItem>
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                  )}
               />
             </div>
              <FormField
@@ -514,6 +491,7 @@ export function PurchaseReceiptDialog({
                    {fromBC && <Label>Qté Cmdée</Label>}
                    <Label>Qté Reçue</Label>
                    <Label>Prix</Label>
+                   <Label>TVA (%)</Label>
                    <div className="w-[50px]"></div>
                 </div>
               {fields.map((field, index) => (
@@ -586,6 +564,18 @@ export function PurchaseReceiptDialog({
                         </FormItem>
                       )}
                     />
+                  <FormField
+                      control={form.control}
+                      name={`items.${index}.tvaRate`}
+                      render={({ field: itemField }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                          </FormControl>
+                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                   {!fromBC && !readOnly && (
                      <div className="flex justify-center">
@@ -597,7 +587,7 @@ export function PurchaseReceiptDialog({
                 </div>
               ))}
               {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0 })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
                 </Button>
               )}
@@ -611,7 +601,7 @@ export function PurchaseReceiptDialog({
                     {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalHT)}
                 </div>
 
-                <div className="text-right font-medium">TVA ({watchedTvaRate}%):</div>
+                <div className="text-right font-medium">Total TVA:</div>
                 <div className="text-right font-semibold">
                     {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTVA)}
                 </div>

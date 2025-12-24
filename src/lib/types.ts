@@ -33,6 +33,7 @@ export type PurchaseOrderItem = {
   productId: string;
   quantity: number;
   price: number; // Price at the time of order
+  tvaRate: number;
 };
 
 export type PurchaseOrder = {
@@ -42,7 +43,6 @@ export type PurchaseOrder = {
   orderDate: string; // ISO string
   items: PurchaseOrderItem[];
   totalHT: number;
-  tvaRate: number;
   totalTTC: number;
 };
 
@@ -59,6 +59,7 @@ export type PurchaseReceiptItem = {
   quantityOrdered?: number; // Now optional
   quantityReceived: number;
   price: number;
+  tvaRate: number;
 };
 
 export type PurchaseReceipt = {
@@ -71,7 +72,6 @@ export type PurchaseReceipt = {
   items: PurchaseReceiptItem[];
   status: 'Brouillon' | 'Validé';
   totalHT: number;
-  tvaRate: number;
   totalTTC: number;
 };
 
@@ -79,6 +79,7 @@ export type PurchaseInvoiceItem = {
     productId: string;
     quantity: number;
     price: number;
+    tvaRate: number;
 };
 
 export type PurchaseInvoice = {
@@ -90,7 +91,6 @@ export type PurchaseInvoice = {
   invoiceDate: string; // ISO string
   dueDate: string; // ISO string
   totalHT: number;
-  tvaRate: number;
   totalTTC: number;
   status: 'Brouillon' | 'Non payée' | 'Payée' | 'En retard';
 };

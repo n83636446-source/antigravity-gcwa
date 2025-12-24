@@ -53,7 +53,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 
 type Column = {
-  id: keyof PurchaseOrder | 'supplierName' | 'formattedDate' | 'formattedAmount';
+  id: 'orderNumber' | 'supplierName' | 'formattedDate' | 'formattedAmount';
   label: string;
 };
 
@@ -61,7 +61,7 @@ const initialColumns: Column[] = [
   { id: 'orderNumber', label: 'Numéro' },
   { id: 'supplierName', label: 'Fournisseur' },
   { id: 'formattedDate', label: 'Date' },
-  { id: 'formattedAmount', label: 'Montant' },
+  { id: 'formattedAmount', label: 'Montant TTC' },
 ];
 
 export default function PurchaseOrdersPage() {
@@ -158,7 +158,7 @@ export default function PurchaseOrdersPage() {
       formattedAmount: new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR',
-      }).format(order.totalAmount),
+      }).format(order.totalTTC),
     }));
   }, [orders, suppliers]);
 
@@ -331,7 +331,7 @@ export default function PurchaseOrdersPage() {
                               onDoubleClick={() => handleDoubleClick(order)}
                               className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
                              >
-                              {columnIds.map((columnId) => renderCellContent(order, columnId))}
+                              {columnIds.map((columnId) => renderCellContent(order, columnId as any))}
                              </TableRow>
                           ))}
                       </TableBody>

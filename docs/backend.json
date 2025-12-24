@@ -239,10 +239,6 @@
           "type": "number",
           "description": "Total amount of the order before tax."
         },
-        "tvaRate": {
-          "type": "number",
-          "description": "VAT rate for the order."
-        },
         "totalTTC": {
           "type": "number",
           "description": "Total amount of the order including tax."
@@ -260,12 +256,16 @@
               },
               "price": {
                 "type": "number"
+              },
+              "tvaRate": {
+                "type": "number"
               }
             },
             "required": [
               "productId",
               "quantity",
-              "price"
+              "price",
+              "tvaRate"
             ]
           }
         }
@@ -275,7 +275,6 @@
         "supplierId",
         "orderDate",
         "totalHT",
-        "tvaRate",
         "totalTTC",
         "items"
       ]
@@ -324,12 +323,16 @@
               },
               "price": {
                 "type": "number"
+              },
+              "tvaRate": {
+                "type": "number"
               }
             },
             "required": [
               "productId",
               "quantityReceived",
-              "price"
+              "price",
+              "tvaRate"
             ]
           }
         },
@@ -345,10 +348,6 @@
           "type": "number",
           "description": "Total amount of the receipt before tax."
         },
-        "tvaRate": {
-          "type": "number",
-          "description": "VAT rate for the receipt."
-        },
         "totalTTC": {
           "type": "number",
           "description": "Total amount of the receipt including tax."
@@ -361,7 +360,6 @@
         "items",
         "status",
         "totalHT",
-        "tvaRate",
         "totalTTC"
       ]
     },
@@ -401,10 +399,6 @@
           "type": "number",
           "description": "Total amount of the invoice before tax."
         },
-        "tvaRate": {
-          "type": "number",
-          "description": "VAT rate for the invoice."
-        },
         "totalTTC": {
           "type": "number",
           "description": "Total amount of the invoice including tax."
@@ -432,12 +426,16 @@
               },
               "price": {
                 "type": "number"
+              },
+              "tvaRate": {
+                "type": "number"
               }
             },
             "required": [
               "productId",
               "quantity",
-              "price"
+              "price",
+              "tvaRate"
             ]
           }
         }
@@ -448,7 +446,6 @@
         "invoiceDate",
         "dueDate",
         "totalHT",
-        "tvaRate",
         "totalTTC",
         "status",
         "items"
@@ -599,5 +596,3 @@
     "reasoning": "The Firestore structure is designed to reflect the relationships between Suppliers, Products, StockAlerts, and Reports in the StockPilot application. The design prioritizes simplicity, security, and scalability, focusing on authorization independence.  \n\nSuppliers are stored in the `/suppliers` collection. Products are now a top-level collection `/products` to allow a many-to-many relationship between products and suppliers implicitly through purchase orders. StockAlerts are organized under each product in `/products/{productId}/stockAlerts`. Reports are stored in a top-level `/reports` collection. This structure facilitates simple rules since it avoids hierarchical authorization dependencies (no `get()` calls needed).\n\nAuthorization Independence is achieved through path-based ownership where applicable (e.g. alerts under products). Each product is an independent entity. This avoids the need to fetch parent documents to determine access rights.\n\nThe structure facilitates secure `list` operations by using structural segregation. Each collection (`suppliers`, `products`, `stockAlerts`, `reports`, `clients`, `purchaseOrders`) contains documents with similar access control requirements. For example, only authorized users will be able to list suppliers, and similarly for the other collections."
   }
 }
-
-    

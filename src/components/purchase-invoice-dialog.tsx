@@ -45,6 +45,7 @@ const invoiceItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
   quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
   price: z.number(),
+  tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
 });
 
 const purchaseInvoiceSchema = z.object({
@@ -55,6 +56,7 @@ const purchaseInvoiceSchema = z.object({
   items: z.array(z.object({
       productId: z.string().nonempty("Veuillez sélectionner un article."),
       quantity: z.coerce.number().int().min(1, 'La quantité doit être au moins de 1.'),
+      tvaRate: z.coerce.number().min(0, "Le taux de TVA doit être un nombre positif."),
   })).min(1, 'La facture doit contenir au moins un article.'),
 });
 
@@ -137,15 +139,22 @@ export function PurchaseInvoiceDialog({
   const purchaseOrderId = form.watch('purchaseOrderId');
   const watchedItems = useWatch({ control: form.control, name: "items" });
   
-  const liveTotal = useMemo(() => {
-    if (!watchedItems || !products) return 0;
-    return watchedItems.reduce((sum, item) => {
-      if (item && item.productId && item.quantity > 0) {
-        const product = products.find(p => p.id === item.productId);
-        return sum + (item.quantity * (product?.price || 0));
-      }
-      return sum;
-    }, 0);
+  const liveTotals = useMemo(() => {
+    const totalHT = watchedItems?.reduce((sum, item) => {
+        const product = products?.find(p => p.id === item.productId);
+        return sum + ((item.quantity || 0) * (product?.price || 0));
+    }, 0) || 0;
+
+    const totalTVA = watchedItems?.reduce((sum, item) => {
+        const product = products?.find(p => p.id === item.productId);
+        const itemHT = (item.quantity || 0) * (product?.price || 0);
+        const tvaAmount = itemHT * ((item.tvaRate || 0) / 100);
+        return sum + tvaAmount;
+    }, 0) || 0;
+    
+    const totalTTC = totalHT + totalTVA;
+
+    return { totalHT, totalTVA, totalTTC };
   }, [watchedItems, products]);
 
   
@@ -157,7 +166,7 @@ export function PurchaseInvoiceDialog({
                 supplierId: invoice.supplierId,
                 invoiceDate: new Date(invoice.invoiceDate).toISOString().split('T')[0],
                 dueDate: new Date(invoice.dueDate).toISOString().split('T')[0],
-                items: invoice.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
+                items: invoice.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })),
             });
         } else if (purchaseOrder) {
             form.reset({
@@ -165,7 +174,7 @@ export function PurchaseInvoiceDialog({
                 supplierId: purchaseOrder.supplierId,
                 invoiceDate: new Date().toISOString().split('T')[0],
                 dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
-                items: purchaseOrder.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
+                items: purchaseOrder.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })),
             });
         } else {
             form.reset({
@@ -173,7 +182,7 @@ export function PurchaseInvoiceDialog({
                 supplierId: '',
                 invoiceDate: new Date().toISOString().split('T')[0],
                 dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
-                items: [{ productId: '', quantity: 1 }],
+                items: [{ productId: '', quantity: 1, tvaRate: 20 }],
             });
         }
     }
@@ -183,10 +192,10 @@ export function PurchaseInvoiceDialog({
     const po = purchaseOrders.find(o => o.id === purchaseOrderId);
     if (po) {
         form.setValue('supplierId', po.supplierId);
-        form.setValue('items', po.items.map(item => ({ productId: item.productId, quantity: item.quantity })));
+        form.setValue('items', po.items.map(item => ({ productId: item.productId, quantity: item.quantity, tvaRate: item.tvaRate })));
     } else if (!isEditMode && !purchaseOrderId) {
         // When PO is deselected, clear items if not in edit mode
-        form.setValue('items', [{ productId: '', quantity: 1 }]);
+        form.setValue('items', [{ productId: '', quantity: 1, tvaRate: 20 }]);
     }
   }, [purchaseOrderId, purchaseOrders, form, isEditMode]);
 
@@ -205,12 +214,9 @@ export function PurchaseInvoiceDialog({
 
 
   const onSubmit = (data: PurchaseInvoiceFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !products) return;
 
-    const totalAmount = data.items.reduce((sum, item) => {
-        const product = products?.find(p => p.id === item.productId);
-        return sum + ((item.quantity || 0) * (product?.price || 0));
-    }, 0);
+    const { totalHT, totalTTC } = liveTotals;
 
     const invoiceData = {
         purchaseOrderId: data.purchaseOrderId,
@@ -219,9 +225,10 @@ export function PurchaseInvoiceDialog({
         dueDate: new Date(data.dueDate).toISOString(),
         items: data.items.map(item => ({
             ...item,
-            price: products?.find(p => p.id === item.productId)?.price || 0
+            price: products.find(p => p.id === item.productId)?.price || 0
         })),
-        totalAmount: totalAmount,
+        totalHT: totalHT,
+        totalTTC: totalTTC,
     };
 
     if (isEditMode && invoice) {
@@ -411,7 +418,7 @@ export function PurchaseInvoiceDialog({
             <div className="space-y-4">
               <FormLabel>Articles</FormLabel>
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-center gap-2">
+                <div key={field.id} className="grid grid-cols-[1fr_100px_80px_auto] items-end gap-2">
                    <FormField
                     control={form.control}
                     name={`items.${index}.productId`}
@@ -454,6 +461,18 @@ export function PurchaseInvoiceDialog({
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={form.control}
+                    name={`items.${index}.tvaRate`}
+                    render={({ field: itemField }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="number" placeholder="TVA %" {...itemField} disabled={fromBC || readOnly} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                    {!fromBC && !readOnly && (
                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -468,7 +487,7 @@ export function PurchaseInvoiceDialog({
                 </div>
               )}
               {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1 })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 1, tvaRate: 20 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un article
                 </Button>
               )}
@@ -476,14 +495,21 @@ export function PurchaseInvoiceDialog({
 
             <Separator />
 
-            <div className="flex justify-end items-center space-x-4 pt-4">
-                <span className="text-lg font-semibold">Total :</span>
-                <span className="text-lg font-bold text-primary">
-                    {new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                    }).format(liveTotal)}
-                </span>
+             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="text-right font-medium">Total HT:</div>
+                <div className="text-right font-semibold">
+                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalHT)}
+                </div>
+
+                <div className="text-right font-medium">Total TVA:</div>
+                <div className="text-right font-semibold">
+                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTVA)}
+                </div>
+
+                <div className="text-right font-bold text-lg border-t pt-2 mt-1">Total TTC:</div>
+                <div className="text-right font-bold text-lg text-primary border-t pt-2 mt-1">
+                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
+                </div>
             </div>
 
             <DialogFooter>
