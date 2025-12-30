@@ -46,7 +46,6 @@ const achatSubMenuItems = [
     { href: '/purchases/orders', label: 'Bons de commande' },
     { href: '/purchases/receipts', label: 'Bons de réception' },
     { href: '/purchases/invoices', label: 'Factures' },
-    { href: '/purchases/credit-notes', label: 'Avoirs' },
 ];
 
 const tiersSubMenuItems = [

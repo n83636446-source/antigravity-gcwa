@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Supplier, PurchaseOrder, CreditNote, PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
+import type { Supplier, PurchaseOrder, PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { SuppliersTable } from '@/components/suppliers-table';
 import { SupplierDialog } from '@/components/supplier-dialog';
@@ -122,12 +122,6 @@ export default function SuppliersPage() {
     [firestore]
   );
   const { data: purchaseOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
-
-  const creditNotesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'creditNotes') : null),
-    [firestore]
-  );
-  const { data: creditNotes } = useCollection<CreditNote>(creditNotesRef);
   
   const purchaseReceiptsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
@@ -181,13 +175,12 @@ export default function SuppliersPage() {
     const isUsedInOrders = (purchaseOrders || []).some(o => o.supplierId === supplierToDelete.id);
     const isUsedInReceipts = (purchaseReceipts || []).some(r => r.supplierId === supplierToDelete.id);
     const isUsedInInvoices = (purchaseInvoices || []).some(i => i.supplierId === supplierToDelete.id);
-    const isUsedInCreditNotes = (creditNotes || []).some(n => n.supplierId === supplierToDelete.id);
 
-    if (isUsedInOrders || isUsedInReceipts || isUsedInInvoices || isUsedInCreditNotes) {
+    if (isUsedInOrders || isUsedInReceipts || isUsedInInvoices) {
       toast({
         variant: 'destructive',
         title: 'Suppression impossible',
-        description: `Le fournisseur "${supplierToDelete.name}" est lié à des documents d'achat (commandes, réceptions, factures, ou avoirs) et ne peut pas être supprimé.`,
+        description: `Le fournisseur "${supplierToDelete.name}" est lié à des documents d'achat (commandes, réceptions, factures) et ne peut pas être supprimé.`,
         duration: 6000,
       });
       setDeleteDialogOpen(false);
@@ -205,7 +198,7 @@ export default function SuppliersPage() {
     setSelectedSupplier(null);
   };
 
-  const isLoading = isLoadingSuppliers || !purchaseOrders || !creditNotes || !purchaseReceipts || !purchaseInvoices;
+  const isLoading = isLoadingSuppliers || !purchaseOrders || !purchaseReceipts || !purchaseInvoices;
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
