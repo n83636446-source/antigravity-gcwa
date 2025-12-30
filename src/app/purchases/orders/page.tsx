@@ -69,7 +69,7 @@ export default function PurchaseOrdersPage() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | undefined>();
+  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
@@ -164,7 +164,7 @@ export default function PurchaseOrdersPage() {
 
 
   const handleAdd = () => {
-    setEditingOrder(undefined);
+    setEditingOrder(null);
     setDialogOpen(true);
   };
 
@@ -178,12 +178,6 @@ export default function PurchaseOrdersPage() {
       setReceiptDialogOpen(true);
     }
   };
-
-  const handleTransferFromDialog = (order: PurchaseOrder) => {
-    setDialogOpen(false);
-    setSelectedOrder(order);
-    setTimeout(() => setReceiptDialogOpen(true), 150);
-  }
 
   const handleRowClick = (order: PurchaseOrder) => {
     if (selectedOrder?.id === order.id) {
@@ -253,6 +247,17 @@ export default function PurchaseOrdersPage() {
         return <TableCell key={key}></TableCell>;
     }
   };
+  
+  const lastOrderNumber = useMemo(() => {
+    if (!orders || orders.length === 0) {
+      return 0;
+    }
+    return orders.reduce((max, s) => {
+      const codeNumber = parseInt((s.orderNumber || 'BC-0000').replace('BC-', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [orders]);
+
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -260,10 +265,13 @@ export default function PurchaseOrdersPage() {
         title="Bons de commande"
         description="Gérez vos bons de commande."
       >
-        <Button onClick={handleAdd}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Créer un bon de commande
-        </Button>
+        <PurchaseOrderDialog
+            isOpen={dialogOpen}
+            onOpenChange={setDialogOpen}
+            suppliers={suppliers || []}
+            order={editingOrder}
+            lastOrderNumber={lastOrderNumber}
+        />
       </PageHeader>
       
       {isLoading ? (
@@ -348,20 +356,17 @@ export default function PurchaseOrdersPage() {
                     <p className="text-sm text-muted-foreground">
                       Commencez par en créer un.
                     </p>
+                    <Button className="mt-4" onClick={handleAdd}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Créer un bon de commande
+                    </Button>
                   </div>
                 </div>
               )}
             </CardContent>
         </Card>
       )}
-      <PurchaseOrderDialog
-        isOpen={dialogOpen}
-        onOpenChange={setDialogOpen}
-        suppliers={suppliers || []}
-        order={editingOrder}
-        lastOrderNumber={orders?.length || 0}
-        onTransfer={handleTransferFromDialog}
-      />
+
        {selectedOrder && (
         <PurchaseReceiptDialog
           isOpen={receiptDialogOpen}
