@@ -2,10 +2,10 @@
 
 import { PageHeader } from '@/components/page-header';
 import { PurchaseCreditNoteDialog } from '@/components/purchase-credit-note-dialog';
-import type { PurchaseCreditNote, Product, Supplier, PurchaseInvoice } from '@/lib/types';
+import type { PurchaseCreditNote, Product, Supplier, PurchaseOrder } from '@/lib/types';
 import { useState, useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,11 +24,11 @@ export default function CreditNotesPage() {
   );
   const { data: creditNotes, isLoading: isLoadingCreditNotes } = useCollection<PurchaseCreditNote>(creditNotesRef);
   
-  const allInvoicesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
+  const allOrdersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
     [firestore]
   );
-  const { data: allInvoices, isLoading: isLoadingInvoices } = useCollection<PurchaseInvoice>(allInvoicesRef);
+  const { data: allOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(allOrdersRef);
 
   const productsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'products') : null),
@@ -42,7 +42,7 @@ export default function CreditNotesPage() {
   );
   const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
   
-  const isLoading = isLoadingCreditNotes || isLoadingInvoices || isLoadingProducts || isLoadingSuppliers;
+  const isLoading = isLoadingCreditNotes || isLoadingOrders || isLoadingProducts || isLoadingSuppliers;
 
   const lastCreditNoteNumber = useMemo(() => {
     if (!creditNotes || creditNotes.length === 0) {
@@ -61,7 +61,7 @@ export default function CreditNotesPage() {
         description="Gérez vos avoirs fournisseurs."
       >
         <PurchaseCreditNoteDialog
-            purchaseInvoices={allInvoices || []}
+            purchaseOrders={allOrders || []}
             creditNotes={creditNotes || []}
             products={products || []}
             suppliers={suppliers || []}
