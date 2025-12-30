@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -491,11 +492,11 @@ export function TestResizableDialog({
                     <div className="space-y-4 pt-2">
                         <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                             <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
-                            <Input defaultValue="BR-0001" className="w-full min-w-0" />
+                            <Input defaultValue="BC-0001" className="w-full min-w-0" />
                         </div>
                         <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
-                           <Popover>
+                          <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant={"outline"}
