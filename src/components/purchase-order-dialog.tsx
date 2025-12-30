@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2 } from 'lucide-react';
+import { CalendarIcon, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Supplier, Product, PurchaseOrder, Representative } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -40,7 +40,9 @@ import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Label } from './ui/label';
-import { addDays } from 'date-fns';
+import { addDays, format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
 
 const orderItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
@@ -50,11 +52,12 @@ const orderItemSchema = z.object({
 });
 
 const purchaseOrderSchema = z.object({
+  documentNumber: z.string().optional(),
   supplierId: z.string().nonempty('Un fournisseur doit être sélectionné.'),
-  orderDate: z.string({ required_error: 'La date est requise.' }),
+  orderDate: z.date({ required_error: 'La date est requise.' }),
   items: z.array(orderItemSchema).min(1, 'Le bon de commande doit contenir au moins un article.'),
   paymentMode: z.string().optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.date().optional(),
   representativeId: z.string().optional(),
   reference: z.string().optional(),
   remarks: z.string().optional(),
@@ -98,15 +101,17 @@ export function PurchaseOrderDialog({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: {
       supplierId: '',
-      orderDate: new Date().toISOString().split('T')[0],
+      orderDate: new Date(),
       items: [{ productId: '', quantity: 1, price: 0, tvaRate: 20 }],
       paymentMode: 'Espèces',
-      dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
+      dueDate: addDays(new Date(), 30),
       representativeId: '',
       reference: '',
       remarks: '',
     }
   });
+
+  const { register, watch, setValue } = form;
 
   const { fields, append, remove, replace, update } = useFieldArray({
     control: form.control,
@@ -139,10 +144,12 @@ export function PurchaseOrderDialog({
 
   useEffect(() => {
     if (isOpen) {
+        const newOrderNumber = `BC-${(lastOrderNumber + 1).toString().padStart(4, '0')}`;
         if (order) {
             form.reset({
+                documentNumber: order.orderNumber,
                 supplierId: order.supplierId,
-                orderDate: new Date(order.orderDate).toISOString().split('T')[0],
+                orderDate: new Date(order.orderDate),
                 items: order.items.map(item => ({ 
                     productId: item.productId, 
                     quantity: item.quantity, 
@@ -150,27 +157,27 @@ export function PurchaseOrderDialog({
                     tvaRate: item.tvaRate 
                 })),
                 paymentMode: order.paymentMode,
-                dueDate: order.dueDate ? new Date(order.dueDate).toISOString().split('T')[0] : addDays(new Date(), 30).toISOString().split('T')[0],
+                dueDate: order.dueDate ? new Date(order.dueDate) : addDays(new Date(), 30),
                 representativeId: order.representativeId,
                 reference: order.reference,
                 remarks: order.remarks,
             });
         } else {
             form.reset({
+                documentNumber: newOrderNumber,
                 supplierId: '',
-                orderDate: new Date().toISOString().split('T')[0],
+                orderDate: new Date(),
                 items: [{ productId: '', quantity: 1, price: 0, tvaRate: 20 }],
                 paymentMode: 'Espèces',
-                dueDate: addDays(new Date(), 30).toISOString().split('T')[0],
+                dueDate: addDays(new Date(), 30),
                 representativeId: '',
                 reference: '',
                 remarks: '',
             });
         }
     }
-  }, [order, isOpen, form]);
+  }, [order, isOpen, form, lastOrderNumber]);
 
-  const newOrderNumber = `BC-${(lastOrderNumber + 1).toString().padStart(4, '0')}`;
 
   const onSubmit = async (data: PurchaseOrderFormValues) => {
     if (!firestore || !products) return;
@@ -178,13 +185,14 @@ export function PurchaseOrderDialog({
     const { totalHT, totalTTC } = liveTotals;
 
     const orderData = {
+        orderNumber: data.documentNumber || `BC-${(lastOrderNumber + 1).toString().padStart(4, '0')}`,
         supplierId: data.supplierId,
-        orderDate: new Date(data.orderDate).toISOString(),
+        orderDate: data.orderDate.toISOString(),
         items: data.items,
         totalHT,
         totalTTC,
         paymentMode: data.paymentMode,
-        dueDate: data.dueDate,
+        dueDate: data.dueDate?.toISOString(),
         representativeId: data.representativeId,
         reference: data.reference,
         remarks: data.remarks,
@@ -202,14 +210,11 @@ export function PurchaseOrderDialog({
         });
     } else {
         const purchaseOrdersRef = collection(firestore, 'purchaseOrders');
-        addDocumentNonBlocking(purchaseOrdersRef, {
-            ...orderData,
-            orderNumber: newOrderNumber,
-        });
+        addDocumentNonBlocking(purchaseOrdersRef, orderData);
 
         toast({
           title: 'Bon de commande créé',
-          description: `Le bon de commande "${newOrderNumber}" a été créé.`,
+          description: `Le bon de commande "${orderData.orderNumber}" a été créé.`,
         });
     }
     
@@ -264,100 +269,163 @@ export function PurchaseOrderDialog({
             </DialogHeader>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                    <div className="space-y-4">
+               {/* Zone 1: Informations pièce */}
+                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-4">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-semibold text-blue-800">
+                        Informations pièce
+                    </h3>
+                    <div className="space-y-4 pt-2">
+                        {/* Numéro Field */}
                         <div className="grid grid-cols-[110px_1fr] items-center gap-4">
-                            <Label className="text-right">Numéro</Label>
-                            <Input value={isEditMode ? order?.orderNumber : newOrderNumber} disabled className="w-full" />
+                        <Label className="text-right">Numéro</Label>
+                        <Input {...register('documentNumber')} placeholder="Ex: BC-0001" className="w-full" disabled />
                         </div>
+                        {/* Date Field */}
+                        <div className="grid grid-cols-[110px_1fr] items-center gap-4">
+                            <Label className="text-right">Date</Label>
+                            <FormField
+                                control={form.control}
+                                name="orderDate"
+                                render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(field.value, "PPP") : <span>Choisir une date</span>}
+                                        </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        initialFocus
+                                        />
+                                    </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+                </div>
+                {/* Zone 2: Informations fournisseur */}
+                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-8">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-semibold text-blue-800">Informations fournisseur</h3>
+                    <div className="space-y-2 pt-2">
                         <FormField
                             control={form.control}
-                            name="orderDate"
+                            name="supplierId"
                             render={({ field }) => (
                                 <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
-                                <FormLabel className="text-right">Date</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} className="w-full justify-start text-left font-normal" />
-                                </FormControl>
-                                <FormMessage className="col-start-2" />
+                                <FormLabel className="text-right">Fournisseur</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode}>
+                                    <FormControl>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {suppliers.map((supplier) => (
+                                        <SelectItem key={supplier.id} value={supplier.id}>
+                                        {supplier.name}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage className='col-start-2' />
                                 </FormItem>
                             )}
                         />
                     </div>
-                </div>
-                <div className="relative lg:col-span-8 space-y-2 rounded-md border border-blue-800 p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations fournisseur</h3>
-                    <FormField
-                        control={form.control}
-                        name="supplierId"
-                        render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
-                            <FormLabel className="text-right">Fournisseur</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode}>
-                                <FormControl>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {suppliers.map((supplier) => (
-                                    <SelectItem key={supplier.id} value={supplier.id}>
-                                    {supplier.name}
-                                    </SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage className='col-start-2' />
-                            </FormItem>
-                        )}
-                    />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
-                    <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="paymentMode"
-                            render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
-                                <FormLabel className="text-right">Mode de paiement</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Mode de paiement" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value="Espèces">Espèces</SelectItem>
-                                    <SelectItem value="Chèque">Chèque</SelectItem>
-                                    <SelectItem value="Virement">Virement</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage className="col-start-2" />
+                {/* Zone 3: Règlement */}
+                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-4">
+                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-semibold text-blue-800">
+                        Règlement
+                    </h3>
+                    <div className="space-y-4 pt-2">
+                        {/* Mode de paiement */}
+                        <div className="grid grid-cols-[110px_1fr] items-center gap-4">
+                            <Label className="text-right">Mode de paiement</Label>
+                             <FormField
+                                control={form.control}
+                                name="paymentMode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Mode de paiement" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            <SelectItem value="Espèces">Espèces</SelectItem>
+                                            <SelectItem value="Chèque">Chèque</SelectItem>
+                                            <SelectItem value="Virement">Virement</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        {/* Date d'échéance */}
+                        <div className="grid grid-cols-[110px_1fr] items-center gap-4">
+                            <Label className="text-right">Date d'échéance</Label>
+                             <FormField
+                                control={form.control}
+                                name="dueDate"
+                                render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(field.value, "PPP") : <span>Choisir une date</span>}
+                                        </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        initialFocus
+                                        />
+                                    </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
                                 </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="dueDate"
-                            render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
-                                <FormLabel className="text-right">Date d'échéance</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} className="w-full justify-start text-left font-normal" />
-                                </FormControl>
-                                <FormMessage className="col-start-2" />
-                                </FormItem>
-                            )}
-                        />
+                                )}
+                            />
+                        </div>
                     </div>
                 </div>
-                <div className="relative lg:col-span-8 rounded-md border border-blue-800 p-4 pt-6 grid grid-cols-1 gap-4">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
+
+                {/* Zone 4: Détails */}
+                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-8 grid grid-cols-1 gap-4">
+                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-semibold text-blue-800">Détails</h3>
                     <FormField
                         control={form.control}
                         name="representativeId"
