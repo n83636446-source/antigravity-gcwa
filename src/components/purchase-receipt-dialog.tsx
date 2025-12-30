@@ -490,7 +490,7 @@ export function PurchaseReceiptDialog({
                                 disabled={readOnly || fromBC}
                               >
                                 <FormControl>
-                                  <SelectTrigger className='border-black w-full'>
+                                  <SelectTrigger className='w-full border-black'>
                                     <SelectValue placeholder="Sélectionnez un fournisseur" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -567,7 +567,7 @@ export function PurchaseReceiptDialog({
                             <FormLabel className="text-right">Représentant</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                 <FormControl>
-                                <SelectTrigger className='border-black w-full'>
+                                <SelectTrigger className='w-full border-black'>
                                     <SelectValue placeholder="Représentant" />
                                 </SelectTrigger>
                                 </FormControl>
@@ -588,7 +588,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                             <FormLabel className="text-right">Référence</FormLabel>
                             <FormControl>
-                                <Input placeholder="Référence" {...field} disabled={readOnly} className='border-black w-full' />
+                                <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full border-black' />
                             </FormControl>
                             <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -601,7 +601,7 @@ export function PurchaseReceiptDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                             <FormLabel className="text-right">Remarques</FormLabel>
                             <FormControl>
-                                <Input placeholder="Remarques" {...field} disabled={readOnly} className='border-black w-full' />
+                                <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full border-black' />
                             </FormControl>
                             <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
