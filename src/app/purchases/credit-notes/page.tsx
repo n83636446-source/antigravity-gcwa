@@ -24,41 +24,13 @@ export default function CreditNotesPage() {
   );
   const { data: suppliers } = useCollection<Supplier>(suppliersRef);
 
-  const purchaseOrdersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
-    [firestore]
-  );
-  const { data: purchaseOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
-
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
-  );
-  const { data: products } = useCollection<Product>(productsRef);
-  
-  const lastCreditNoteNumber = useMemo(() => {
-    if (!creditNotes || creditNotes.length === 0) {
-      return 0;
-    }
-    return creditNotes.reduce((max, note) => {
-      const codeNumber = parseInt((note.creditNoteNumber || 'AV-0000').replace('AV-', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [creditNotes]);
-
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
         title="Avoirs"
         description="Gérez vos notes de crédit."
       >
-        <CreditNoteDialog
-          suppliers={suppliers || []}
-          creditNotes={creditNotes || []}
-          purchaseOrders={purchaseOrders || []}
-          products={products || []}
-          lastCreditNoteNumber={lastCreditNoteNumber}
-        />
+        <CreditNoteDialog />
       </PageHeader>
       
       <CreditNotesTable creditNotes={creditNotes || []} suppliers={suppliers || []} />
