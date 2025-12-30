@@ -59,7 +59,7 @@ const creditNoteSchema = z.object({
   creditNoteDate: z.string({ required_error: 'La date est requise.' }),
   items: z.array(creditNoteItemSchema).min(1, "L'avoir doit contenir au moins un article."),
   paymentMode: z.string().optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.string({ required_error: "La date d'échéance est requise." }).nonempty("La date d'échéance est requise."),
   representativeId: z.string().optional(),
   reference: z.string().optional(),
   remarks: z.string().optional(),
@@ -67,8 +67,8 @@ const creditNoteSchema = z.object({
 
 type CreditNoteFormValues = z.infer<typeof creditNoteSchema>;
 
-type CreditNoteDialogProps = {
-  purchaseOrders?: PurchaseOrder[];
+type PurchaseCreditNoteDialogProps = {
+  purchaseOrders: PurchaseOrder[];
   creditNotes: CreditNote[];
   products: Product[];
   suppliers: Supplier[];
@@ -95,7 +95,7 @@ export function CreditNoteDialog({
   onOpenChange: onOpenChangeProp,
   purchaseOrder,
   creditNote,
-}: CreditNoteDialogProps) {
+}: PurchaseCreditNoteDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -118,12 +118,10 @@ export function CreditNoteDialog({
   const representativesRef = useMemoFirebase(() => (firestore ? collection(firestore, 'representatives') : null), [firestore]);
   const { data: representatives } = useCollection<Representative>(representativesRef);
 
-
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
   
   const gridLayout = "grid grid-cols-[1fr_120px_100px_80px_120px_50px] gap-2 items-end text-left";
-
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
@@ -143,6 +141,15 @@ export function CreditNoteDialog({
     }, 0);
   }, [products]);
 
+
+  const availablePurchaseOrders = useMemo(() => {
+    if (!creditNotes || !purchaseOrders) return [];
+    const creditedOrderIds = new Set(creditNotes.map(r => r.id));
+    if (isEditMode && creditNote?.id) {
+        creditedOrderIds.delete(creditNote.id);
+    }
+    return purchaseOrders.filter(o => !creditedOrderIds.has(o.id));
+  }, [purchaseOrders, creditNotes, isEditMode, creditNote]);
 
   const form = useForm<CreditNoteFormValues>({
     resolver: zodResolver(creditNoteSchema),
@@ -167,7 +174,7 @@ export function CreditNoteDialog({
 
   const watchedItems = useWatch({ control: form.control, name: 'items' });
   const watchedOrderId = form.watch('purchaseOrderId');
-  const fromBC = !!watchedOrderId || (isEditMode && !!creditNote?.purchaseOrderId);
+  const fromBC = !!watchedOrderId || (isEditMode && !!creditNote?.id);
   
   const liveTotals = useMemo(() => {
     const totalHT = watchedItems?.reduce((sum, item) => {
@@ -203,10 +210,9 @@ export function CreditNoteDialog({
     }
   
     if (isEditMode && creditNote) {
-      const orderForCreditNote = purchaseOrders?.find(o => o.id === creditNote.purchaseOrderId);
+      const orderForCreditNote = purchaseOrders.find(o => o.id === creditNote.id);
       form.reset({
         creditNoteNumber: creditNote.creditNoteNumber,
-        purchaseOrderId: creditNote.purchaseOrderId,
         supplierId: creditNote.supplierId,
         creditNoteDate: new Date(creditNote.creditNoteDate).toISOString().split('T')[0],
         items: creditNote.items.map(item => ({
@@ -223,7 +229,6 @@ export function CreditNoteDialog({
         remarks: creditNote.remarks,
       });
     } else if (purchaseOrder) {
-      // Case: Transfer from a specific PO
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
       form.reset({
         creditNoteNumber: newCreditNoteNumber,
@@ -245,7 +250,7 @@ export function CreditNoteDialog({
       });
     } else {
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
-      const selectedPO = purchaseOrders?.find(o => o.id === watchedOrderId);
+      const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
         replace(selectedPO.items.map(item => ({
@@ -296,7 +301,7 @@ export function CreditNoteDialog({
     
     const { totalHT, totalTTC } = liveTotals;
 
-    const creditNoteData: Omit<CreditNote, 'id' | 'status' | 'reason'> & { reason?: string } = {
+    const creditNoteData: Omit<CreditNote, 'id' | 'status' | 'reason'> = {
         creditNoteNumber: data.creditNoteNumber,
         supplierId: data.supplierId,
         creditNoteDate: new Date(data.creditNoteDate).toISOString(),
@@ -314,23 +319,23 @@ export function CreditNoteDialog({
         reference: data.reference,
         remarks: data.remarks,
     };
-    
 
     if (isEditMode && creditNote) {
         const creditNoteDocRef = doc(firestore, 'creditNotes', creditNote.id);
         updateDocumentNonBlocking(creditNoteDocRef, {
             ...creditNoteData,
-            status: creditNote.status, // Preserve current status on edit
+            status: creditNote.status,
+            reason: creditNote.reason,
         });
         toast({
-            title: 'Avoir modifié',
+            title: 'Avoir fournisseur modifié',
             description: "Les détails de l'avoir ont été mis à jour.",
         });
 
     } else {
         const newCreditNoteData = {
           ...creditNoteData,
-          reason: '', // Add empty reason
+          reason: '',
           status: 'Brouillon' as const,
         };
 
@@ -338,7 +343,7 @@ export function CreditNoteDialog({
         addDocumentNonBlocking(creditNoteRef, newCreditNoteData)
           .then((docRef) => {
              toast({
-              title: 'Avoir créé',
+              title: 'Avoir fournisseur créé',
               description: `L'avoir "${data.creditNoteNumber}" est enregistré en brouillon.`,
             });
             onCreditNoteCreated?.();
@@ -414,7 +419,6 @@ export function CreditNoteDialog({
   
   const readOnly = isEditMode && creditNote?.status === 'Appliqué';
 
-
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -432,7 +436,7 @@ export function CreditNoteDialog({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-2">
                         <FormField
                             control={form.control}
                             name="creditNoteNumber"
@@ -463,48 +467,50 @@ export function CreditNoteDialog({
                 </div>
                 <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-8">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
-                     <FormField
-                          control={form.control}
-                          name="supplierId"
-                          render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                              <FormLabel className="text-right">Fournisseur</FormLabel>
-                              <Select
-                                onValueChange={handleSupplierChange}
-                                value={field.value}
-                                disabled={readOnly || fromBC}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className='w-full'>
-                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                                    <div className="flex items-center gap-2">
-                                      <PlusCircle className="h-4 w-4" />
-                                      <span>Créer un nouveau fournisseur</span>
-                                    </div>
-                                  </SelectItem>
-                                  <Separator />
-                                  {suppliers?.map((supplier) => (
-                                    <SelectItem key={supplier.id} value={supplier.id}>
-                                      {supplier.name}
+                     <div className="pt-2">
+                        <FormField
+                            control={form.control}
+                            name="supplierId"
+                            render={({ field }) => (
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                <FormLabel className="text-right">Fournisseur</FormLabel>
+                                <Select
+                                    onValueChange={handleSupplierChange}
+                                    value={field.value}
+                                    disabled={readOnly || fromBC}
+                                >
+                                    <FormControl>
+                                    <SelectTrigger className='w-full'>
+                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                        <div className="flex items-center gap-2">
+                                        <PlusCircle className="h-4 w-4" />
+                                        <span>Créer un nouveau fournisseur</span>
+                                        </div>
                                     </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                          )}
-                        />
+                                    <Separator />
+                                    {suppliers?.map((supplier) => (
+                                        <SelectItem key={supplier.id} value={supplier.id}>
+                                        {supplier.name}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage className="col-span-2 col-start-2" />
+                                </FormItem>
+                            )}
+                            />
+                     </div>
                 </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-2">
                         <FormField
                             control={form.control}
                             name="paymentMode"
@@ -544,6 +550,7 @@ export function CreditNoteDialog({
                 </div>
                 <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-8 grid grid-cols-1 gap-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
+                    <div className="pt-2 space-y-4">
                     <FormField
                         control={form.control}
                         name="representativeId"
@@ -592,6 +599,7 @@ export function CreditNoteDialog({
                             </FormItem>
                         )}
                     />
+                    </div>
                 </div>
             </div>
 
@@ -740,7 +748,6 @@ export function CreditNoteDialog({
                     {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
                 </div>
             </div>
-
 
             <DialogFooter className="sm:justify-end">
               <div className='flex gap-2'>
