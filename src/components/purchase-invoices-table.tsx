@@ -21,6 +21,8 @@ import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { useMemo, ReactNode } from 'react';
 import { DraggableHeader } from './ui/DraggableHeader';
+import { Button } from './ui/button';
+import { PurchaseInvoiceDialog } from './purchase-invoice-dialog';
 
 
 type Column = {
@@ -157,6 +159,12 @@ export function PurchaseInvoicesTable({
               <p className="text-sm text-muted-foreground">
                 Commencez par en créer une.
               </p>
+               <PurchaseInvoiceDialog
+                  purchaseOrders={purchaseOrders || []}
+                  suppliers={suppliers || []}
+                  products={[]}
+                  lastInvoiceNumber={0}
+              />
             </div>
           </div>
         )}
