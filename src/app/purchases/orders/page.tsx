@@ -265,14 +265,19 @@ export default function PurchaseOrdersPage() {
         title="Bons de commande"
         description="Gérez vos bons de commande."
       >
-        <PurchaseOrderDialog
-            isOpen={dialogOpen}
-            onOpenChange={setDialogOpen}
-            suppliers={suppliers || []}
-            order={editingOrder}
-            lastOrderNumber={lastOrderNumber}
-        />
+        <Button onClick={handleAdd}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Créer un bon de commande
+        </Button>
       </PageHeader>
+      
+      <PurchaseOrderDialog
+          isOpen={dialogOpen}
+          onOpenChange={setDialogOpen}
+          suppliers={suppliers || []}
+          order={editingOrder}
+          lastOrderNumber={lastOrderNumber}
+      />
       
       {isLoading ? (
          <div className="space-y-4">
