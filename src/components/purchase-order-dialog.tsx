@@ -278,7 +278,7 @@ export function PurchaseOrderDialog({
                                 <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
                                 <FormLabel className="text-right">Date</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} className="w-full" />
+                                    <Input type="date" {...field} className="w-full justify-start text-left font-normal" />
                                 </FormControl>
                                 <FormMessage className="col-start-2" />
                                 </FormItem>
@@ -292,7 +292,8 @@ export function PurchaseOrderDialog({
                         control={form.control}
                         name="supplierId"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
+                            <FormLabel className="text-right">Fournisseur</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value} disabled={isEditMode}>
                                 <FormControl>
                                 <SelectTrigger className="w-full">
@@ -307,7 +308,7 @@ export function PurchaseOrderDialog({
                                 ))}
                                 </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className='col-start-2' />
                             </FormItem>
                         )}
                     />
@@ -347,7 +348,7 @@ export function PurchaseOrderDialog({
                                 <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} className="w-full" />
+                                    <Input type="date" {...field} className="w-full justify-start text-left font-normal" />
                                 </FormControl>
                                 <FormMessage className="col-start-2" />
                                 </FormItem>
