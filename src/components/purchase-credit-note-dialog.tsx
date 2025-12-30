@@ -34,7 +34,6 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseCreditNote, Supplier, Representative } from '@/lib/types';
 import { Separator } from './ui/separator';
-import { Textarea } from './ui/textarea';
 import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -55,7 +54,7 @@ const creditNoteItemSchema = z.object({
 
 const purchaseCreditNoteSchema = z.object({
   creditNoteNumber: z.string().nonempty("Le numéro de document est requis."),
-  purchaseOrderId: z.string().optional(),
+  purchaseInvoiceId: z.string().optional(),
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
   creditNoteDate: z.string({ required_error: 'La date est requise.' }),
   items: z.array(creditNoteItemSchema).min(1, "L'avoir doit contenir au moins un article."),
@@ -77,7 +76,7 @@ type PurchaseCreditNoteDialogProps = {
   onCreditNoteCreated?: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  purchaseOrder?: PurchaseOrder | null;
+  purchaseInvoice?: PurchaseOrder | null;
   creditNote?: PurchaseCreditNote | null;
 };
 
@@ -94,14 +93,14 @@ export function PurchaseCreditNoteDialog({
   onCreditNoteCreated,
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
-  purchaseOrder,
-  creditNote: receipt, // Keep `receipt` prop name for structure but treat as creditNote
+  purchaseInvoice,
+  creditNote,
 }: PurchaseCreditNoteDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const isTriggeredExternally = openProp !== undefined;
-  const isEditMode = !!receipt;
+  const isEditMode = !!creditNote;
   
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
@@ -150,18 +149,18 @@ export function PurchaseCreditNoteDialog({
     if (!creditNotes || !purchaseOrders) return [];
     const receivedOrderIds = new Set(creditNotes.map(r => r.purchaseInvoiceId));
     // When editing, allow the current receipt's PO to be in the list
-    if (isEditMode && receipt?.purchaseInvoiceId) {
-        receivedOrderIds.delete(receipt.purchaseInvoiceId);
+    if (isEditMode && creditNote?.purchaseInvoiceId) {
+        receivedOrderIds.delete(creditNote.purchaseInvoiceId);
     }
     return purchaseOrders.filter(o => !receivedOrderIds.has(o.id));
-  }, [purchaseOrders, creditNotes, isEditMode, receipt]);
+  }, [purchaseOrders, creditNotes, isEditMode, creditNote]);
 
 
   const form = useForm<PurchaseCreditNoteFormValues>({
-    resolver: zodResolver(purchaseCreditNoteSchema as any),
+    resolver: zodResolver(purchaseCreditNoteSchema),
     defaultValues: {
       creditNoteNumber: '',
-      purchaseOrderId: '',
+      purchaseInvoiceId: '',
       supplierId: '',
       creditNoteDate: new Date().toISOString().split('T')[0],
       items: [],
@@ -179,17 +178,17 @@ export function PurchaseCreditNoteDialog({
   });
 
   const watchedItems = useWatch({ control: form.control, name: 'items' });
-  const watchedOrderId = form.watch('purchaseOrderId');
-  const fromBC = !!watchedOrderId || (isEditMode && !!receipt?.purchaseInvoiceId);
+  const watchedOrderId = form.watch('purchaseInvoiceId');
+  const fromBC = !!watchedOrderId || (isEditMode && !!creditNote?.purchaseInvoiceId);
   
   const liveTotals = useMemo(() => {
-    const totalHT = watchedItems?.reduce((sum, item: any) => {
+    const totalHT = watchedItems?.reduce((sum, item) => {
         const product = products.find(p => p.id === item.productId);
         const price = item.price ?? product?.price ?? 0;
         return sum + ((item.quantityReceived || 0) * price);
     }, 0) || 0;
 
-    const totalTVA = watchedItems?.reduce((sum, item: any) => {
+    const totalTVA = watchedItems?.reduce((sum, item) => {
         const product = products.find(p => p.id === item.productId);
         const price = item.price ?? product?.price ?? 0;
         const itemHT = (item.quantityReceived || 0) * price;
@@ -207,55 +206,55 @@ export function PurchaseCreditNoteDialog({
     if (!isOpen) {
       form.reset({
         creditNoteNumber: '',
-        purchaseOrderId: '',
+        purchaseInvoiceId: '',
         supplierId: '',
         creditNoteDate: new Date().toISOString().split('T')[0],
         items: [],
-      } as any);
+      });
       return;
     }
   
-    if (isEditMode && receipt) {
-      const orderForReceipt = purchaseOrders.find(o => o.id === receipt.purchaseInvoiceId);
+    if (isEditMode && creditNote) {
+      const orderForCreditNote = purchaseOrders.find(o => o.id === creditNote.purchaseInvoiceId);
       form.reset({
-        creditNoteNumber: receipt.creditNoteNumber,
-        purchaseOrderId: receipt.purchaseInvoiceId,
-        supplierId: receipt.supplierId,
-        creditNoteDate: new Date(receipt.creditNoteDate).toISOString().split('T')[0],
-        items: receipt.items.map(item => ({
+        creditNoteNumber: creditNote.creditNoteNumber,
+        purchaseInvoiceId: creditNote.purchaseInvoiceId,
+        supplierId: creditNote.supplierId,
+        creditNoteDate: new Date(creditNote.creditNoteDate).toISOString().split('T')[0],
+        items: creditNote.items.map(item => ({
           productId: item.productId,
-          quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
+          quantityOrdered: orderForCreditNote?.items.find(i => i.productId === item.productId)?.quantity || 0,
           quantityReceived: item.quantity,
           price: item.price,
           tvaRate: item.tvaRate,
         })),
-        remarks: receipt.remarks,
-      } as any);
-    } else if (purchaseOrder) {
+        remarks: creditNote.remarks,
+      });
+    } else if (purchaseInvoice) {
       // Case: Transfer from a specific PO
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
       form.reset({
         creditNoteNumber: newCreditNoteNumber,
-        purchaseOrderId: purchaseOrder.id,
-        supplierId: purchaseOrder.supplierId,
+        purchaseInvoiceId: purchaseInvoice.id,
+        supplierId: purchaseInvoice.supplierId,
         creditNoteDate: new Date().toISOString().split('T')[0],
-        items: purchaseOrder.items.map(item => ({
+        items: purchaseInvoice.items.map(item => ({
           productId: item.productId,
           quantityOrdered: item.quantity,
           quantityReceived: item.quantity,
           price: item.price,
           tvaRate: item.tvaRate,
         })),
-        paymentMode: purchaseOrder.paymentMode,
-        dueDate: purchaseOrder.dueDate ? new Date(purchaseOrder.dueDate).toISOString().split('T')[0] : '',
-        representativeId: purchaseOrder.representativeId,
-        reference: purchaseOrder.reference,
-        remarks: purchaseOrder.remarks,
-      } as any);
+        paymentMode: purchaseInvoice.paymentMode,
+        dueDate: purchaseInvoice.dueDate ? new Date(purchaseInvoice.dueDate).toISOString().split('T')[0] : '',
+        representativeId: purchaseInvoice.representativeId,
+        reference: purchaseInvoice.reference,
+        remarks: purchaseInvoice.remarks,
+      });
     } else {
       // Case: Creating a new BR from scratch or after selecting a PO in dialog
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
-      const selectedPO = purchaseOrders && purchaseOrders.find(o => o.id === watchedOrderId);
+      const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
         replace(selectedPO.items.map(item => ({
@@ -264,12 +263,12 @@ export function PurchaseCreditNoteDialog({
             quantityReceived: item.quantity,
             price: item.price,
             tvaRate: item.tvaRate,
-        })) as any);
+        })));
       } else {
          // Reset for manual creation
          form.reset({
             creditNoteNumber: newCreditNoteNumber,
-            purchaseOrderId: '',
+            purchaseInvoiceId: '',
             supplierId: '',
             creditNoteDate: new Date().toISOString().split('T')[0],
             items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0, tvaRate: 20 }],
@@ -278,10 +277,10 @@ export function PurchaseCreditNoteDialog({
             representativeId: '',
             reference: '',
             remarks: '',
-         } as any);
+         });
       }
     }
-  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace, lastCreditNoteNumber]);
+  }, [isOpen, isEditMode, creditNote, purchaseInvoice, watchedOrderId, purchaseOrders, form, replace, lastCreditNoteNumber]);
 
 
   const getProductName = (productId: string) => {
@@ -309,10 +308,10 @@ export function PurchaseCreditNoteDialog({
 
     const creditNoteData: Omit<PurchaseCreditNote, 'id' > = {
         creditNoteNumber: data.creditNoteNumber,
-        purchaseInvoiceId: data.purchaseOrderId,
+        purchaseInvoiceId: data.purchaseInvoiceId,
         supplierId: data.supplierId,
         creditNoteDate: new Date(data.creditNoteDate).toISOString(),
-        items: (data.items as any).map(({ productId, quantityReceived, price, tvaRate }: any) => ({
+        items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
             productId,
             quantity: quantityReceived,
             price: price ?? 0,
@@ -324,8 +323,8 @@ export function PurchaseCreditNoteDialog({
     };
     
 
-    if (isEditMode && receipt) {
-        const creditNoteDocRef = doc(firestore, 'purchaseCreditNotes', receipt.id);
+    if (isEditMode && creditNote) {
+        const creditNoteDocRef = doc(firestore, 'purchaseCreditNotes', creditNote.id);
         updateDocumentNonBlocking(creditNoteDocRef, {
             ...creditNoteData
         });
@@ -385,7 +384,7 @@ export function PurchaseCreditNoteDialog({
           ...currentItem,
           productId: value,
           price: product?.price ?? 0 
-      } as any);
+      });
     }
   };
 
@@ -397,7 +396,7 @@ export function PurchaseCreditNoteDialog({
             ...watchedItems[index], 
             productId: newArticle.id,
             price: newArticle.price
-        } as any);
+        });
       }, 100);
     }
     articleCreationIndex.current = null;
@@ -426,12 +425,12 @@ export function PurchaseCreditNoteDialog({
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Modifier' : 'Créer'} un avoir fournisseur</DialogTitle>
               <DialogDescription>
-                {isEditMode ? "Modifiez les informations de l'avoir." : "Créez un avoir fournisseur à partir d'un bon de commande existant ou manuellement."}
+                {isEditMode ? "Modifiez les informations de l'avoir." : "Créez un avoir fournisseur à partir d'une facture existante ou manuellement."}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="relative lg:col-span-4 rounded-md border border-black p-4 pt-6">
+                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
                     <div className="space-y-4">
                         <FormField
@@ -441,7 +440,7 @@ export function PurchaseCreditNoteDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: AV-0001" {...field} className="w-full border-black" disabled={readOnly} />
+                                    <Input placeholder="Ex: AV-0001" {...field} className="w-full" disabled={readOnly} />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -454,7 +453,7 @@ export function PurchaseCreditNoteDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                               <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} className="w-full border-black" />
+                                <Input type="date" {...field} disabled={readOnly} className="w-full" />
                               </FormControl>
                               <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -462,7 +461,7 @@ export function PurchaseCreditNoteDialog({
                         />
                     </div>
                 </div>
-                <div className="relative lg:col-span-8 space-y-2 rounded-md border border-black p-4 pt-6">
+                <div className="relative lg:col-span-8 space-y-2 rounded-md border border-blue-800 p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
                      <FormField
                           control={form.control}
@@ -476,7 +475,7 @@ export function PurchaseCreditNoteDialog({
                                 disabled={readOnly || fromBC}
                               >
                                 <FormControl>
-                                  <SelectTrigger className='w-full border-black'>
+                                  <SelectTrigger className='w-full'>
                                     <SelectValue placeholder="Sélectionnez un fournisseur" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -503,7 +502,7 @@ export function PurchaseCreditNoteDialog({
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="relative lg:col-span-4 rounded-md border border-black p-4 pt-6">
+                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
                     <div className="space-y-4">
                         <FormField
@@ -514,7 +513,7 @@ export function PurchaseCreditNoteDialog({
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
                                     <FormControl>
-                                    <SelectTrigger className="w-full border-black">
+                                    <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Mode de paiement" />
                                     </SelectTrigger>
                                     </FormControl>
@@ -535,7 +534,7 @@ export function PurchaseCreditNoteDialog({
                                 <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={readOnly} className="w-full border-black" />
+                                    <Input type="date" {...field} disabled={readOnly} className="w-full" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                                 </FormItem>
@@ -543,7 +542,7 @@ export function PurchaseCreditNoteDialog({
                         />
                     </div>
                 </div>
-                <div className="relative lg:col-span-8 rounded-md border border-black p-4 pt-6 grid grid-cols-1 gap-4">
+                <div className="relative lg:col-span-8 rounded-md border border-blue-800 p-4 pt-6 grid grid-cols-1 gap-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
                     <FormField
                         control={form.control}
@@ -553,7 +552,7 @@ export function PurchaseCreditNoteDialog({
                             <FormLabel className="text-right">Représentant</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                 <FormControl>
-                                <SelectTrigger className='w-full border-black'>
+                                <SelectTrigger className='w-full'>
                                     <SelectValue placeholder="Représentant" />
                                 </SelectTrigger>
                                 </FormControl>
@@ -574,7 +573,7 @@ export function PurchaseCreditNoteDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                             <FormLabel className="text-right">Référence</FormLabel>
                             <FormControl>
-                                <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full border-black' />
+                                <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full' />
                             </FormControl>
                             <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -587,7 +586,7 @@ export function PurchaseCreditNoteDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
                             <FormLabel className="text-right">Remarques</FormLabel>
                             <FormControl>
-                                <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full border-black' />
+                                <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full' />
                             </FormControl>
                             <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
@@ -609,13 +608,13 @@ export function PurchaseCreditNoteDialog({
                    {!fromBC && !readOnly && <div className="w-[50px]"></div>}
                 </div>
               {fields.map((field, index) => {
-                const item: any = watchedItems[index];
+                const item = watchedItems[index];
                 const lineTotal = (item?.quantityReceived || 0) * (item?.price || 0);
 
                 return (
                   <div key={field.id} className={cn(gridLayout)}>
                     {fromBC ? (
-                      <p className="text-sm font-medium h-10 flex items-center">{getProductName(item.productId)}</p>
+                      <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
                     ) : (
                       <FormField
                         control={form.control}
@@ -624,7 +623,7 @@ export function PurchaseCreditNoteDialog({
                           <FormItem>
                             <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
                               <FormControl>
-                                <SelectTrigger className='border-black'>
+                                <SelectTrigger>
                                   <SelectValue placeholder="Article" />
                                 </SelectTrigger>
                               </FormControl>
@@ -652,18 +651,18 @@ export function PurchaseCreditNoteDialog({
                           type="number"
                           readOnly
                           disabled
-                          value={item.quantityOrdered}
-                          className="w-full border-black"
+                          value={field.quantityOrdered}
+                          className="w-full"
                         />
                     )}
 
                     <FormField
                       control={form.control}
-                      name={`items.${index}.quantityReceived` as any}
+                      name={`items.${index}.quantityReceived`}
                       render={({ field: itemField }) => (
                         <FormItem>
                           <FormControl>
-                            <Input type="number" placeholder="Qté reçue" className="w-full border-black" disabled={readOnly} {...itemField} />
+                            <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -672,11 +671,11 @@ export function PurchaseCreditNoteDialog({
 
                     <FormField
                         control={form.control}
-                        name={`items.${index}.price` as any}
+                        name={`items.${index}.price`}
                         render={({ field: itemField }) => (
                           <FormItem>
                             <FormControl>
-                              <Input type="number" placeholder="Prix UHT" className="w-full border-black" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                              <Input type="number" placeholder="Prix UHT" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -684,11 +683,11 @@ export function PurchaseCreditNoteDialog({
                       />
                     <FormField
                         control={form.control}
-                        name={`items.${index}.tvaRate` as any}
+                        name={`items.${index}.tvaRate`}
                         render={({ field: itemField }) => (
                           <FormItem>
                             <FormControl>
-                              <Input type="number" placeholder="TVA" className="w-full border-black" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                              <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -702,7 +701,7 @@ export function PurchaseCreditNoteDialog({
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       }).format(lineTotal)}
-                      className="w-full text-right border-black"
+                      className="w-full text-right"
                     />
 
 
@@ -717,7 +716,7 @@ export function PurchaseCreditNoteDialog({
                 )
               })}
               {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 } as any)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
                 </Button>
               )}
