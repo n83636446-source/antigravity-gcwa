@@ -122,9 +122,6 @@ export function TestResizableDialog({
 
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
-  
-  const gridLayout = "grid grid-cols-[1fr_120px_100px_80px_120px_50px] gap-2 items-end text-left";
-
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
@@ -468,29 +465,21 @@ export function TestResizableDialog({
         <Button variant="outline">Open Test Dialog</Button>
       </DialogTrigger>
       
-      {/* 1. CENTERED FRAME */}
       <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
-        
-        {/* 2. RESIZABLE BOX */}
         <div 
           className="relative bg-white border rounded-lg shadow-xl flex flex-col"
           style={{ width: size.width, height: size.height }}
         >
-          
-          {/* HEADER */}
           <div className="flex-none p-6 pb-4 border-b">
             <DialogHeader>
               <DialogTitle>Créer un bon de réception</DialogTitle>
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
-          {/* BODY */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 min-h-0">
            <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* --- GRID --- */}
               <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                  {/* Zone 1 */}
                   <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
@@ -514,10 +503,12 @@ export function TestResizableDialog({
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant={"outline"}
-                                            className={cn("w-full justify-between text-left font-normal px-3", !field.value && "text-muted-foreground")}
+                                            className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !field.value && "text-muted-foreground")}
                                         >
-                                            {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisir une date</span>}
-                                            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <span className="truncate flex-1 min-w-0">
+                                              {field.value ? format(field.value, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                                            </span>
+                                            <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0">
@@ -534,8 +525,6 @@ export function TestResizableDialog({
                         />
                     </div>
                   </div>
-                  
-                  {/* Zone 2 (Fournisseur) */}
                   <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                     <div className="pt-2">
@@ -546,7 +535,7 @@ export function TestResizableDialog({
                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                                     <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
                                     <Select onValueChange={handleSupplierChange} value={field.value}>
-                                        <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100">
+                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                             <SelectValue placeholder="Sélectionnez un fournisseur" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -558,8 +547,6 @@ export function TestResizableDialog({
                         />
                     </div>
                   </div>
-                  
-                  {/* Zone 3 */}
                     <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                         <div className="space-y-4 pt-2">
@@ -570,7 +557,7 @@ export function TestResizableDialog({
                                      <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                                         <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100">
+                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                                 <SelectValue placeholder="Mode de paiement" />
                                             </SelectTrigger>
                                              <SelectContent>
@@ -590,13 +577,15 @@ export function TestResizableDialog({
                                         <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date d'échéance</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button
+                                                 <Button
                                                     variant={"outline"}
-                                                    className={cn("w-full justify-between text-left font-normal px-3", !field.value && "text-muted-foreground")}
-                                                >
-                                                    {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisir une date</span>}
-                                                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
+                                                    className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !field.value && "text-muted-foreground")}
+                                                  >
+                                                    <span className="truncate flex-1 min-w-0">
+                                                      {field.value ? format(field.value, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                                                    </span>
+                                                    <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                  </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
                                                 <Calendar
@@ -612,8 +601,6 @@ export function TestResizableDialog({
                             />
                         </div>
                     </div>
-
-                    {/* Zone 4 */}
                     <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
@@ -624,7 +611,7 @@ export function TestResizableDialog({
                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                                         <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Représentant</Label>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100">
+                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                                 <SelectValue placeholder="Sélectionnez un représentant" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -649,8 +636,6 @@ export function TestResizableDialog({
                         </div>
                     </div>
               </div>
-              
-              {/* --- Table --- */}
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader className="bg-gray-50">
@@ -667,16 +652,18 @@ export function TestResizableDialog({
                     <TableRow>
                       <TableCell>
                         <Select defaultValue="article1">
-                          <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                <SelectValue placeholder="Sélectionnez un article"/>
+                            </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
                             <SelectItem value="article2">Pantalon Lin Beige</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell><Input type="number" defaultValue="1" className="min-w-0" /></TableCell>
-                      <TableCell><Input type="number" defaultValue="45.00" className="min-w-0" /></TableCell>
-                      <TableCell><Input type="number" defaultValue="20" className="min-w-0" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="1" className="min-w-0 w-full" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="45.00" className="min-w-0 w-full" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="20" className="min-w-0 w-full" /></TableCell>
                       <TableCell className="text-right font-medium">45,00 €</TableCell>
                       <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
                     </TableRow>
@@ -692,7 +679,6 @@ export function TestResizableDialog({
             </form>
            </Form>
           </div>
-          {/* FOOTER */}
           <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
             <div className="space-y-2 text-right mb-4">
                 <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
@@ -704,8 +690,6 @@ export function TestResizableDialog({
               <Button type="submit" form='receipt-form' className="bg-slate-900 text-white">Créer</Button>
             </DialogFooter>
           </div>
-          
-          {/* HANDLES */}
           <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
           <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
           <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md" />
