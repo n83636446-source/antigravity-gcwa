@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { CreditNote, Supplier } from '@/lib/types';
+import type { CreditNote, Supplier, PurchaseOrder, Product } from '@/lib/types';
 import { CreditNoteDialog } from '@/components/credit-note-dialog';
 import { CreditNotesTable } from '@/components/credit-notes-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -23,6 +23,18 @@ export default function CreditNotesPage() {
     [firestore]
   );
   const { data: suppliers } = useCollection<Supplier>(suppliersRef);
+
+  const purchaseOrdersRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
+    [firestore]
+  );
+  const { data: purchaseOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
+
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
+    [firestore]
+  );
+  const { data: products } = useCollection<Product>(productsRef);
   
   const lastCreditNoteNumber = useMemo(() => {
     if (!creditNotes || creditNotes.length === 0) {
@@ -42,6 +54,9 @@ export default function CreditNotesPage() {
       >
         <CreditNoteDialog
           suppliers={suppliers || []}
+          creditNotes={creditNotes || []}
+          purchaseOrders={purchaseOrders || []}
+          products={products || []}
           lastCreditNoteNumber={lastCreditNoteNumber}
         />
       </PageHeader>

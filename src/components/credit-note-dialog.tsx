@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, PurchaseOrder, CreditNote, Supplier, Representative } from '@/lib/types';
+import type { Product, PurchaseOrder, PurchaseReceipt, Supplier, Representative, CreditNote } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -44,7 +44,7 @@ import { Label } from '@/components/ui/label';
 const creditNoteItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
   quantityOrdered: z.coerce.number().int().optional(),
-  quantity: z.coerce
+  quantityReceived: z.coerce
     .number()
     .int()
     .min(0, 'La quantité doit être un entier non négatif.'),
@@ -53,10 +53,10 @@ const creditNoteItemSchema = z.object({
 });
 
 const creditNoteSchema = z.object({
-  creditNoteNumber: z.string().nonempty("Le numéro de document est requis."),
+  receiptNumber: z.string().nonempty("Le numéro de document est requis."),
   purchaseOrderId: z.string().optional(),
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
-  creditNoteDate: z.string({ required_error: 'La date est requise.' }),
+  receiptDate: z.string({ required_error: 'La date est requise.' }),
   items: z.array(creditNoteItemSchema).min(1, "L'avoir doit contenir au moins un article."),
   paymentMode: z.string().optional(),
   dueDate: z.string({ required_error: "La date d'échéance est requise." }).nonempty("La date d'échéance est requise."),
@@ -118,10 +118,12 @@ export function CreditNoteDialog({
   const representativesRef = useMemoFirebase(() => (firestore ? collection(firestore, 'representatives') : null), [firestore]);
   const { data: representatives } = useCollection<Representative>(representativesRef);
 
+
   const products = allProducts || initialProducts;
   const suppliers = allSuppliers || initialSuppliers;
   
   const gridLayout = "grid grid-cols-[1fr_120px_100px_80px_120px_50px] gap-2 items-end text-left";
+
 
   const lastSupplierCodeNumber = useMemo(() => {
     if (!suppliers || suppliers.length === 0) return 0;
@@ -142,22 +144,25 @@ export function CreditNoteDialog({
   }, [products]);
 
 
+  // Filter out purchase orders that already have a receipt
   const availablePurchaseOrders = useMemo(() => {
     if (!creditNotes || !purchaseOrders) return [];
-    const creditedOrderIds = new Set(creditNotes.map(r => r.id));
-    if (isEditMode && creditNote?.id) {
-        creditedOrderIds.delete(creditNote.id);
+    const creditedOrderIds = new Set(creditNotes.map(r => r.purchaseOrderId));
+    // When editing, allow the current receipt's PO to be in the list
+    if (isEditMode && creditNote?.purchaseOrderId) {
+        creditedOrderIds.delete(creditNote.purchaseOrderId);
     }
     return purchaseOrders.filter(o => !creditedOrderIds.has(o.id));
   }, [purchaseOrders, creditNotes, isEditMode, creditNote]);
 
+
   const form = useForm<CreditNoteFormValues>({
     resolver: zodResolver(creditNoteSchema),
     defaultValues: {
-      creditNoteNumber: '',
+      receiptNumber: '',
       purchaseOrderId: '',
       supplierId: '',
-      creditNoteDate: new Date().toISOString().split('T')[0],
+      receiptDate: new Date().toISOString().split('T')[0],
       items: [],
       paymentMode: 'Espèces',
       dueDate: '',
@@ -174,19 +179,19 @@ export function CreditNoteDialog({
 
   const watchedItems = useWatch({ control: form.control, name: 'items' });
   const watchedOrderId = form.watch('purchaseOrderId');
-  const fromBC = !!watchedOrderId || (isEditMode && !!creditNote?.id);
+  const fromBC = !!watchedOrderId || (isEditMode && !!creditNote?.purchaseOrderId);
   
   const liveTotals = useMemo(() => {
     const totalHT = watchedItems?.reduce((sum, item) => {
         const product = products.find(p => p.id === item.productId);
         const price = item.price ?? product?.price ?? 0;
-        return sum + ((item.quantity || 0) * price);
+        return sum + ((item.quantityReceived || 0) * price);
     }, 0) || 0;
 
     const totalTVA = watchedItems?.reduce((sum, item) => {
         const product = products.find(p => p.id === item.productId);
         const price = item.price ?? product?.price ?? 0;
-        const itemHT = (item.quantity || 0) * price;
+        const itemHT = (item.quantityReceived || 0) * price;
         const tvaAmount = itemHT * ((item.tvaRate || 0) / 100);
         return sum + tvaAmount;
     }, 0) || 0;
@@ -200,25 +205,26 @@ export function CreditNoteDialog({
   useEffect(() => {
     if (!isOpen) {
       form.reset({
-        creditNoteNumber: '',
+        receiptNumber: '',
         purchaseOrderId: '',
         supplierId: '',
-        creditNoteDate: new Date().toISOString().split('T')[0],
+        receiptDate: new Date().toISOString().split('T')[0],
         items: [],
       });
       return;
     }
   
     if (isEditMode && creditNote) {
-      const orderForCreditNote = purchaseOrders.find(o => o.id === creditNote.id);
+      const orderForCreditNote = purchaseOrders.find(o => o.id === creditNote.purchaseOrderId);
       form.reset({
-        creditNoteNumber: creditNote.creditNoteNumber,
+        receiptNumber: creditNote.creditNoteNumber,
+        purchaseOrderId: creditNote.purchaseOrderId,
         supplierId: creditNote.supplierId,
-        creditNoteDate: new Date(creditNote.creditNoteDate).toISOString().split('T')[0],
+        receiptDate: new Date(creditNote.creditNoteDate).toISOString().split('T')[0],
         items: creditNote.items.map(item => ({
           productId: item.productId,
           quantityOrdered: orderForCreditNote?.items.find(i => i.productId === item.productId)?.quantity || 0,
-          quantity: item.quantity,
+          quantityReceived: item.quantity,
           price: item.price,
           tvaRate: item.tvaRate,
         })),
@@ -229,16 +235,17 @@ export function CreditNoteDialog({
         remarks: creditNote.remarks,
       });
     } else if (purchaseOrder) {
+      // Case: Transfer from a specific PO
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
       form.reset({
-        creditNoteNumber: newCreditNoteNumber,
+        receiptNumber: newCreditNoteNumber,
         purchaseOrderId: purchaseOrder.id,
         supplierId: purchaseOrder.supplierId,
-        creditNoteDate: new Date().toISOString().split('T')[0],
+        receiptDate: new Date().toISOString().split('T')[0],
         items: purchaseOrder.items.map(item => ({
           productId: item.productId,
           quantityOrdered: item.quantity,
-          quantity: item.quantity,
+          quantityReceived: item.quantity,
           price: item.price,
           tvaRate: item.tvaRate,
         })),
@@ -249,24 +256,26 @@ export function CreditNoteDialog({
         remarks: purchaseOrder.remarks,
       });
     } else {
+      // Case: Creating a new BR from scratch or after selecting a PO in dialog
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
-      const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
+      const selectedPO = purchaseOrders?.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
         replace(selectedPO.items.map(item => ({
             productId: item.productId,
             quantityOrdered: item.quantity,
-            quantity: item.quantity,
+            quantityReceived: item.quantity,
             price: item.price,
             tvaRate: item.tvaRate,
         })));
       } else {
+         // Reset for manual creation
          form.reset({
-            creditNoteNumber: newCreditNoteNumber,
+            receiptNumber: newCreditNoteNumber,
             purchaseOrderId: '',
             supplierId: '',
-            creditNoteDate: new Date().toISOString().split('T')[0],
-            items: [{ productId: '', quantityOrdered: 0, quantity: 0, price: 0, tvaRate: 20 }],
+            receiptDate: new Date().toISOString().split('T')[0],
+            items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0, tvaRate: 20 }],
             paymentMode: 'Espèces',
             dueDate: '',
             representativeId: '',
@@ -288,10 +297,10 @@ export function CreditNoteDialog({
 
     if (!isEditMode) {
         const creditNoteExists = creditNotes.some(
-          (r) => r.creditNoteNumber === data.creditNoteNumber
+          (r) => r.creditNoteNumber === data.receiptNumber
         );
         if (creditNoteExists) {
-          form.setError('creditNoteNumber', {
+          form.setError('receiptNumber', {
             type: 'manual',
             message: 'Ce numéro de document est déjà utilisé.',
           });
@@ -302,12 +311,13 @@ export function CreditNoteDialog({
     const { totalHT, totalTTC } = liveTotals;
 
     const creditNoteData: Omit<CreditNote, 'id' | 'status' | 'reason'> = {
-        creditNoteNumber: data.creditNoteNumber,
+        creditNoteNumber: data.receiptNumber,
+        purchaseOrderId: data.purchaseOrderId,
         supplierId: data.supplierId,
-        creditNoteDate: new Date(data.creditNoteDate).toISOString(),
-        items: data.items.map(({ productId, quantity, price, tvaRate }) => ({
+        creditNoteDate: new Date(data.receiptDate).toISOString(),
+        items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
             productId,
-            quantity,
+            quantity: quantityReceived,
             price: price ?? 0,
             tvaRate: tvaRate ?? 20,
         })),
@@ -319,32 +329,32 @@ export function CreditNoteDialog({
         reference: data.reference,
         remarks: data.remarks,
     };
+    
 
     if (isEditMode && creditNote) {
         const creditNoteDocRef = doc(firestore, 'creditNotes', creditNote.id);
         updateDocumentNonBlocking(creditNoteDocRef, {
             ...creditNoteData,
-            status: creditNote.status,
-            reason: creditNote.reason,
+            status: creditNote.status, // Preserve current status on edit
         });
         toast({
-            title: 'Avoir fournisseur modifié',
+            title: 'Avoir modifié',
             description: "Les détails de l'avoir ont été mis à jour.",
         });
 
     } else {
         const newCreditNoteData = {
           ...creditNoteData,
-          reason: '',
           status: 'Brouillon' as const,
+          reason: '',
         };
 
         const creditNoteRef = collection(firestore, 'creditNotes');
         addDocumentNonBlocking(creditNoteRef, newCreditNoteData)
           .then((docRef) => {
              toast({
-              title: 'Avoir fournisseur créé',
-              description: `L'avoir "${data.creditNoteNumber}" est enregistré en brouillon.`,
+              title: 'Avoir créé',
+              description: `L'avoir "${data.receiptNumber}" est enregistré en brouillon.`,
             });
             onCreditNoteCreated?.();
           })
@@ -419,6 +429,7 @@ export function CreditNoteDialog({
   
   const readOnly = isEditMode && creditNote?.status === 'Appliqué';
 
+
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -439,7 +450,7 @@ export function CreditNoteDialog({
                     <div className="space-y-4 pt-2">
                         <FormField
                             control={form.control}
-                            name="creditNoteNumber"
+                            name="receiptNumber"
                             render={({ field }) => (
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
                                 <FormLabel className="text-right">Numéro</FormLabel>
@@ -452,7 +463,7 @@ export function CreditNoteDialog({
                         />
                        <FormField
                           control={form.control}
-                          name="creditNoteDate"
+                          name="receiptDate"
                           render={({ field }) => (
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
                               <FormLabel className="text-right">Date</FormLabel>
@@ -609,7 +620,7 @@ export function CreditNoteDialog({
                 <div className={cn('grid text-sm font-medium', gridLayout)}>
                    <Label>Article</Label>
                    {fromBC && <Label>Qté Cmdée</Label>}
-                   <Label>Qté</Label>
+                   <Label>Qté Reçue</Label>
                    <Label>Prix UHT</Label>
                    <Label>TVA (%)</Label>
                    <Label className="text-right">Total HT</Label>
@@ -617,7 +628,7 @@ export function CreditNoteDialog({
                 </div>
               {fields.map((field, index) => {
                 const item = watchedItems[index];
-                const lineTotal = (item?.quantity || 0) * (item?.price || 0);
+                const lineTotal = (item?.quantityReceived || 0) * (item?.price || 0);
 
                 return (
                   <div key={field.id} className={cn(gridLayout)}>
@@ -666,11 +677,11 @@ export function CreditNoteDialog({
 
                     <FormField
                       control={form.control}
-                      name={`items.${index}.quantity`}
+                      name={`items.${index}.quantityReceived`}
                       render={({ field: itemField }) => (
                         <FormItem>
                           <FormControl>
-                            <Input type="number" placeholder="Qté" className="w-full" disabled={readOnly} {...itemField} />
+                            <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -724,7 +735,7 @@ export function CreditNoteDialog({
                 )
               })}
               {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantity: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
                 </Button>
               )}
@@ -748,6 +759,7 @@ export function CreditNoteDialog({
                     {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
                 </div>
             </div>
+
 
             <DialogFooter className="sm:justify-end">
               <div className='flex gap-2'>
