@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -110,6 +110,70 @@ export function TestResizableDialog({
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
   
+  const [size, setSize] = useState({ width: 1000, height: 800 });
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const isResizing = useRef(false);
+
+  const minWidth = 350;
+  const minHeight = 400;
+
+  const handleResize = useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    setSize(prev => ({
+      width: Math.max(minWidth, prev.width + e.movementX),
+      height: Math.max(minHeight, prev.height + e.movementY),
+    }));
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    window.removeEventListener('mousemove', handleResize);
+    window.removeEventListener('mouseup', stopResizing);
+  }, [handleResize]);
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    window.addEventListener('mousemove', handleResize);
+    window.addEventListener('mouseup', stopResizing);
+  };
+  
+    const handleResizeY = useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    setSize(prev => ({
+      ...prev,
+      height: Math.max(minHeight, prev.height + e.movementY),
+    }));
+  }, []);
+
+  const handleResizeX = useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    setSize(prev => ({
+      ...prev,
+      width: Math.max(minWidth, prev.width + e.movementX),
+    }));
+  }, []);
+
+  const startResizingX = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    window.addEventListener('mousemove', handleResizeX);
+    window.addEventListener('mouseup', () => {
+      isResizing.current = false;
+      window.removeEventListener('mousemove', handleResizeX);
+    });
+  };
+
+  const startResizingY = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    window.addEventListener('mousemove', handleResizeY);
+    window.addEventListener('mouseup', () => {
+      isResizing.current = false;
+      window.removeEventListener('mousemove', handleResizeY);
+    });
+  };
+
   const suppliersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'suppliers') : null), [firestore]);
   const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
 
@@ -434,341 +498,369 @@ export function TestResizableDialog({
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
-              <DialogDescription>
-                {isEditMode ? 'Modifiez les informations du bon de réception.' : "Créez un bon de réception à partir d'un bon de commande existant ou manuellement."}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                    <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="receiptNumber"
-                            render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
-                                <FormLabel className="text-right">Numéro</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ex: BR-0001" {...field} className="w-full" disabled={readOnly} />
-                                </FormControl>
-                                <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                            )}
-                        />
-                       <FormField
-                          control={form.control}
-                          name="receiptDate"
-                          render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
-                              <FormLabel className="text-right">Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} disabled={readOnly} className="w-full" />
-                              </FormControl>
-                              <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                          )}
-                        />
-                    </div>
-                </div>
-                <div className="relative lg:col-span-8 space-y-2 rounded-md border border-blue-800 p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
-                     <FormField
-                          control={form.control}
-                          name="supplierId"
-                          render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                              <FormLabel className="text-right">Fournisseur</FormLabel>
-                              <Select
-                                onValueChange={handleSupplierChange}
-                                value={field.value}
-                                disabled={readOnly || fromBC}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className='w-full'>
-                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                                    <div className="flex items-center gap-2">
-                                      <PlusCircle className="h-4 w-4" />
-                                      <span>Créer un nouveau fournisseur</span>
-                                    </div>
-                                  </SelectItem>
-                                  <Separator />
-                                  {suppliers?.map((supplier) => (
-                                    <SelectItem key={supplier.id} value={supplier.id}>
-                                      {supplier.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                          )}
-                        />
-                </div>
+      <DialogContent 
+        ref={dialogRef}
+        style={{ width: size.width, height: size.height }}
+        className="sm:max-w-none p-0 flex flex-col"
+      >
+          <div 
+            className="w-full h-full flex flex-col"
+          >
+            <div className='flex-shrink-0 p-6'>
+              <DialogHeader>
+                <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
+                <DialogDescription>
+                  {isEditMode ? 'Modifiez les informations du bon de réception.' : "Créez un bon de réception à partir d'un bon de commande existant ou manuellement."}
+                </DialogDescription>
+              </DialogHeader>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
-                    <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="paymentMode"
-                            render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
-                                <FormLabel className="text-right">Mode de paiement</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
+          
+            <div className="flex-grow overflow-auto px-6">
+              <Form {...form}>
+                <form id="resizable-dialog-form" className="space-y-4">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                      <div className="relative sm:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
+                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
+                          <div className="space-y-4">
+                              <FormField
+                                  control={form.control}
+                                  name="receiptNumber"
+                                  render={({ field }) => (
+                                  <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
+                                      <FormLabel className="text-right">Numéro</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="Ex: BR-0001" {...field} className="w-full" disabled={readOnly} />
+                                      </FormControl>
+                                      <FormMessage className="col-span-2 col-start-2" />
+                                  </FormItem>
+                                  )}
+                              />
+                            <FormField
+                                control={form.control}
+                                name="receiptDate"
+                                render={({ field }) => (
+                                  <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
+                                    <FormLabel className="text-right">Date</FormLabel>
                                     <FormControl>
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Mode de paiement" />
-                                    </SelectTrigger>
+                                      <Input type="date" {...field} disabled={readOnly} className="w-full" />
+                                    </FormControl>
+                                    <FormMessage className="col-span-2 col-start-2" />
+                                  </FormItem>
+                                )}
+                              />
+                          </div>
+                      </div>
+                      <div className="relative sm:col-span-8 space-y-2 rounded-md border border-blue-800 p-4 pt-6">
+                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
+                          <FormField
+                                control={form.control}
+                                name="supplierId"
+                                render={({ field }) => (
+                                  <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                    <FormLabel className="text-right">Fournisseur</FormLabel>
+                                    <Select
+                                      onValueChange={handleSupplierChange}
+                                      value={field.value}
+                                      disabled={readOnly || fromBC}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger className='w-full'>
+                                          <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                          <div className="flex items-center gap-2">
+                                            <PlusCircle className="h-4 w-4" />
+                                            <span>Créer un nouveau fournisseur</span>
+                                          </div>
+                                        </SelectItem>
+                                        <Separator />
+                                        {suppliers?.map((supplier) => (
+                                          <SelectItem key={supplier.id} value={supplier.id}>
+                                            {supplier.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage className="col-span-2 col-start-2" />
+                                  </FormItem>
+                                )}
+                              />
+                      </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                      <div className="relative sm:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
+                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
+                          <div className="space-y-4">
+                              <FormField
+                                  control={form.control}
+                                  name="paymentMode"
+                                  render={({ field }) => (
+                                      <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
+                                      <FormLabel className="text-right">Mode de paiement</FormLabel>
+                                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
+                                          <FormControl>
+                                          <SelectTrigger className="w-full">
+                                              <SelectValue placeholder="Mode de paiement" />
+                                          </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                          <SelectItem value="Espèces">Espèces</SelectItem>
+                                          <SelectItem value="Chèque">Chèque</SelectItem>
+                                          <SelectItem value="Virement">Virement</SelectItem>
+                                          </SelectContent>
+                                      </Select>
+                                      <FormMessage className="col-span-2 col-start-2" />
+                                      </FormItem>
+                                  )}
+                              />
+                              <FormField
+                                  control={form.control}
+                                  name="dueDate"
+                                  render={({ field }) => (
+                                      <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
+                                      <FormLabel className="text-right">Date d'échéance</FormLabel>
+                                      <FormControl>
+                                          <Input type="date" {...field} disabled={readOnly} className="w-full" />
+                                      </FormControl>
+                                      <FormMessage className="col-span-2 col-start-2" />
+                                      </FormItem>
+                                  )}
+                              />
+                          </div>
+                      </div>
+                      <div className="relative sm:col-span-8 rounded-md border border-blue-800 p-4 pt-6 grid grid-cols-1 gap-4">
+                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
+                          <FormField
+                              control={form.control}
+                              name="representativeId"
+                              render={({ field }) => (
+                                  <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                  <FormLabel className="text-right">Représentant</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
+                                      <FormControl>
+                                      <SelectTrigger className='w-full'>
+                                          <SelectValue placeholder="Représentant" />
+                                      </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                      {(representatives || []).map(rep => (
+                                          <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                                      ))}
+                                      </SelectContent>
+                                  </Select>
+                                  <FormMessage className="col-span-2 col-start-2" />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="reference"
+                              render={({ field }) => (
+                                  <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                  <FormLabel className="text-right">Référence</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full' />
+                                  </FormControl>
+                                  <FormMessage className="col-span-2 col-start-2" />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="remarks"
+                              render={({ field }) => (
+                                  <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                                  <FormLabel className="text-right">Remarques</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full' />
+                                  </FormControl>
+                                  <FormMessage className="col-span-2 col-start-2" />
+                                  </FormItem>
+                              )}
+                          />
+                      </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                      <div className={cn('grid text-sm font-medium', gridLayout)}>
+                        <Label>Article</Label>
+                        {fromBC && <Label>Qté Cmdée</Label>}
+                        <Label>Qté Reçue</Label>
+                        <Label>Prix UHT</Label>
+                        <Label>TVA (%)</Label>
+                        <Label className="text-right">Total HT</Label>
+                        {!fromBC && !readOnly && <div className="w-[50px]"></div>}
+                      </div>
+                    {fields.map((field, index) => {
+                      const item = watchedItems[index];
+                      const lineTotal = (item?.quantityReceived || 0) * (item?.price || 0);
+
+                      return (
+                        <div key={field.id} className={cn(gridLayout)}>
+                          {fromBC ? (
+                            <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
+                          ) : (
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.productId`}
+                              render={({ field: itemField }) => (
+                                <FormItem>
+                                  <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Article" />
+                                      </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                    <SelectItem value="Espèces">Espèces</SelectItem>
-                                    <SelectItem value="Chèque">Chèque</SelectItem>
-                                    <SelectItem value="Virement">Virement</SelectItem>
+                                      <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
+                                        <div className="flex items-center gap-2">
+                                          <PlusCircle className="h-4 w-4" />
+                                          <span>Créer un article</span>
+                                        </div>
+                                      </SelectItem>
+                                      <Separator />
+                                      {products?.map((product) => (
+                                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                      ))}
                                     </SelectContent>
-                                </Select>
-                                <FormMessage className="col-span-2 col-start-2" />
+                                  </Select>
+                                  <FormMessage />
                                 </FormItem>
-                            )}
-                        />
-                        <FormField
+                              )}
+                            />
+                          )}
+
+                          {fromBC && (
+                              <Input
+                                type="number"
+                                readOnly
+                                disabled
+                                value={field.quantityOrdered}
+                                className="w-full"
+                              />
+                          )}
+
+                          <FormField
                             control={form.control}
-                            name="dueDate"
-                            render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
-                                <FormLabel className="text-right">Date d'échéance</FormLabel>
+                            name={`items.${index}.quantityReceived`}
+                            render={({ field: itemField }) => (
+                              <FormItem>
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={readOnly} className="w-full" />
+                                  <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
                                 </FormControl>
-                                <FormMessage className="col-span-2 col-start-2" />
-                                </FormItem>
+                                <FormMessage />
+                              </FormItem>
                             )}
-                        />
-                    </div>
-                </div>
-                <div className="relative lg:col-span-8 rounded-md border border-blue-800 p-4 pt-6 grid grid-cols-1 gap-4">
-                    <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
-                    <FormField
-                        control={form.control}
-                        name="representativeId"
-                        render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                            <FormLabel className="text-right">Représentant</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
-                                <FormControl>
-                                <SelectTrigger className='w-full'>
-                                    <SelectValue placeholder="Représentant" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {(representatives || []).map(rep => (
-                                    <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="reference"
-                        render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                            <FormLabel className="text-right">Référence</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full' />
-                            </FormControl>
-                            <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={form.control}
-                        name="remarks"
-                        render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                            <FormLabel className="text-right">Remarques</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full' />
-                            </FormControl>
-                            <FormMessage className="col-span-2 col-start-2" />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            </div>
+                          />
 
-            <Separator />
-
-            <div className="space-y-2">
-                <div className={cn('grid text-sm font-medium', gridLayout)}>
-                   <Label>Article</Label>
-                   {fromBC && <Label>Qté Cmdée</Label>}
-                   <Label>Qté Reçue</Label>
-                   <Label>Prix UHT</Label>
-                   <Label>TVA (%)</Label>
-                   <Label className="text-right">Total HT</Label>
-                   {!fromBC && !readOnly && <div className="w-[50px]"></div>}
-                </div>
-              {fields.map((field, index) => {
-                const item = watchedItems[index];
-                const lineTotal = (item?.quantityReceived || 0) * (item?.price || 0);
-
-                return (
-                  <div key={field.id} className={cn(gridLayout)}>
-                    {fromBC ? (
-                      <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
-                    ) : (
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.productId`}
-                        render={({ field: itemField }) => (
-                          <FormItem>
-                            <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Article" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
-                                  <div className="flex items-center gap-2">
-                                    <PlusCircle className="h-4 w-4" />
-                                    <span>Créer un article</span>
-                                  </div>
-                                </SelectItem>
-                                <Separator />
-                                {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    {fromBC && (
-                        <Input
-                          type="number"
-                          readOnly
-                          disabled
-                          value={field.quantityOrdered}
-                          className="w-full"
-                        />
-                    )}
-
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.quantityReceived`}
-                      render={({ field: itemField }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name={`items.${index}.price`}
-                        render={({ field: itemField }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input type="number" placeholder="Prix UHT" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    <FormField
-                        control={form.control}
-                        name={`items.${index}.tvaRate`}
-                        render={({ field: itemField }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    
-                    <Input
-                      readOnly
-                      disabled
-                      value={new Intl.NumberFormat('fr-FR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }).format(lineTotal)}
-                      className="w-full text-right"
-                    />
+                          <FormField
+                              control={form.control}
+                              name={`items.${index}.price`}
+                              render={({ field: itemField }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input type="number" placeholder="Prix UHT" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          <FormField
+                              control={form.control}
+                              name={`items.${index}.tvaRate`}
+                              render={({ field: itemField }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          
+                          <Input
+                            readOnly
+                            disabled
+                            value={new Intl.NumberFormat('fr-FR', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(lineTotal)}
+                            className="w-full text-right"
+                          />
 
 
-                    {!fromBC && !readOnly && (
-                      <div className="flex justify-center">
-                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {!fromBC && !readOnly && (
+                            <div className="flex justify-center">
+                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                          )}
                         </div>
+                      )
+                    })}
+                    {!fromBC && !readOnly && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
+                      </Button>
                     )}
                   </div>
-                )
-              })}
-              {!fromBC && !readOnly && (
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
-                </Button>
-              )}
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <div className="text-right font-medium">Total HT:</div>
-                <div className="text-right font-semibold">
-                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalHT)}
-                </div>
+                  
+                  <Separator />
+                  
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div className="text-right font-medium">Total HT:</div>
+                      <div className="text-right font-semibold">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalHT)}
+                      </div>
 
-                <div className="text-right font-medium">Total TVA:</div>
-                <div className="text-right font-semibold">
-                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTVA)}
-                </div>
+                      <div className="text-right font-medium">Total TVA:</div>
+                      <div className="text-right font-semibold">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTVA)}
+                      </div>
 
-                <div className="text-right font-bold text-lg border-t pt-2 mt-1">Total TTC:</div>
-                <div className="text-right font-bold text-lg text-primary border-t pt-2 mt-1">
-                    {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
-                </div>
+                      <div className="text-right font-bold text-lg border-t pt-2 mt-1">Total TTC:</div>
+                      <div className="text-right font-bold text-lg text-primary border-t pt-2 mt-1">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
+                      </div>
+                  </div>
+                </form>
+              </Form>
             </div>
 
+            <div className="flex-shrink-0 p-6 pt-0">
+              <DialogFooter className="sm:justify-end">
+                <div className='flex gap-2'>
+                  <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                    {readOnly ? 'Fermer' : 'Annuler'}
+                  </Button>
+                  {!readOnly && (
+                    <Button type="submit" form="resizable-dialog-form">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
+                  )}
+                </div>
+              </DialogFooter>
+            </div>
+        </div>
 
-            <DialogFooter className="sm:justify-end">
-              <div className='flex gap-2'>
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                  {readOnly ? 'Fermer' : 'Annuler'}
-                </Button>
-                {!readOnly && (
-                  <Button type="submit">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
-                )}
-              </div>
-            </DialogFooter>
-          </form>
-        </Form>
+        <div 
+            onMouseDown={startResizingX} 
+            className="absolute top-0 right-0 h-full w-2 cursor-ew-resize"
+        />
+        <div 
+            onMouseDown={startResizingY} 
+            className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize" 
+        />
+        <div 
+            onMouseDown={startResizing}
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
+        />
+
       </DialogContent>
     </Dialog>
     <ArticleDialog
@@ -787,5 +879,3 @@ export function TestResizableDialog({
     </>
   );
 }
-
-    
