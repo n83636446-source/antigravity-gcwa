@@ -102,6 +102,8 @@ export function TestResizableDialog({
   receipt,
 }: TestResizableDialogProps) {
   const [open, setOpen] = useState(false);
+  const [date, setDate] = React.useState<Date>()
+  const [dueDate, setDueDate] = React.useState<Date>()
   const { toast } = useToast();
   const firestore = useFirestore();
   const isEditMode = !!receipt;
@@ -466,176 +468,145 @@ export function TestResizableDialog({
       </DialogTrigger>
       
       <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
+        
         <div 
           className="relative bg-white border rounded-lg shadow-xl flex flex-col"
           style={{ width: size.width, height: size.height }}
         >
+          
+          {/* HEADER */}
           <div className="flex-none p-6 pb-4 border-b">
             <DialogHeader>
               <DialogTitle>Créer un bon de réception</DialogTitle>
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
+      
+          {/* BODY */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 min-h-0">
-           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form className="space-y-6">
               <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                   <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
-                        <FormField
-                            control={form.control}
-                            name="receiptNumber"
-                            render={({ field }) => (
-                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
-                                    <Input {...field} className="w-full min-w-0" />
-                                </div>
-                             )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="receiptDate"
-                            render={({ field }) => (
-                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !field.value && "text-muted-foreground")}
-                                        >
-                                            <span className="truncate flex-1 min-w-0">
-                                              {field.value ? format(field.value, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
-                                            </span>
-                                            <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={field.value}
-                                            onSelect={field.onChange}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                               </div>
-                            )}
-                        />
+                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                            <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
+                            <Input defaultValue="BR-0001" className="w-full min-w-0" />
+                        </div>
+                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                          <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
+                           <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
+                                  !date && "text-muted-foreground"
+                                )}
+                              >
+                                <span className="truncate flex-1 min-w-0">
+                                  {date ? format(date, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                                </span>
+                                <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                       </div>
                     </div>
                   </div>
                   <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                     <div className="pt-2">
-                         <FormField
-                            control={form.control}
-                            name="supplierId"
-                            render={({ field }) => (
-                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
-                                    <Select onValueChange={handleSupplierChange} value={field.value}>
-                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                            <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                        />
+                         <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                            <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
+                            <Select>
+                                <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                   </div>
                     <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                         <div className="space-y-4 pt-2">
-                            <FormField
-                                control={form.control}
-                                name="paymentMode"
-                                render={({ field }) => (
-                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                                <SelectValue placeholder="Mode de paiement" />
-                                            </SelectTrigger>
-                                             <SelectContent>
-                                                <SelectItem value="Espèces">Espèces</SelectItem>
-                                                <SelectItem value="Chèque">Chèque</SelectItem>
-                                                <SelectItem value="Virement">Virement</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="dueDate"
-                                render={({ field }) => (
-                                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date d'échéance</Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                 <Button
-                                                    variant={"outline"}
-                                                    className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !field.value && "text-muted-foreground")}
-                                                  >
-                                                    <span className="truncate flex-1 min-w-0">
-                                                      {field.value ? format(field.value, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
-                                                    </span>
-                                                    <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                  </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-                                                    onSelect={field.onChange}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                )}
-                            />
+                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
+                                <Select>
+                                    <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                        <SelectValue placeholder="Mode de paiement" />
+                                    </SelectTrigger>
+                                     <SelectContent>
+                                        <SelectItem value="Espèces">Espèces</SelectItem>
+                                        <SelectItem value="Chèque">Chèque</SelectItem>
+                                        <SelectItem value="Virement">Virement</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date d'échéance</Label>
+                                 <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
+                                        !dueDate && "text-muted-foreground"
+                                      )}
+                                    >
+                                      <span className="truncate flex-1 min-w-0">
+                                        {dueDate ? format(dueDate, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                                      </span>
+                                      <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={dueDate}
+                                      onSelect={setDueDate}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                            </div>
                         </div>
                     </div>
                     <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
-                             <FormField
-                                control={form.control}
-                                name="representativeId"
-                                render={({ field }) => (
-                                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Représentant</Label>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                                <SelectValue placeholder="Sélectionnez un représentant" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {(representatives || []).map(rep => (
-                                                    <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="reference"
-                                render={({ field }) => (
-                                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Référence</Label>
-                                        <Input {...field} placeholder="Référence" className="w-full min-w-0" />
-                                    </div>
-                                )}
-                            />
+                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Représentant</Label>
+                                <Select>
+                                    <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                        <SelectValue placeholder="Sélectionnez un représentant" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(representatives || []).map(rep => (
+                                            <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Référence</Label>
+                                <Input placeholder="Référence" className="w-full min-w-0" />
+                            </div>
                         </div>
                     </div>
               </div>
+              
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader className="bg-gray-50">
@@ -652,18 +623,18 @@ export function TestResizableDialog({
                     <TableRow>
                       <TableCell>
                         <Select defaultValue="article1">
-                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                <SelectValue placeholder="Sélectionnez un article"/>
-                            </SelectTrigger>
+                          <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                              <SelectValue placeholder="Sélectionnez un article"/>
+                          </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
                             <SelectItem value="article2">Pantalon Lin Beige</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell><Input type="number" defaultValue="1" className="min-w-0 w-full" /></TableCell>
-                      <TableCell><Input type="number" defaultValue="45.00" className="min-w-0 w-full" /></TableCell>
-                      <TableCell><Input type="number" defaultValue="20" className="min-w-0 w-full" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="1" className="min-w-[60px] w-full min-w-0" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="45.00" className="min-w-[60px] w-full min-w-0" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="20" className="min-w-[60px] w-full min-w-0" /></TableCell>
                       <TableCell className="text-right font-medium">45,00 €</TableCell>
                       <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
                     </TableRow>
@@ -677,8 +648,9 @@ export function TestResizableDialog({
               </div>
 
             </form>
-           </Form>
           </div>
+          
+          {/* FOOTER */}
           <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
             <div className="space-y-2 text-right mb-4">
                 <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
@@ -687,9 +659,11 @@ export function TestResizableDialog({
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-              <Button type="submit" form='receipt-form' className="bg-slate-900 text-white">Créer</Button>
+              <Button className="bg-slate-900 text-white">Créer</Button>
             </DialogFooter>
           </div>
+          
+          {/* RESIZE HANDLES */}
           <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
           <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
           <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md" />
