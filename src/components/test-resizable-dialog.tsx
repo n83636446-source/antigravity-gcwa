@@ -107,71 +107,6 @@ export function TestResizableDialog({
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
   
-  const [size, setSize] = useState({ width: 1000, height: 800 });
-  const isResizing = useRef(false);
-
-  const minWidth = 350;
-  const minHeight = 400;
-  
-  const isMobile = size.width < 900;
-
-  const handleResize = useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
-    setSize(prev => ({
-      width: Math.max(minWidth, prev.width + e.movementX),
-      height: Math.max(minHeight, prev.height + e.movementY),
-    }));
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = false;
-    window.removeEventListener('mousemove', handleResize);
-    window.removeEventListener('mouseup', stopResizing);
-  }, [handleResize]);
-
-  const startResizing = (e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    window.addEventListener('mousemove', handleResize);
-    window.addEventListener('mouseup', stopResizing);
-  };
-  
-    const handleResizeY = useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
-    setSize(prev => ({
-      ...prev,
-      height: Math.max(minHeight, prev.height + e.movementY),
-    }));
-  }, []);
-
-  const handleResizeX = useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
-    setSize(prev => ({
-      ...prev,
-      width: Math.max(minWidth, prev.width + e.movementX),
-    }));
-  }, []);
-
-  const startResizingX = (e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    window.addEventListener('mousemove', handleResizeX);
-    window.addEventListener('mouseup', () => {
-      isResizing.current = false;
-      window.removeEventListener('mousemove', handleResizeX);
-    });
-  };
-
-  const startResizingY = (e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    window.addEventListener('mousemove', handleResizeY);
-    window.addEventListener('mouseup', () => {
-      isResizing.current = false;
-      window.removeEventListener('mousemove', handleResizeY);
-    });
-  };
-
   const suppliersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'suppliers') : null), [firestore]);
   const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
 
@@ -481,19 +416,41 @@ export function TestResizableDialog({
   };
   
   const readOnly = isEditMode && receipt?.status === 'Validé';
+  
+  const [isMobile, setIsMobile] = useState(false);
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const checkSize = () => {
+      if (dialogContentRef.current) {
+        setIsMobile(dialogContentRef.current.offsetWidth < 900);
+      }
+    };
+    
+    checkSize(); // Initial check
+
+    const observer = new ResizeObserver(checkSize);
+    if (dialogContentRef.current) {
+      observer.observe(dialogContentRef.current);
+    }
+
+    return () => {
+      if (dialogContentRef.current) {
+        observer.unobserve(dialogContentRef.current);
+      }
+    };
+  }, [isOpen]);
 
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent 
-        style={{ width: size.width, height: size.height }}
-        className="sm:max-w-none p-0 flex flex-col overflow-hidden"
+       <DialogContent 
+        ref={dialogContentRef}
+        className="w-[1000px] h-[80vh] min-w-[350px] max-w-[100vw] p-0 overflow-hidden sm:max-w-[none] resize-both"
       >
-          <div 
-            className="w-full h-full flex flex-col"
-          >
-            <div className='flex-shrink-0 p-6 pb-0'>
+        <div className="flex flex-col h-full w-full">
+            {/* HEADER - Fixed (No Scroll) */}
+            <div className="flex-shrink-0 p-6 pb-4">
               <DialogHeader>
                 <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
                 <DialogDescription>
@@ -502,9 +459,10 @@ export function TestResizableDialog({
               </DialogHeader>
             </div>
           
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+            {/* BODY - Scrollable (Takes remaining space) */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pt-0">
               <Form {...form}>
-                <form id="resizable-dialog-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-5 px-1">
+                <form id="resizable-dialog-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
                   <div className={cn("grid gap-4 mb-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                       <div className={cn("relative rounded-md border border-blue-800 p-4 pt-6", isMobile ? "col-span-1" : "col-span-4")}>
@@ -821,7 +779,8 @@ export function TestResizableDialog({
               </Form>
             </div>
 
-            <div className="flex-shrink-0 p-6 pt-0">
+            {/* FOOTER - Fixed (No Scroll) */}
+            <div className="flex-shrink-0 p-6 pt-4">
               <DialogFooter className="sm:justify-end">
                 <div className='flex gap-2'>
                   <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
@@ -834,20 +793,6 @@ export function TestResizableDialog({
               </DialogFooter>
             </div>
         </div>
-
-        <div 
-            onMouseDown={startResizingX} 
-            className="absolute top-0 right-0 h-full w-2 cursor-ew-resize"
-        />
-        <div 
-            onMouseDown={startResizingY} 
-            className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize" 
-        />
-        <div 
-            onMouseDown={startResizing}
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize"
-        />
-
       </DialogContent>
     </Dialog>
     <ArticleDialog
