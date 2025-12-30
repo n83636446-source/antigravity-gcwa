@@ -488,12 +488,12 @@ export function TestResizableDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
         style={{ width: size.width, height: size.height }}
-        className="sm:max-w-none p-0 flex flex-col overflow-x-hidden"
+        className="sm:max-w-none p-0 flex flex-col overflow-hidden"
       >
           <div 
             className="w-full h-full flex flex-col"
           >
-            <div className='flex-shrink-0 p-6'>
+            <div className='flex-shrink-0 p-6 pb-0'>
               <DialogHeader>
                 <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
                 <DialogDescription>
@@ -502,7 +502,7 @@ export function TestResizableDialog({
               </DialogHeader>
             </div>
           
-            <div className="flex-grow overflow-auto px-6">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
               <Form {...form}>
                 <form id="resizable-dialog-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-5 px-1">
 
