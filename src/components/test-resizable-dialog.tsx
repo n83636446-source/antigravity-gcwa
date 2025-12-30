@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -34,7 +33,6 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt, Supplier, Representative } from '@/lib/types';
 import { Separator } from './ui/separator';
-import { Textarea } from './ui/textarea';
 import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -100,7 +98,6 @@ export function TestResizableDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const isTriggeredExternally = openProp !== undefined;
   const isEditMode = !!receipt;
   
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
@@ -116,7 +113,7 @@ export function TestResizableDialog({
   const minWidth = 350;
   const minHeight = 400;
   
-  const isMobile = size.width < 700;
+  const isMobile = size.width < 900;
 
   const handleResize = useCallback((e: MouseEvent) => {
     if (!isResizing.current) return;
@@ -483,25 +480,15 @@ export function TestResizableDialog({
     setArticleDialogOpen(false);
   };
   
-  const Trigger = !isTriggeredExternally ? (
-    <DialogTrigger asChild>
-      <Button>
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Créer un bon de réception
-      </Button>
-    </DialogTrigger>
-  ) : null;
-  
   const readOnly = isEditMode && receipt?.status === 'Validé';
 
 
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {Trigger}
       <DialogContent 
         style={{ width: size.width, height: size.height }}
-        className="sm:max-w-none p-0 flex flex-col"
+        className="sm:max-w-none p-0 flex flex-col overflow-x-hidden"
       >
           <div 
             className="w-full h-full flex flex-col"
@@ -517,7 +504,7 @@ export function TestResizableDialog({
           
             <div className="flex-grow overflow-auto px-6">
               <Form {...form}>
-                <form id="resizable-dialog-form" className="space-y-4 pt-5 px-1">
+                <form id="resizable-dialog-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-5 px-1">
 
                   <div className={cn("grid gap-4 mb-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                       <div className={cn("relative rounded-md border border-blue-800 p-4 pt-6", isMobile ? "col-span-1" : "col-span-4")}>
@@ -528,7 +515,7 @@ export function TestResizableDialog({
                                   name="receiptNumber"
                                   render={({ field }) => (
                                     <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                        <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Numéro</FormLabel>
+                                        <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Numéro</FormLabel>
                                         <FormControl>
                                             <Input placeholder="Ex: BR-0001" {...field} className="w-full" disabled={readOnly} />
                                         </FormControl>
@@ -541,7 +528,7 @@ export function TestResizableDialog({
                                 name="receiptDate"
                                 render={({ field }) => (
                                   <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                    <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Date</FormLabel>
+                                    <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Date</FormLabel>
                                     <FormControl>
                                       <Input type="date" {...field} disabled={readOnly} className="w-full" />
                                     </FormControl>
@@ -558,7 +545,7 @@ export function TestResizableDialog({
                                 name="supplierId"
                                 render={({ field }) => (
                                   <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                    <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Fournisseur</FormLabel>
+                                    <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Fournisseur</FormLabel>
                                     <Select
                                       onValueChange={handleSupplierChange}
                                       value={field.value}
@@ -600,7 +587,7 @@ export function TestResizableDialog({
                                   name="paymentMode"
                                   render={({ field }) => (
                                       <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                      <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Mode de paiement</FormLabel>
+                                      <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Mode de paiement</FormLabel>
                                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
                                           <FormControl>
                                           <SelectTrigger className="w-full">
@@ -622,7 +609,7 @@ export function TestResizableDialog({
                                   name="dueDate"
                                   render={({ field }) => (
                                       <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                      <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Date d'échéance</FormLabel>
+                                      <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Date d'échéance</FormLabel>
                                       <FormControl>
                                           <Input type="date" {...field} disabled={readOnly} className="w-full" />
                                       </FormControl>
@@ -639,7 +626,7 @@ export function TestResizableDialog({
                               name="representativeId"
                               render={({ field }) => (
                                   <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                  <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Représentant</FormLabel>
+                                  <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Représentant</FormLabel>
                                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
                                       <FormControl>
                                       <SelectTrigger className='w-full'>
@@ -661,7 +648,7 @@ export function TestResizableDialog({
                               name="reference"
                               render={({ field }) => (
                                   <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                  <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Référence</FormLabel>
+                                  <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Référence</FormLabel>
                                   <FormControl>
                                       <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full' />
                                   </FormControl>
@@ -674,7 +661,7 @@ export function TestResizableDialog({
                               name="remarks"
                               render={({ field }) => (
                                   <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                  <FormLabel className={cn(isMobile ? "text-left" : "text-right")}>Remarques</FormLabel>
+                                  <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Remarques</FormLabel>
                                   <FormControl>
                                       <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full' />
                                   </FormControl>
