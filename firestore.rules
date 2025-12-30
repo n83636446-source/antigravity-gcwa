@@ -127,6 +127,13 @@ service cloud.firestore {
     }
 
     /**
+     * @description Manages purchase credit note documents. Any authenticated user can manage them.
+     */
+    match /purchaseCreditNotes/{creditNoteId} {
+        allow read, write: if isSignedIn();
+    }
+
+    /**
      * @description Manages article family documents. Any authenticated user can manage them.
      */
     match /articleFamilies/{familyId} {

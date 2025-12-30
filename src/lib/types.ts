@@ -115,10 +115,31 @@ export type PurchaseInvoice = {
   remarks?: string;
 };
 
+export type PurchaseCreditNoteItem = {
+  productId: string;
+  quantity: number;
+  price: number;
+  tvaRate: number;
+};
+
+export type PurchaseCreditNote = {
+  id: string;
+  creditNoteNumber: string;
+  purchaseInvoiceId?: string;
+  supplierId: string;
+  creditNoteDate: string;
+  items: PurchaseCreditNoteItem[];
+  totalHT: number;
+  totalTTC: number;
+  reason?: string;
+  remarks?: string;
+};
+
+
 export type Representative = {
     id: string;
     name: string;
     email: string;
 };
 
-export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | ArticleFamily | Representative;
+export type FirestoreEntity = Product | Supplier | Client | PurchaseOrder | PurchaseReceipt | PurchaseInvoice | ArticleFamily | Representative | PurchaseCreditNote;
