@@ -332,7 +332,7 @@ export function PurchaseOrderDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: BC-0001" {...field} className="w-full" disabled />
+                                    <Input placeholder="Ex: BC-0001" {...field} className="w-full" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
