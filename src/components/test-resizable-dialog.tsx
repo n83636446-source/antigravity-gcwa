@@ -517,7 +517,7 @@ export function TestResizableDialog({
           
             <div className="flex-grow overflow-auto px-6">
               <Form {...form}>
-                <form id="resizable-dialog-form" className="space-y-4">
+                <form id="resizable-dialog-form" className="space-y-4 pt-5 px-1">
 
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
                       <div className="relative sm:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
