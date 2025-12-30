@@ -501,30 +501,29 @@ export function TestResizableDialog({
                       <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
                            <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
-                                  !date && "text-muted-foreground"
-                                )}
-                              >
-                                <span className="truncate flex-1 min-w-0">
-                                  {date ? format(date, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
-                                </span>
-                                <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 [&_*]:text-center" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={date}
-                                onSelect={setDate}
-                                initialFocus
-                                className="rounded-md border"
-                              />
-                            </PopoverContent>
-                          </Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
+                                    !date && "text-muted-foreground"
+                                  )}
+                                >
+                                  <span className="truncate flex-1 min-w-0">
+                                    {date ? format(date, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                                  </span>
+                                  <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 bg-white" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={date}
+                                  onSelect={setDate}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                        </div>
                    </div>
                 </div>
@@ -579,13 +578,12 @@ export function TestResizableDialog({
                                     <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 [&_*]:text-center" align="start">
+                                <PopoverContent className="w-auto p-0 bg-white" align="start">
                                   <Calendar
                                     mode="single"
                                     selected={dueDate}
                                     onSelect={setDueDate}
                                     initialFocus
-                                    className="rounded-md border"
                                   />
                                 </PopoverContent>
                               </Popover>
