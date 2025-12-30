@@ -41,6 +41,7 @@ import {
 } from '@dnd-kit/sortable';
 import { DraggableHeader } from '@/components/ui/DraggableHeader';
 import { cn } from '@/lib/utils';
+import { PlusCircle } from 'lucide-react';
 
 type Column = {
     id: 'invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalTTC' | 'status';
@@ -264,12 +265,10 @@ export default function PurchaseInvoicesPage() {
         title="Factures d'achat"
         description="Gérez vos factures fournisseurs."
       >
-        <PurchaseInvoiceDialog
-            purchaseOrders={purchaseOrders || []}
-            suppliers={suppliers || []}
-            products={products || []}
-            lastInvoiceNumber={lastInvoiceNumber}
-        />
+        <Button onClick={() => setDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Créer une facture d'achat
+        </Button>
       </PageHeader>
       {isLoading ? (
          <div className="space-y-4">
@@ -340,6 +339,7 @@ export default function PurchaseInvoicesPage() {
                         selectedInvoiceId={selectedInvoice?.id}
                         columns={columns}
                         columnIds={columnIds}
+                        onNewInvoiceClick={() => setDialogOpen(true)}
                     />
                 </SortableContext>
             </DndContext>

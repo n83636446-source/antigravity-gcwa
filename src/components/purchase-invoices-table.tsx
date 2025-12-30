@@ -23,6 +23,7 @@ import { useMemo, ReactNode } from 'react';
 import { DraggableHeader } from './ui/DraggableHeader';
 import { Button } from './ui/button';
 import { PurchaseInvoiceDialog } from './purchase-invoice-dialog';
+import { PlusCircle } from 'lucide-react';
 
 
 type Column = {
@@ -39,6 +40,7 @@ type PurchaseInvoicesTableProps = {
   selectedInvoiceId?: string | null;
   columns: Column[];
   columnIds: ('invoiceNumber' | 'orderNumber' | 'supplierName' | 'invoiceDate' | 'dueDate' | 'totalTTC' | 'status')[];
+  onNewInvoiceClick: () => void;
 };
 
 export function PurchaseInvoicesTable({
@@ -50,6 +52,7 @@ export function PurchaseInvoicesTable({
   selectedInvoiceId,
   columns,
   columnIds,
+  onNewInvoiceClick
 }: PurchaseInvoicesTableProps) {
   const getInvoiceDetails = (invoice: PurchaseInvoice) => {
     let orderNumber = 'N/A';
@@ -159,12 +162,10 @@ export function PurchaseInvoicesTable({
               <p className="text-sm text-muted-foreground">
                 Commencez par en créer une.
               </p>
-               <PurchaseInvoiceDialog
-                  purchaseOrders={purchaseOrders || []}
-                  suppliers={suppliers || []}
-                  products={[]}
-                  lastInvoiceNumber={0}
-              />
+               <Button className="mt-4" onClick={onNewInvoiceClick}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Créer une facture d'achat
+                </Button>
             </div>
           </div>
         )}

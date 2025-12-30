@@ -34,6 +34,9 @@ import {
 import { DraggableHeader } from '@/components/ui/DraggableHeader';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { PlusCircle } from 'lucide-react';
+import { PurchaseReceiptDialog } from './purchase-receipt-dialog';
 
 type EnrichedReceipt = PurchaseReceipt & {
   orderNumber?: string;
@@ -73,6 +76,7 @@ export function PurchaseReceiptsTable({
   selectedReceiptId,
 }: PurchaseReceiptsTableProps) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -164,6 +168,16 @@ export function PurchaseReceiptsTable({
     }
   };
 
+  const lastReceiptNumber = useMemo(() => {
+    if (!receipts || receipts.length === 0) {
+      return 0;
+    }
+    return receipts.reduce((max, rec) => {
+      const codeNumber = parseInt((rec.receiptNumber || 'BR-0000').replace('BR-', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [receipts]);
+
 
   return (
     <>
@@ -208,9 +222,22 @@ export function PurchaseReceiptsTable({
               <p className="text-sm text-muted-foreground">
                 Commencez par en créer un.
               </p>
+               <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Créer un bon de réception
+                </Button>
             </div>
           </div>
         )}
+        <PurchaseReceiptDialog
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          purchaseOrders={purchaseOrders || []}
+          receipts={receipts || []}
+          products={[]}
+          suppliers={suppliers || []}
+          lastReceiptNumber={lastReceiptNumber}
+        />
     </>
   );
 }
