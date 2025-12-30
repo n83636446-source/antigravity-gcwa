@@ -25,6 +25,7 @@ import {
   UserCheck,
   UserPlus,
   FileWarning,
+  FlaskConical,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -183,6 +184,19 @@ export function AppSidebar() {
                 <Link href={'/reports'}>
                   <LineChart className="size-4" />
                   <span className="group-data-[collapsible=icon]:hidden">Rapports</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/test-resize'}
+                className="justify-start"
+                tooltip={'Test Resize'}
+              >
+                <Link href={'/test-resize'}>
+                  <FlaskConical className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden">Test Resize</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
