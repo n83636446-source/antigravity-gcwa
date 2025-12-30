@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, PurchaseOrder, PurchaseReceipt, Supplier, Representative } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -41,7 +41,10 @@ import { ArticleDialog } from './article-dialog';
 import { SupplierDialog } from './supplier-dialog';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const receiptItemSchema = z.object({
   productId: z.string().nonempty("Veuillez sélectionner un article."),
@@ -58,10 +61,10 @@ const purchaseReceiptSchema = z.object({
   receiptNumber: z.string().nonempty("Le numéro de document est requis."),
   purchaseOrderId: z.string().optional(),
   supplierId: z.string().nonempty("Un fournisseur doit être sélectionné."),
-  receiptDate: z.string({ required_error: 'La date est requise.' }),
+  receiptDate: z.date({ required_error: 'La date est requise.' }),
   items: z.array(receiptItemSchema).min(1, 'Le bon de réception doit contenir au moins un article.'),
   paymentMode: z.string().optional(),
-  dueDate: z.string({ required_error: "La date d'échéance est requise." }).nonempty("La date d'échéance est requise."),
+  dueDate: z.date({ required_error: "La date d'échéance est requise." }),
   representativeId: z.string().optional(),
   reference: z.string().optional(),
   remarks: z.string().optional(),
@@ -160,10 +163,10 @@ export function TestResizableDialog({
       receiptNumber: '',
       purchaseOrderId: '',
       supplierId: '',
-      receiptDate: new Date().toISOString().split('T')[0],
+      receiptDate: new Date(),
       items: [],
       paymentMode: 'Espèces',
-      dueDate: '',
+      dueDate: new Date(),
       representativeId: '',
       reference: '',
       remarks: '',
@@ -206,7 +209,7 @@ export function TestResizableDialog({
         receiptNumber: '',
         purchaseOrderId: '',
         supplierId: '',
-        receiptDate: new Date().toISOString().split('T')[0],
+        receiptDate: new Date(),
         items: [],
       });
       return;
@@ -218,7 +221,7 @@ export function TestResizableDialog({
         receiptNumber: receipt.receiptNumber,
         purchaseOrderId: receipt.purchaseOrderId,
         supplierId: receipt.supplierId,
-        receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
+        receiptDate: new Date(receipt.receiptDate),
         items: receipt.items.map(item => ({
           productId: item.productId,
           quantityOrdered: orderForReceipt?.items.find(i => i.productId === item.productId)?.quantity || 0,
@@ -227,7 +230,7 @@ export function TestResizableDialog({
           tvaRate: item.tvaRate,
         })),
         paymentMode: receipt.paymentMode,
-        dueDate: receipt.dueDate ? new Date(receipt.dueDate).toISOString().split('T')[0] : '',
+        dueDate: receipt.dueDate ? new Date(receipt.dueDate) : new Date(),
         representativeId: receipt.representativeId,
         reference: receipt.reference,
         remarks: receipt.remarks,
@@ -239,7 +242,7 @@ export function TestResizableDialog({
         receiptNumber: newReceiptNumber,
         purchaseOrderId: purchaseOrder.id,
         supplierId: purchaseOrder.supplierId,
-        receiptDate: new Date().toISOString().split('T')[0],
+        receiptDate: new Date(),
         items: purchaseOrder.items.map(item => ({
           productId: item.productId,
           quantityOrdered: item.quantity,
@@ -248,7 +251,7 @@ export function TestResizableDialog({
           tvaRate: item.tvaRate,
         })),
         paymentMode: purchaseOrder.paymentMode,
-        dueDate: purchaseOrder.dueDate ? new Date(purchaseOrder.dueDate).toISOString().split('T')[0] : '',
+        dueDate: purchaseOrder.dueDate ? new Date(purchaseOrder.dueDate) : new Date(),
         representativeId: purchaseOrder.representativeId,
         reference: purchaseOrder.reference,
         remarks: purchaseOrder.remarks,
@@ -272,10 +275,10 @@ export function TestResizableDialog({
             receiptNumber: newReceiptNumber,
             purchaseOrderId: '',
             supplierId: '',
-            receiptDate: new Date().toISOString().split('T')[0],
+            receiptDate: new Date(),
             items: [{ productId: '', quantityOrdered: 0, quantityReceived: 0, price: 0, tvaRate: 20 }],
             paymentMode: 'Espèces',
-            dueDate: '',
+            dueDate: new Date(),
             representativeId: '',
             reference: '',
             remarks: '',
@@ -308,11 +311,11 @@ export function TestResizableDialog({
     
     const { totalHT, totalTTC } = liveTotals;
 
-    const receiptData: Omit<PurchaseReceipt, 'id' | 'status'> = {
+    const receiptData = {
         receiptNumber: data.receiptNumber,
         purchaseOrderId: data.purchaseOrderId,
         supplierId: data.supplierId,
-        receiptDate: new Date(data.receiptDate).toISOString(),
+        receiptDate: data.receiptDate.toISOString(),
         items: data.items.map(({ productId, quantityReceived, price, tvaRate }) => ({
             productId,
             quantityReceived,
@@ -322,7 +325,7 @@ export function TestResizableDialog({
         totalHT,
         totalTTC,
         paymentMode: data.paymentMode,
-        dueDate: data.dueDate,
+        dueDate: data.dueDate.toISOString(),
         representativeId: data.representativeId,
         reference: data.reference,
         remarks: data.remarks,
@@ -459,6 +462,7 @@ export function TestResizableDialog({
   const isMobile = size.width < 900;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">Open Test Dialog</Button>
@@ -480,23 +484,54 @@ export function TestResizableDialog({
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
-          {/* BODY (The Missing Part) */}
+          {/* BODY */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 min-h-0">
-            <form className="space-y-6">
-              {/* --- RESTORE YOUR GRID HERE --- */}
+           <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* --- GRID --- */}
               <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                   {/* Zone 1 */}
                   <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
-                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
-                          <Input defaultValue="BC-0001" className="w-full min-w-0" readOnly />
-                        </div>
-                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date</Label>
-                          <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full min-w-0" />
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="receiptNumber"
+                            render={({ field }) => (
+                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                    <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
+                                    <Input {...field} className="w-full min-w-0" />
+                                </div>
+                             )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="receiptDate"
+                            render={({ field }) => (
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn("w-full justify-between text-left font-normal px-3", !field.value && "text-muted-foreground")}
+                                        >
+                                            {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisir une date</span>}
+                                            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                               </div>
+                            )}
+                        />
                     </div>
                   </div>
                   
@@ -504,51 +539,118 @@ export function TestResizableDialog({
                   <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                     <div className="pt-2">
-                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
-                          <Select>
-                              <SelectTrigger className="w-full min-w-0 truncate"><SelectValue placeholder="Sélectionnez un fournisseur" /></SelectTrigger>
-                              <SelectContent>
-                                {suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                              </SelectContent>
-                          </Select>
-                        </div>
+                         <FormField
+                            control={form.control}
+                            name="supplierId"
+                            render={({ field }) => (
+                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                    <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
+                                    <Select onValueChange={handleSupplierChange} value={field.value}>
+                                        <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100">
+                                            <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        />
                     </div>
                   </div>
                   
-                  {/* Zone 3 & 4 ... */}
+                  {/* Zone 3 */}
                     <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                         <div className="space-y-4 pt-2">
-                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
-                              <Select>
-                                  <SelectTrigger className="w-full min-w-0 truncate"><SelectValue placeholder="Mode de paiement" /></SelectTrigger>
-                              </Select>
-                            </div>
-                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                                <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date d'échéance</Label>
-                              <Input type="date" className="w-full min-w-0" />
-                            </div>
+                            <FormField
+                                control={form.control}
+                                name="paymentMode"
+                                render={({ field }) => (
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100">
+                                                <SelectValue placeholder="Mode de paiement" />
+                                            </SelectTrigger>
+                                             <SelectContent>
+                                                <SelectItem value="Espèces">Espèces</SelectItem>
+                                                <SelectItem value="Chèque">Chèque</SelectItem>
+                                                <SelectItem value="Virement">Virement</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="dueDate"
+                                render={({ field }) => (
+                                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date d'échéance</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn("w-full justify-between text-left font-normal px-3", !field.value && "text-muted-foreground")}
+                                                >
+                                                    {field.value ? format(field.value, 'PPP', { locale: fr }) : <span>Choisir une date</span>}
+                                                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                )}
+                            />
                         </div>
                     </div>
 
+                    {/* Zone 4 */}
                     <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
-                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Représentant</Label>
-                              <Select>
-                                  <SelectTrigger className="w-full min-w-0 truncate"><SelectValue placeholder="Sélectionnez un représentant" /></SelectTrigger>
-                              </Select>
-                            </div>
-                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Référence</Label>
-                              <Input placeholder="Référence" className="w-full min-w-0" />
-                            </div>
+                             <FormField
+                                control={form.control}
+                                name="representativeId"
+                                render={({ field }) => (
+                                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Représentant</Label>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100">
+                                                <SelectValue placeholder="Sélectionnez un représentant" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {(representatives || []).map(rep => (
+                                                    <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="reference"
+                                render={({ field }) => (
+                                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Référence</Label>
+                                        <Input {...field} placeholder="Référence" className="w-full min-w-0" />
+                                    </div>
+                                )}
+                            />
                         </div>
                     </div>
               </div>
+              
+              {/* --- Table --- */}
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader className="bg-gray-50">
@@ -564,30 +666,31 @@ export function TestResizableDialog({
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        {/* Truncate ensures the dropdown doesn't force width open */}
                         <Select defaultValue="article1">
-                          <SelectTrigger className="w-full truncate"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-full px-3 [&>span]:truncate [&>svg]:shrink-0 [&>svg]:opacity-100"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
                             <SelectItem value="article2">Pantalon Lin Beige</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell><Input type="number" defaultValue="1" className="w-full min-w-0" /></TableCell>
-                      <TableCell><Input type="number" defaultValue="45.00" className="w-full min-w-0" /></TableCell>
-                      <TableCell><Input type="number" defaultValue="20" className="w-full min-w-0" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="1" className="min-w-0" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="45.00" className="min-w-0" /></TableCell>
+                      <TableCell><Input type="number" defaultValue="20" className="min-w-0" /></TableCell>
                       <TableCell className="text-right font-medium">45,00 €</TableCell>
                       <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell colSpan={6}>
-                        <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
+                         <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
                       </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </div>
+
             </form>
+           </Form>
           </div>
           {/* FOOTER */}
           <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
@@ -598,15 +701,30 @@ export function TestResizableDialog({
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-              <Button className="bg-slate-900 text-white">Créer</Button>
+              <Button type="submit" form='receipt-form' className="bg-slate-900 text-white">Créer</Button>
             </DialogFooter>
           </div>
-          {/* HANDLES (Keep the Blue Hover) */}
+          
+          {/* HANDLES */}
           <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
           <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
           <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md" />
         </div>
       </DialogContent>
     </Dialog>
+     <ArticleDialog
+      isOpen={isArticleDialogOpen}
+      onOpenChange={setArticleDialogOpen}
+      onArticleCreated={handleArticleCreated}
+      lastArticleCodeNumber={lastArticleCodeNumber}
+    />
+    <SupplierDialog
+      isOpen={isSupplierDialogOpen}
+      onOpenChange={setSupplierDialogOpen}
+      lastSupplierCodeNumber={lastSupplierCodeNumber}
+      onSupplierCreated={handleSupplierCreated}
+      suppliers={suppliers || []}
+    />
+    </>
 );
 }
