@@ -84,7 +84,7 @@ const CREATE_NEW_SUPPLIER_VALUE = '--create-new-supplier--';
 const CREATE_NEW_ARTICLE_VALUE = '--create-new-article--';
 
 
-export function CreditNoteDialog({
+export function PurchaseCreditNoteDialog({
   purchaseOrders,
   creditNotes,
   products: initialProducts,
@@ -144,11 +144,9 @@ export function CreditNoteDialog({
   }, [products]);
 
 
-  // Filter out purchase orders that already have a credit note
   const availablePurchaseOrders = useMemo(() => {
     if (!creditNotes || !purchaseOrders) return [];
-    const creditedOrderIds = new Set(creditNotes.flatMap(cn => cn.purchaseOrderId ? [cn.purchaseOrderId] : []));
-    // When editing, allow the current credit note's PO to be in the list
+    const creditedOrderIds = new Set(creditNotes.map(r => r.purchaseOrderId));
     if (isEditMode && creditNote?.purchaseOrderId) {
         creditedOrderIds.delete(creditNote.purchaseOrderId);
     }
@@ -235,7 +233,6 @@ export function CreditNoteDialog({
         remarks: creditNote.remarks,
       });
     } else if (purchaseOrder) {
-      // Case: Transfer from a specific PO
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
       form.reset({
         creditNoteNumber: newCreditNoteNumber,
@@ -256,7 +253,6 @@ export function CreditNoteDialog({
         remarks: purchaseOrder.remarks,
       });
     } else {
-      // Case: Creating a new Credit Note from scratch or after selecting a PO in dialog
       const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
       const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
@@ -269,7 +265,6 @@ export function CreditNoteDialog({
             tvaRate: item.tvaRate,
         })));
       } else {
-         // Reset for manual creation
          form.reset({
             creditNoteNumber: newCreditNoteNumber,
             purchaseOrderId: '',
@@ -312,16 +307,15 @@ export function CreditNoteDialog({
 
     const creditNoteData: Omit<CreditNote, 'id' | 'status'> = {
         creditNoteNumber: data.creditNoteNumber,
-        purchaseOrderId: data.purchaseOrderId,
         supplierId: data.supplierId,
         creditNoteDate: new Date(data.creditNoteDate).toISOString(),
-        reason: data.remarks || '', // Using remarks as reason
         items: data.items.map(({ productId, quantity, price, tvaRate }) => ({
             productId,
             quantity,
             price: price ?? 0,
             tvaRate: tvaRate ?? 20,
         })),
+        reason: data.remarks || '',
         totalHT,
         totalTTC,
         paymentMode: data.paymentMode,
@@ -440,19 +434,19 @@ export function CreditNoteDialog({
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Modifier' : 'Créer'} un avoir fournisseur</DialogTitle>
               <DialogDescription>
-                {isEditMode ? "Modifiez les informations de l'avoir." : "Créez un avoir à partir d'un bon de commande existant ou manuellement."}
+                Remplissez les informations ci-dessous.
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-4">
+                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                    <div className="space-y-4 pt-2">
+                    <div className="space-y-4">
                         <FormField
                             control={form.control}
                             name="creditNoteNumber"
                             render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Ex: AV-0001" {...field} className="w-full" disabled={readOnly} />
@@ -465,7 +459,7 @@ export function CreditNoteDialog({
                           control={form.control}
                           name="creditNoteDate"
                           render={({ field }) => (
-                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                               <FormLabel className="text-right">Date</FormLabel>
                               <FormControl>
                                 <Input type="date" {...field} disabled={readOnly} className="w-full" />
@@ -476,57 +470,55 @@ export function CreditNoteDialog({
                         />
                     </div>
                 </div>
-                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-8">
+                <div className="relative lg:col-span-8 space-y-2 rounded-md border border-blue-800 p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
-                     <div className="pt-2">
-                        <FormField
-                            control={form.control}
-                            name="supplierId"
-                            render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                                <FormLabel className="text-right">Fournisseur</FormLabel>
-                                <Select
-                                    onValueChange={handleSupplierChange}
-                                    value={field.value}
-                                    disabled={readOnly || fromBC}
-                                >
-                                    <FormControl>
-                                    <SelectTrigger className='w-full'>
-                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                                        <div className="flex items-center gap-2">
-                                        <PlusCircle className="h-4 w-4" />
-                                        <span>Créer un nouveau fournisseur</span>
-                                        </div>
+                     <FormField
+                          control={form.control}
+                          name="supplierId"
+                          render={({ field }) => (
+                            <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                              <FormLabel className="text-right">Fournisseur</FormLabel>
+                              <Select
+                                onValueChange={handleSupplierChange}
+                                value={field.value}
+                                disabled={readOnly || fromBC}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className='w-full'>
+                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
+                                    <div className="flex items-center gap-2">
+                                      <PlusCircle className="h-4 w-4" />
+                                      <span>Créer un nouveau fournisseur</span>
+                                    </div>
+                                  </SelectItem>
+                                  <Separator />
+                                  {suppliers?.map((supplier) => (
+                                    <SelectItem key={supplier.id} value={supplier.id}>
+                                      {supplier.name}
                                     </SelectItem>
-                                    <Separator />
-                                    {suppliers?.map((supplier) => (
-                                        <SelectItem key={supplier.id} value={supplier.id}>
-                                        {supplier.name}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage className="col-span-2 col-start-2" />
-                                </FormItem>
-                            )}
-                            />
-                     </div>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage className="col-span-2 col-start-2" />
+                            </FormItem>
+                          )}
+                        />
                 </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-4">
+                <div className="relative lg:col-span-4 rounded-md border border-blue-800 p-4 pt-6">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
-                    <div className="space-y-4 pt-2">
+                    <div className="space-y-4">
                         <FormField
                             control={form.control}
                             name="paymentMode"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Mode de paiement</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
                                     <FormControl>
@@ -548,7 +540,7 @@ export function CreditNoteDialog({
                             control={form.control}
                             name="dueDate"
                             render={({ field }) => (
-                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-4">
+                                <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Date d'échéance</FormLabel>
                                 <FormControl>
                                     <Input type="date" {...field} disabled={readOnly} className="w-full" />
@@ -559,9 +551,8 @@ export function CreditNoteDialog({
                         />
                     </div>
                 </div>
-                <div className="border border-blue-800 p-4 rounded-md relative lg:col-span-8 grid grid-cols-1 gap-4">
+                <div className="relative lg:col-span-8 rounded-md border border-blue-800 p-4 pt-6 grid grid-cols-1 gap-4">
                     <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
-                    <div className="pt-2 space-y-4">
                     <FormField
                         control={form.control}
                         name="representativeId"
@@ -610,7 +601,6 @@ export function CreditNoteDialog({
                             </FormItem>
                         )}
                     />
-                    </div>
                 </div>
             </div>
 
@@ -620,7 +610,7 @@ export function CreditNoteDialog({
                 <div className={cn('grid text-sm font-medium', gridLayout)}>
                    <Label>Article</Label>
                    {fromBC && <Label>Qté Cmdée</Label>}
-                   <Label>Qté Reçue</Label>
+                   <Label>Qté</Label>
                    <Label>Prix UHT</Label>
                    <Label>TVA (%)</Label>
                    <Label className="text-right">Total HT</Label>
@@ -681,7 +671,7 @@ export function CreditNoteDialog({
                       render={({ field: itemField }) => (
                         <FormItem>
                           <FormControl>
-                            <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
+                            <Input type="number" placeholder="Qté" className="w-full" disabled={readOnly} {...itemField} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

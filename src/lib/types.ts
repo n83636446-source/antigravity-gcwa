@@ -125,6 +125,7 @@ export type CreditNoteItem = {
 export type CreditNote = {
     id: string;
     creditNoteNumber: string;
+    purchaseOrderId?: string;
     supplierId: string;
     creditNoteDate: string; // ISO string
     reason: string;
