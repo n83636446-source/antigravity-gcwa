@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { TestResizableDialog } from '@/components/test-resizable-dialog';
@@ -13,18 +13,25 @@ export default function TestResizePage() {
   const firestore = useFirestore();
 
   const ordersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'purchaseOrders') : null), [firestore]);
-  const { data: purchaseOrders = [] } = useCollection<PurchaseOrder>(ordersRef);
+  const { data: purchaseOrders } = useCollection<PurchaseOrder>(ordersRef);
 
   const receiptsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'purchaseReceipts') : null), [firestore]);
-  const { data: receipts = [] } = useCollection<PurchaseReceipt>(receiptsRef);
+  const { data: receipts } = useCollection<PurchaseReceipt>(receiptsRef);
 
   const productsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'products') : null), [firestore]);
-  const { data: products = [] } = useCollection<Product>(productsRef);
+  const { data: products } = useCollection<Product>(productsRef);
 
   const suppliersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'suppliers') : null), [firestore]);
-  const { data: suppliers = [] } = useCollection<Supplier>(suppliersRef);
+  const { data: suppliers } = useCollection<Supplier>(suppliersRef);
 
-  const lastReceiptNumber = receipts.length;
+  const lastReceiptNumber = useMemo(() => {
+    if (!receipts) return 0;
+    return receipts.reduce((max, rec) => {
+      const codeNumber = parseInt((rec.receiptNumber || 'BR-0000').replace('BR-', ''), 10);
+      return codeNumber > max ? codeNumber : max;
+    }, 0);
+  }, [receipts]);
+
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -38,10 +45,10 @@ export default function TestResizePage() {
       <TestResizableDialog
         isOpen={isOpen}
         onOpenChange={setIsOpen}
-        purchaseOrders={purchaseOrders}
-        receipts={receipts}
-        products={products}
-        suppliers={suppliers}
+        purchaseOrders={purchaseOrders || []}
+        receipts={receipts || []}
+        products={products || []}
+        suppliers={suppliers || []}
         lastReceiptNumber={lastReceiptNumber}
       />
     </div>
