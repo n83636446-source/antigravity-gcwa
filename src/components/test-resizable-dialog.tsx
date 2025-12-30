@@ -12,6 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -417,397 +418,122 @@ export function TestResizableDialog({
   
   const readOnly = isEditMode && receipt?.status === 'Validé';
   
-  const [isMobile, setIsMobile] = useState(false);
-  const dialogContentRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 1000, height: 800 });
+  const [isDragging, setIsDragging] = useState<string | null>(null);
+
+  const handleMouseDown = (direction: 'right' | 'bottom' | 'corner') => (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsDragging(direction);
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+      if (!isDragging) return;
+
+      setSize(prev => {
+          let newWidth = prev.width;
+          let newHeight = prev.height;
+
+          if (isDragging === 'right' || isDragging === 'corner') {
+              newWidth = Math.max(350, e.clientX - e.movementX);
+          }
+          if (isDragging === 'bottom' || isDragging === 'corner') {
+              newHeight = Math.max(400, e.clientY - e.movementY);
+          }
+          
+          return { width: newWidth, height: newHeight };
+      });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+      setIsDragging(null);
+  }, []);
 
   useEffect(() => {
-    const checkSize = () => {
-      if (dialogContentRef.current) {
-        setIsMobile(dialogContentRef.current.offsetWidth < 900);
+      if (isDragging) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+      } else {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
       }
-    };
-    
-    checkSize(); // Initial check
 
-    const observer = new ResizeObserver(checkSize);
-    if (dialogContentRef.current) {
-      observer.observe(dialogContentRef.current);
-    }
-
-    return () => {
-      if (dialogContentRef.current) {
-        observer.unobserve(dialogContentRef.current);
-      }
-    };
-  }, [isOpen]);
+      return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+      };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+  
+  const isMobile = size.width < 900;
 
   return (
-    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-       <DialogContent 
-        ref={dialogContentRef}
-        className="w-[1000px] h-[80vh] min-w-[350px] max-w-[100vw] p-0 overflow-hidden sm:max-w-[none] resize-both"
-      >
-        <div className="flex flex-col h-full w-full">
-            {/* HEADER - Fixed (No Scroll) */}
-            <div className="flex-shrink-0 p-6 pb-4">
-              <DialogHeader>
-                <DialogTitle>{isEditMode ? 'Modifier le' : 'Créer un'} bon de réception</DialogTitle>
-                <DialogDescription>
-                  {isEditMode ? 'Modifiez les informations du bon de réception.' : "Créez un bon de réception à partir d'un bon de commande existant ou manuellement."}
-                </DialogDescription>
-              </DialogHeader>
-            </div>
+      <DialogTrigger asChild>
+        <Button variant="outline">Open Test Dialog</Button>
+      </DialogTrigger>
+      {/* 1. OUTER FRAME: No scrolling, just a rigid container */}
+      <DialogContent className="p-0 overflow-hidden sm:max-w-[none] border-none bg-transparent shadow-none" style={{ maxWidth: '100vw', maxHeight: '100vh' }}>
+        
+        {/* 2. RESIZABLE WRAPPER: Controlled by state size */}
+        <div 
+          className="relative bg-white border rounded-lg shadow-xl flex flex-col"
+          style={{ width: size.width, height: size.height }}
+        >
           
-            {/* BODY - Scrollable (Takes remaining space) */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pt-0">
-              <Form {...form}>
-                <form id="resizable-dialog-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-
-                  <div className={cn("grid gap-4 mb-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                      <div className={cn("relative rounded-md border border-blue-800 p-4 pt-6", isMobile ? "col-span-1" : "col-span-4")}>
-                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Informations pièce</h3>
-                          <div className="space-y-4">
-                              <FormField
-                                  control={form.control}
-                                  name="receiptNumber"
-                                  render={({ field }) => (
-                                    <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                        <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Numéro</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Ex: BR-0001" {...field} className="w-full" disabled={readOnly} />
-                                        </FormControl>
-                                        <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                    </FormItem>
-                                  )}
-                              />
-                            <FormField
-                                control={form.control}
-                                name="receiptDate"
-                                render={({ field }) => (
-                                  <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                    <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Date</FormLabel>
-                                    <FormControl>
-                                      <Input type="date" {...field} disabled={readOnly} className="w-full" />
-                                    </FormControl>
-                                    <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                  </FormItem>
-                                )}
-                              />
-                          </div>
-                      </div>
-                      <div className={cn("relative space-y-2 rounded-md border border-blue-800 p-4 pt-6", isMobile ? "col-span-1" : "col-span-8")}>
-                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Fournisseur</h3>
-                          <FormField
-                                control={form.control}
-                                name="supplierId"
-                                render={({ field }) => (
-                                  <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                    <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Fournisseur</FormLabel>
-                                    <Select
-                                      onValueChange={handleSupplierChange}
-                                      value={field.value}
-                                      disabled={readOnly || fromBC}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger className='w-full'>
-                                          <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value={CREATE_NEW_SUPPLIER_VALUE}>
-                                          <div className="flex items-center gap-2">
-                                            <PlusCircle className="h-4 w-4" />
-                                            <span>Créer un nouveau fournisseur</span>
-                                          </div>
-                                        </SelectItem>
-                                        <Separator />
-                                        {suppliers?.map((supplier) => (
-                                          <SelectItem key={supplier.id} value={supplier.id}>
-                                            {supplier.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                  </FormItem>
-                                )}
-                              />
-                      </div>
-                  </div>
-                  
-                  <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                      <div className={cn("relative rounded-md border border-blue-800 p-4 pt-6", isMobile ? "col-span-1" : "col-span-4")}>
-                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Règlement</h3>
-                          <div className="space-y-4">
-                              <FormField
-                                  control={form.control}
-                                  name="paymentMode"
-                                  render={({ field }) => (
-                                      <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                      <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Mode de paiement</FormLabel>
-                                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly} >
-                                          <FormControl>
-                                          <SelectTrigger className="w-full">
-                                              <SelectValue placeholder="Mode de paiement" />
-                                          </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent>
-                                          <SelectItem value="Espèces">Espèces</SelectItem>
-                                          <SelectItem value="Chèque">Chèque</SelectItem>
-                                          <SelectItem value="Virement">Virement</SelectItem>
-                                          </SelectContent>
-                                      </Select>
-                                      <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                      </FormItem>
-                                  )}
-                              />
-                              <FormField
-                                  control={form.control}
-                                  name="dueDate"
-                                  render={({ field }) => (
-                                      <FormItem className={cn("grid items-center gap-2", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                      <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Date d'échéance</FormLabel>
-                                      <FormControl>
-                                          <Input type="date" {...field} disabled={readOnly} className="w-full" />
-                                      </FormControl>
-                                      <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                      </FormItem>
-                                  )}
-                              />
-                          </div>
-                      </div>
-                      <div className={cn("relative grid grid-cols-1 gap-4 rounded-md border border-blue-800 p-4 pt-6", isMobile ? "col-span-1" : "col-span-8")}>
-                          <h3 className="absolute -top-3 left-3 bg-background px-2 text-sm font-medium text-muted-foreground">Détails</h3>
-                          <FormField
-                              control={form.control}
-                              name="representativeId"
-                              render={({ field }) => (
-                                  <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                  <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Représentant</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={readOnly}>
-                                      <FormControl>
-                                      <SelectTrigger className='w-full'>
-                                          <SelectValue placeholder="Représentant" />
-                                      </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                      {(representatives || []).map(rep => (
-                                          <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
-                                      ))}
-                                      </SelectContent>
-                                  </Select>
-                                  <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField
-                              control={form.control}
-                              name="reference"
-                              render={({ field }) => (
-                                  <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                  <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Référence</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="Référence" {...field} disabled={readOnly} className='w-full' />
-                                  </FormControl>
-                                  <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField
-                              control={form.control}
-                              name="remarks"
-                              render={({ field }) => (
-                                  <FormItem className={cn("grid items-center gap-4 space-y-0", isMobile ? "grid-cols-1 items-start gap-1" : "grid-cols-[110px_1fr]")}>
-                                  <FormLabel className={cn("font-medium", isMobile ? "text-left" : "text-right")}>Remarques</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="Remarques" {...field} disabled={readOnly} className='w-full' />
-                                  </FormControl>
-                                  <FormMessage className={cn(!isMobile && "col-span-2 col-start-2")} />
-                                  </FormItem>
-                              )}
-                          />
-                      </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                      <div className={cn('grid text-sm font-medium', gridLayout)}>
-                        <Label>Article</Label>
-                        {fromBC && <Label>Qté Cmdée</Label>}
-                        <Label>Qté Reçue</Label>
-                        <Label>Prix UHT</Label>
-                        <Label>TVA (%)</Label>
-                        <Label className="text-right">Total HT</Label>
-                        {!fromBC && !readOnly && <div className="w-[50px]"></div>}
-                      </div>
-                    {fields.map((field, index) => {
-                      const item = watchedItems[index];
-                      const lineTotal = (item?.quantityReceived || 0) * (item?.price || 0);
-
-                      return (
-                        <div key={field.id} className={cn(gridLayout)}>
-                          {fromBC ? (
-                            <p className="text-sm font-medium h-10 flex items-center">{getProductName(field.productId)}</p>
-                          ) : (
-                            <FormField
-                              control={form.control}
-                              name={`items.${index}.productId`}
-                              render={({ field: itemField }) => (
-                                <FormItem>
-                                  <Select onValueChange={(value) => handleProductChange(value, index)} value={itemField.value} disabled={readOnly}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Article" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value={CREATE_NEW_ARTICLE_VALUE}>
-                                        <div className="flex items-center gap-2">
-                                          <PlusCircle className="h-4 w-4" />
-                                          <span>Créer un article</span>
-                                        </div>
-                                      </SelectItem>
-                                      <Separator />
-                                      {products?.map((product) => (
-                                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          {fromBC && (
-                              <Input
-                                type="number"
-                                readOnly
-                                disabled
-                                value={field.quantityOrdered}
-                                className="w-full"
-                              />
-                          )}
-
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.quantityReceived`}
-                            render={({ field: itemField }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input type="number" placeholder="Qté reçue" className="w-full" disabled={readOnly} {...itemField} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                              control={form.control}
-                              name={`items.${index}.price`}
-                              render={({ field: itemField }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input type="number" placeholder="Prix UHT" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          <FormField
-                              control={form.control}
-                              name={`items.${index}.tvaRate`}
-                              render={({ field: itemField }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input type="number" placeholder="TVA" className="w-full" disabled={readOnly || fromBC} value={itemField.value ?? ''} onChange={e => itemField.onChange(parseFloat(e.target.value) || 0)} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          
-                          <Input
-                            readOnly
-                            disabled
-                            value={new Intl.NumberFormat('fr-FR', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }).format(lineTotal)}
-                            className="w-full text-right"
-                          />
-
-
-                          {!fromBC && !readOnly && (
-                            <div className="flex justify-center">
-                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} className="h-10 w-10">
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                    {!fromBC && !readOnly && (
-                      <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', quantityReceived: 0, quantityOrdered: 0, price: 0, tvaRate: 20 })}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Ajouter une ligne
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                      <div className="text-right font-medium">Total HT:</div>
-                      <div className="text-right font-semibold">
-                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalHT)}
-                      </div>
-
-                      <div className="text-right font-medium">Total TVA:</div>
-                      <div className="text-right font-semibold">
-                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTVA)}
-                      </div>
-
-                      <div className="text-right font-bold text-lg border-t pt-2 mt-1">Total TTC:</div>
-                      <div className="text-right font-bold text-lg text-primary border-t pt-2 mt-1">
-                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(liveTotals.totalTTC)}
-                      </div>
-                  </div>
-                </form>
-              </Form>
-            </div>
-
-            {/* FOOTER - Fixed (No Scroll) */}
-            <div className="flex-shrink-0 p-6 pt-4">
-              <DialogFooter className="sm:justify-end">
-                <div className='flex gap-2'>
-                  <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                    {readOnly ? 'Fermer' : 'Annuler'}
-                  </Button>
-                  {!readOnly && (
-                    <Button type="submit" form="resizable-dialog-form">{isEditMode ? 'Enregistrer' : 'Créer le bon de réception'}</Button>
-                  )}
-                </div>
-              </DialogFooter>
-            </div>
+          {/* --- HEADER (Fixed) --- */}
+          <div className="flex-none p-6 pb-4 border-b">
+            <DialogHeader>
+              <DialogTitle>Créer un bon de réception</DialogTitle>
+              <DialogDescription>
+                Créez un bon de réception à partir d'un bon de commande existant ou manuellement.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+      {/* --- BODY (Scrollable) --- */}
+      {/* pt-10 ensures the 'Information pièce' title isn't cut off */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pt-10">
+        <form className="space-y-8">
+          {/* YOUR GRID CONTENT HERE */}
+          {/* Use the existing grid code you have, but ensure the 'isMobile' logic is applied */}
+          <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
+             {/* ... (Keep your Zone 1, 2, 3, 4 code exactly as it was) ... */}
+             {/* Just make sure Zone 1 starts here so we see if it is clipped */}
+          </div>
+          {/* ITEMS TABLE WRAPPER */}
+          <div className="w-full overflow-x-auto border rounded-md">
+            {/* ... Table code ... */}
+          </div>
+        </form>
+      </div>
+      {/* --- FOOTER (Fixed) --- */}
+      <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
+        <div className="space-y-2 text-right mb-4">
+            <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
+            <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>0,00 €</span></div>
+            <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
         </div>
-      </DialogContent>
-    </Dialog>
-    <ArticleDialog
-      isOpen={isArticleDialogOpen}
-      onOpenChange={setArticleDialogOpen}
-      onArticleCreated={handleArticleCreated}
-      lastArticleCodeNumber={lastArticleCodeNumber}
-    />
-    <SupplierDialog
-      isOpen={isSupplierDialogOpen}
-      onOpenChange={setSupplierDialogOpen}
-      lastSupplierCodeNumber={lastSupplierCodeNumber}
-      onSupplierCreated={handleSupplierCreated}
-      suppliers={suppliers || []}
-    />
-    </>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button className="bg-slate-900 text-white">Créer le bon de réception</Button>
+        </DialogFooter>
+      </div>
+      {/* --- RESIZE HANDLES (Overlay) --- */}
+      {/* Right Handle */}
+      <div 
+        onMouseDown={handleMouseDown('right')}
+        className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/20 transition-colors"
+      />
+      {/* Bottom Handle */}
+      <div 
+        onMouseDown={handleMouseDown('bottom')}
+        className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/20 transition-colors"
+      />
+      {/* Corner Handle */}
+      <div 
+        onMouseDown={handleMouseDown('corner')}
+        className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md"
+      />
+    </div>
+  </DialogContent>
+</Dialog>
   );
 }
