@@ -428,18 +428,12 @@ export function TestResizableDialog({
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
       if (!isDragging) return;
+      e.preventDefault();
+      e.stopPropagation();
 
       setSize(prev => {
-          let newWidth = prev.width;
-          let newHeight = prev.height;
-
-          if (isDragging === 'right' || isDragging === 'corner') {
-              newWidth = Math.max(350, e.clientX - e.movementX);
-          }
-          if (isDragging === 'bottom' || isDragging === 'corner') {
-              newHeight = Math.max(400, e.clientY - e.movementY);
-          }
-          
+          const newWidth = isDragging === 'right' || isDragging === 'corner' ? Math.max(350, prev.width + e.movementX) : prev.width;
+          const newHeight = isDragging === 'bottom' || isDragging === 'corner' ? Math.max(400, prev.height + e.movementY) : prev.height;
           return { width: newWidth, height: newHeight };
       });
   }, [isDragging]);
@@ -470,41 +464,102 @@ export function TestResizableDialog({
       <DialogTrigger asChild>
         <Button variant="outline">Open Test Dialog</Button>
       </DialogTrigger>
-      {/* 1. OUTER FRAME: No scrolling, just a rigid container */}
-      <DialogContent className="p-0 overflow-hidden sm:max-w-[none] border-none bg-transparent shadow-none" style={{ maxWidth: '100vw', maxHeight: '100vh' }}>
+      
+      {/* 1. CENTERED FRAME */}
+      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
         
-        {/* 2. RESIZABLE WRAPPER: Controlled by state size */}
+        {/* 2. RESIZABLE BOX */}
         <div 
           className="relative bg-white border rounded-lg shadow-xl flex flex-col"
           style={{ width: size.width, height: size.height }}
         >
           
-          {/* --- HEADER (Fixed) --- */}
+          {/* HEADER */}
           <div className="flex-none p-6 pb-4 border-b">
             <DialogHeader>
               <DialogTitle>Créer un bon de réception</DialogTitle>
-              <DialogDescription>
-                Créez un bon de réception à partir d'un bon de commande existant ou manuellement.
-              </DialogDescription>
+              <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
-      {/* --- BODY (Scrollable) --- */}
-      {/* pt-10 ensures the 'Information pièce' title isn't cut off */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pt-10">
-        <form className="space-y-8">
-          {/* YOUR GRID CONTENT HERE */}
-          {/* Use the existing grid code you have, but ensure the 'isMobile' logic is applied */}
-          <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-             {/* ... (Keep your Zone 1, 2, 3, 4 code exactly as it was) ... */}
-             {/* Just make sure Zone 1 starts here so we see if it is clipped */}
-          </div>
-          {/* ITEMS TABLE WRAPPER */}
-          <div className="w-full overflow-x-auto border rounded-md">
-            {/* ... Table code ... */}
-          </div>
+      {/* BODY (The Missing Part) */}
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 min-h-0">
+        <form className="space-y-6">
+           {/* --- RESTORE YOUR GRID HERE --- */}
+           <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
+              {/* Zone 1 */}
+              <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                 <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
+                 <div className="space-y-4 pt-2">
+                    {/* Inputs... */}
+                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                       <Label className={cn(isMobile ? "text-left" : "text-right")}>Numéro</Label>
+                       <Input value="BC-0001" className="w-full" readOnly />
+                    </div>
+                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                       <Label className={cn(isMobile ? "text-left" : "text-right")}>Date</Label>
+                       <Input type="date" value={new Date().toISOString().split('T')[0]} className="w-full" />
+                    </div>
+                 </div>
+              </div>
+              
+              {/* Zone 2 (Fournisseur) */}
+              <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                 <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
+                 <div className="pt-2">
+                    <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                       <Label className={cn(isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
+                       <Select>
+                          <SelectTrigger><SelectValue placeholder="Sélectionnez un fournisseur" /></SelectTrigger>
+                          <SelectContent>
+                             {suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                       </Select>
+                    </div>
+                 </div>
+              </div>
+              
+              {/* Zone 3 & 4 ... */}
+                <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                    <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
+                     <div className="space-y-4 pt-2">
+                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                           <Label className={cn(isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
+                           <Select>
+                              <SelectTrigger><SelectValue placeholder="Mode de paiement" /></SelectTrigger>
+                           </Select>
+                        </div>
+                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                            <Label className={cn(isMobile ? "text-left" : "text-right")}>Date d'échéance</Label>
+                           <Input type="date" />
+                        </div>
+                     </div>
+                </div>
+
+                <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                    <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
+                    <div className="space-y-4 pt-2">
+                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                           <Label className={cn(isMobile ? "text-left" : "text-right")}>Représentant</Label>
+                           <Select>
+                               <SelectTrigger><SelectValue placeholder="Sélectionnez un représentant" /></SelectTrigger>
+                           </Select>
+                        </div>
+                         <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                           <Label className={cn(isMobile ? "text-left" : "text-right")}>Référence</Label>
+                           <Input placeholder="Référence" />
+                        </div>
+                    </div>
+                </div>
+           </div>
+           {/* Table Wrapper */}
+           <div className="w-full overflow-x-auto border rounded-md p-2">
+              <div className="min-w-[600px] text-center text-muted-foreground py-16">
+                 (Tableau des articles ici)
+              </div>
+           </div>
         </form>
       </div>
-      {/* --- FOOTER (Fixed) --- */}
+      {/* FOOTER */}
       <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
         <div className="space-y-2 text-right mb-4">
             <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
@@ -513,27 +568,15 @@ export function TestResizableDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-          <Button className="bg-slate-900 text-white">Créer le bon de réception</Button>
+          <Button className="bg-slate-900 text-white">Créer</Button>
         </DialogFooter>
       </div>
-      {/* --- RESIZE HANDLES (Overlay) --- */}
-      {/* Right Handle */}
-      <div 
-        onMouseDown={handleMouseDown('right')}
-        className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/20 transition-colors"
-      />
-      {/* Bottom Handle */}
-      <div 
-        onMouseDown={handleMouseDown('bottom')}
-        className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/20 transition-colors"
-      />
-      {/* Corner Handle */}
-      <div 
-        onMouseDown={handleMouseDown('corner')}
-        className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md"
-      />
+      {/* HANDLES (Keep the Blue Hover) */}
+      <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
+      <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
+      <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md" />
     </div>
   </DialogContent>
 </Dialog>
-  );
+);
 }
