@@ -96,7 +96,7 @@ export function TestResizableDialog({
   purchaseOrder,
   receipt,
 }: TestResizableDialogProps) {
-  const [internalOpen, setInternalOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const isEditMode = !!receipt;
@@ -104,9 +104,6 @@ export function TestResizableDialog({
   const [isArticleDialogOpen, setArticleDialogOpen] = useState(false);
   const [isSupplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const articleCreationIndex = useRef<number | null>(null);
-
-  const isOpen = openProp !== undefined ? openProp : internalOpen;
-  const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
   
   const suppliersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'suppliers') : null), [firestore]);
   const { data: allSuppliers } = useCollection<Supplier>(suppliersRef);
@@ -202,7 +199,7 @@ export function TestResizableDialog({
 
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!open) {
       form.reset({
         receiptNumber: '',
         purchaseOrderId: '',
@@ -283,7 +280,7 @@ export function TestResizableDialog({
          });
       }
     }
-  }, [isOpen, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace, lastReceiptNumber]);
+  }, [open, isEditMode, receipt, purchaseOrder, watchedOrderId, purchaseOrders, form, replace, lastReceiptNumber]);
 
 
   const getProductName = (productId: string) => {
@@ -366,7 +363,7 @@ export function TestResizableDialog({
           })
     }
 
-    onOpenChange(false);
+    setOpen(false);
   };
   
   const handleSupplierChange = (value: string) => {
@@ -460,7 +457,7 @@ export function TestResizableDialog({
   const isMobile = size.width < 900;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">Open Test Dialog</Button>
       </DialogTrigger>
@@ -493,11 +490,11 @@ export function TestResizableDialog({
                     {/* Inputs... */}
                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                        <Label className={cn(isMobile ? "text-left" : "text-right")}>Numéro</Label>
-                       <Input value="BC-0001" className="w-full" readOnly />
+                       <Input defaultValue="BC-0001" className="w-full" />
                     </div>
                      <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                        <Label className={cn(isMobile ? "text-left" : "text-right")}>Date</Label>
-                       <Input type="date" value={new Date().toISOString().split('T')[0]} className="w-full" />
+                       <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full" />
                     </div>
                  </div>
               </div>
@@ -567,7 +564,7 @@ export function TestResizableDialog({
             <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
           <Button className="bg-slate-900 text-white">Créer</Button>
         </DialogFooter>
       </div>
