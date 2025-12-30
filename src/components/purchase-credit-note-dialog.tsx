@@ -232,7 +232,8 @@ export function PurchaseCreditNoteDialog({
       });
     } else if (purchaseInvoice) {
       // Case: Transfer from a specific PO
-      const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
+      const nextNumber = isNaN(lastCreditNoteNumber) ? 1 : lastCreditNoteNumber + 1;
+      const newCreditNoteNumber = `AV-${nextNumber.toString().padStart(4, '0')}`;
       form.reset({
         creditNoteNumber: newCreditNoteNumber,
         purchaseInvoiceId: purchaseInvoice.id,
@@ -253,7 +254,8 @@ export function PurchaseCreditNoteDialog({
       });
     } else {
       // Case: Creating a new BR from scratch or after selecting a PO in dialog
-      const newCreditNoteNumber = `AV-${(lastCreditNoteNumber + 1).toString().padStart(4, '0')}`;
+      const nextNumber = isNaN(lastCreditNoteNumber) ? 1 : lastCreditNoteNumber + 1;
+      const newCreditNoteNumber = `AV-${nextNumber.toString().padStart(4, '0')}`;
       const selectedPO = purchaseOrders.find(o => o.id === watchedOrderId);
       if (selectedPO) {
         form.setValue('supplierId', selectedPO.supplierId);
@@ -440,7 +442,7 @@ export function PurchaseCreditNoteDialog({
                             <FormItem className="grid grid-cols-[110px_1fr] items-center gap-2">
                                 <FormLabel className="text-right">Numéro</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: AV-0001" {...field} className="w-full" disabled={readOnly} />
+                                    <Input placeholder="Ex: AV-0001" {...field} className="w-full" />
                                 </FormControl>
                                 <FormMessage className="col-span-2 col-start-2" />
                             </FormItem>
