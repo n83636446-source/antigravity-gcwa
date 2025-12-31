@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -223,6 +224,12 @@ export function TestResizableDialog() {
               : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]" // CENTER POSITION
         )}
       >
+        {/* ACCESSIBILITY FIX: Visually hidden title for screen readers */}
+        <DialogHeader className="sr-only">
+          <DialogTitle>Créer un bon de réception</DialogTitle>
+          <DialogDescription>Remplissez les informations ci-dessous pour créer un nouveau bon de réception.</DialogDescription>
+        </DialogHeader>
+
         {/* >             WINDOW FRAME
             - If Normal: Uses 'position' state to drag around + 'size' state for width.
             - If Minimized: Uses 'translate(0,0)' (locked) + Fixed Width (280px).
@@ -419,3 +426,5 @@ export function TestResizableDialog() {
     </Dialog>
   ) 
 }
+
+    
