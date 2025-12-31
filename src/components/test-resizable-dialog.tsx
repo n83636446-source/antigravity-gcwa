@@ -48,7 +48,7 @@ export function TestResizableDialog() {
   const isMobile = size.width < 800;
 
   // Helper for the "Safe" Date Picker
-  const DatePickerField = ({ selected, onSelect, placeholder }: { selected?: Date, onSelect: (date?: Date) => void, placeholder: string }) => (
+  const DatePickerField = ({ selected, onSelect, placeholder }: any) => (
     <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
@@ -64,34 +64,49 @@ export function TestResizableDialog() {
           <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
+      
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="bg-white rounded-md border p-0 relative z-50 pointer-events-auto">
+        {/* >             FIXES:
+            1. dir="ltr": Forces standard Left-to-Right layout (prevents mirroring).
+            2. [&_.rdp-caption]:justify-center: Explicitly centers the Header Row.
+            3. [&_.rdp-caption_label]:text-center: Explicitly centers the Month Text.
+            4. [&_.rdp-nav]:justify-between: Pushes the arrows to the far edges.
+        */}
+        <div className="bg-white rounded-md border p-0 relative z-50 pointer-events-auto" dir="ltr">
             <Calendar
               mode="single"
               selected={selected}
               onSelect={onSelect}
               initialFocus
-              className="p-3"
+              className="p-3 [&_.rdp-caption]:justify-center [&_.rdp-caption]:relative [&_.rdp-caption_label]:text-sm [&_.rdp-caption_label]:font-medium"
             />
         </div>
       </PopoverContent>
     </Popover>
-  );
+  )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-        <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
-        <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
+      <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
+      {/* Center Frame */}
+      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
+        
+        {/* Resizable Container */}
         <div className="relative bg-white border rounded-lg shadow-xl flex flex-col" style={{ width: size.width, height: size.height }}>
+          
+          {/* Header */}
           <div className="flex-none p-6 pb-4 border-b">
             <DialogHeader>
               <DialogTitle>Créer un bon de réception</DialogTitle>
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
+          {/* Scrollable Body */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
             <form className="space-y-6">
               <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
+                 
+                 {/* ZONE 1 */}
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
@@ -105,6 +120,7 @@ export function TestResizableDialog() {
                        </div>
                     </div>
                  </div>
+                 {/* ZONE 2 */}
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                      <div className="space-y-4 pt-2">
@@ -119,6 +135,7 @@ export function TestResizableDialog() {
                         </div>
                      </div>
                  </div>
+                 {/* ZONE 3 */}
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                     <div className="space-y-4 pt-2">
@@ -137,6 +154,7 @@ export function TestResizableDialog() {
                        </div>
                     </div>
                  </div>
+                 {/* ZONE 4 */}
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                     <div className="space-y-4 pt-2">
@@ -156,6 +174,7 @@ export function TestResizableDialog() {
                     </div>
                  </div>
               </div>
+              {/* Items Table */}
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader className="bg-gray-50">
@@ -194,6 +213,7 @@ export function TestResizableDialog() {
               </div>
             </form>
           </div>
+          {/* Footer */}
           <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
             <div className="space-y-2 text-right mb-4">
                 <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
@@ -205,9 +225,10 @@ export function TestResizableDialog() {
               <Button className="bg-slate-900 text-white">Créer</Button>
             </DialogFooter>
           </div>
-          <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-40 hover:bg-blue-400/50 transition-colors" />
-          <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-40 hover:bg-blue-400/50 transition-colors" />
-          <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-40 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
+          {/* Resize Handles */}
+          <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
+          <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
+          <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
         </div>
       </DialogContent>
     </Dialog>
