@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2 } from "lucide-react" // Added Maximize2
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2 } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -92,7 +91,8 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
   ) 
 }
 
-export function TestResizableDialog() { 
+// Add sidebarOffset prop to allow manual control if needed 
+export function TestResizableDialog({ sidebarOffset = 0 }: { sidebarOffset?: number }) { 
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [date, setDate] = useState(new Date()) 
@@ -121,11 +121,8 @@ export function TestResizableDialog() {
   // --- MINIMIZE / RESTORE LOGIC --- 
   const toggleMinimize = () => { 
     if (isMinimized) { 
-      // RESTORE: Go back to last floating position
       setIsMinimized(false) 
     } else { 
-      // MINIMIZE: Save current position first, then dock
-      // Note: We don't actually change 'position' state here, we handle the visual move via CSS classes
       setIsMinimized(true) 
     } 
   }
@@ -210,33 +207,35 @@ export function TestResizableDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
       <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
       
-      {/* >           SMART DOCKING CONTAINER 
-          - If Normal: 'fixed left-[50%] top-[50%]' (Center)
-          - If Minimized: 'fixed left-4 bottom-0' (Dock Bottom Left)
-          - The 'transition-all' property makes it animate smoothly between the two states.
+      {/* Visually hidden title for screen readers to fix accessibility error */}
+      <DialogHeader className="sr-only">
+        <DialogTitle>Créer un bon de réception</DialogTitle>
+        <DialogDescription>Remplissez les informations ci-dessous pour créer un nouveau bon de réception.</DialogDescription>
+      </DialogHeader>
+
+      {/* > SMART POSITIONING CONTAINER
+          - If Normal: Centered.
+          - If Minimized: Pinned to Bottom Left, but REACTIVE.
+            * Uses 'calc(var(--sidebar-width, 0px) + 16px)' to detect sidebar automatically.
+            * Uses 'z-40' so the sidebar (z-50) can slide OVER it if needed.
       */}
       <DialogContent 
         onInteractOutside={(e) => e.preventDefault()}
         className={cn(
-            "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-500 ease-in-out [&>button]:hidden pointer-events-none",
+            "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-300 ease-in-out [&>button]:hidden pointer-events-none",
             isMinimized 
-              ? "fixed left-4 bottom-0 top-auto right-auto translate-x-0 translate-y-0" // DOCK POSITION
-              : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]" // CENTER POSITION
+              ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-40" // DOCK MODE (z-40 stays under sidebar)
+              : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50" // CENTER MODE
         )}
+        style={
+            isMinimized 
+              ? { left: `calc(var(--sidebar-width, ${sidebarOffset}px) + 16px)` } // REACTIVE LEFT POSITION
+              : {}
+        }
       >
-        {/* ACCESSIBILITY FIX: Visually hidden title for screen readers */}
-        <DialogHeader className="sr-only">
-          <DialogTitle>Créer un bon de réception</DialogTitle>
-          <DialogDescription>Remplissez les informations ci-dessous pour créer un nouveau bon de réception.</DialogDescription>
-        </DialogHeader>
-
-        {/* >             WINDOW FRAME
-            - If Normal: Uses 'position' state to drag around + 'size' state for width.
-            - If Minimized: Uses 'translate(0,0)' (locked) + Fixed Width (280px).
-        */}
         <div 
           className={cn(
-            "relative bg-white border rounded-t-lg shadow-xl flex flex-col transition-all duration-500 ease-in-out pointer-events-auto",
+            "relative bg-white border rounded-t-lg shadow-xl flex flex-col transition-all duration-300 ease-in-out pointer-events-auto",
             isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50" : "rounded-lg"
           )}
           style={{ 
@@ -264,7 +263,7 @@ export function TestResizableDialog() {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          {/* HEADER (Draggable only when not docked) */}
+          {/* HEADER */}
           <div 
             onMouseDown={handleDrag}
             className={cn(
@@ -273,24 +272,21 @@ export function TestResizableDialog() {
               isMinimized && "py-3 px-3 border-b-0"
             )}
           >
-            {/* Tab Icon for docked mode */}
             {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
             
             <div className="pr-12 truncate font-semibold text-sm">
               {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
             </div>
           </div>
-          {/* HEADER DESC (Hidden when docked) */}
           {!isMinimized && (
              <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
                 Remplissez les informations ci-dessous.
              </div>
           )}
-          {/* BODY & FOOTER (Hidden when docked) */}
+          {/* BODY & FOOTER */}
           <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
             
-            {/* Scrollable Body */}
-            <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6">
+            <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
               <form className="space-y-6">
                 <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                    {/* ZONE 1 */}
@@ -413,7 +409,7 @@ export function TestResizableDialog() {
               </DialogFooter>
             </div>
           </div>
-          {/* Resize Handles (Hidden when minimized) */}
+          {/* Resize Handles */}
           {!isMinimized && (
             <>
               <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
@@ -426,5 +422,3 @@ export function TestResizableDialog() {
     </Dialog>
   ) 
 }
-
-    
