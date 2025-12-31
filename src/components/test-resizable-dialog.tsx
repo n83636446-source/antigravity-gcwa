@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -86,38 +86,27 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 export function TestResizableDialog() { 
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
+    const [isDragging, setIsDragging] = useState(false) // NEW: Performance Flag
     const [date, setDate] = useState(new Date())
     const [dueDate, setDueDate] = useState(new Date())
     const [size, setSize] = useState({ width: 1000, height: 800 })
     const [position, setPosition] = useState({ x: 0, y: 0 }) 
-
-    // Initialize with a "safe" default (collapsed width approx 70px) to reduce overlap risk
     const [dockOffset, setDockOffset] = useState(70)
-    
-    // --- ROBUST SIDEBAR OBSERVER ---
-    useEffect(() => {
-        const findSidebar = () => {
-            // Search for standard tags or common dashboard class names
-            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar')
+
+    // --- ROBUST SIDEBAR OBSERVER --- 
+    useEffect(() => { 
+        const findSidebar = () => { 
+            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar') 
+        } 
+        const updateWidth = (el: Element) => { 
+            const width = el.getBoundingClientRect().width 
+            if (width === 0) setDockOffset(70) 
+            else setDockOffset(width) 
         }
 
         const sidebar = findSidebar()
-
-        // Function to update width
-        const updateWidth = (el: Element) => {
-           const width = el.getBoundingClientRect().width
-           // Sanity check: if width is 0 (hidden), assume standard sidebar size (250) or safe min (70)
-           if (width === 0) {
-               setDockOffset(70) 
-           } else {
-               setDockOffset(width)
-           }
-        }
-
-        // 1. Initial Check
         if (sidebar) updateWidth(sidebar)
-
-        // 2. Resize Observer (Instant Reaction)
+        
         let observer: ResizeObserver | null = null
         if (sidebar) {
             observer = new ResizeObserver((entries) => {
@@ -125,9 +114,7 @@ export function TestResizableDialog() {
             })
             observer.observe(sidebar)
         }
-
-        // 3. Fallback Interval (Poling)
-        // In case the sidebar changes structure or is replaced in the DOM
+        
         const interval = setInterval(() => {
             const currentSidebar = findSidebar()
             if (currentSidebar) updateWidth(currentSidebar)
@@ -151,18 +138,15 @@ export function TestResizableDialog() {
         } 
     }
 
-    const toggleMinimize = () => { 
-        if (isMinimized) { 
-            setIsMinimized(false)
-        } else { 
-            setIsMinimized(true)
-        } 
-    }
+    const toggleMinimize = () => { setIsMinimized(!isMinimized) }
 
-    const handleDrag = (e: React.MouseEvent) => { 
+    // --- DRAG LOGIC --- 
+    const handleDragStart = (e: React.MouseEvent) => { 
         if (isMinimized) return 
         if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return 
         e.preventDefault()
+
+        setIsDragging(true) // Disable transitions
         const startX = e.clientX 
         const startY = e.clientY 
         const startPos = { ...position }
@@ -173,6 +157,7 @@ export function TestResizableDialog() {
           setPosition({ x: startPos.x + dx, y: startPos.y + dy })
         }
         const onMouseUp = () => {
+          setIsDragging(false) // Re-enable transitions
           document.removeEventListener('mousemove', onMouseMove)
           document.removeEventListener('mouseup', onMouseUp)
         }
@@ -232,19 +217,19 @@ export function TestResizableDialog() {
             </DialogTrigger>
             <DialogHeader className="sr-only">
               <DialogTitle>Créer un bon de réception</DialogTitle>
-              <DialogDescription>Remplissez les informations ci-dessous pour créer un nouveau bon de réception.</DialogDescription>
+              <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
-            {/* > ROBUST FIX:
-                1. Z-Index lowered to 'z-30' (was z-40/50). This forces the dock BEHIND the sidebar 
-                   if detection fails, so it never covers your menu.
-                2. 'duration-300' transition for smooth sync.
+
+            {/* OUTER SHELL (Handles Dock Positioning) 
+              - transition-all duration-200: Fast reactive movement for sidebar.
+              - z-30: Safe layering under sidebar.
             */}
             <DialogContent 
                 onInteractOutside={(e) => e.preventDefault()}
                 className={cn(
-                    "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-300 ease-in-out [&>button]:hidden pointer-events-none",
+                    "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-200 ease-in-out [&>button]:hidden pointer-events-none",
                     isMinimized 
-                      ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30" // Lower z-index for safety
+                      ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                       : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
                 )}
                 style={
@@ -253,10 +238,16 @@ export function TestResizableDialog() {
                       : {}
                 }
             >
+                {/* INNER WINDOW (Handles Dragging & Sizing)
+                    - transition-none (When Dragging): ESSENTIAL for instant drag performance.
+                    - transition-all (When Docking/Restoring): Smooths the minimize animation.
+                */}
                 <div 
                   className={cn(
-                    "relative bg-white border rounded-t-lg shadow-xl flex flex-col transition-all duration-300 ease-in-out pointer-events-auto",
-                    isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50" : "rounded-lg"
+                    "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
+                    isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50" : "rounded-lg",
+                    // THE MAGIC FIX: If dragging, disable animation immediately.
+                    isDragging ? "transition-none" : "transition-all duration-200 ease-in-out"
                   )}
                   style={{ 
                     width: isMinimized ? 280 : size.width, 
@@ -285,7 +276,7 @@ export function TestResizableDialog() {
                   </div>
                   {/* HEADER */}
                   <div 
-                    onMouseDown={handleDrag}
+                    onMouseDown={handleDragStart}
                     className={cn(
                       "flex-none p-4 border-b select-none flex items-center gap-2",
                       !isMinimized && "cursor-move",
