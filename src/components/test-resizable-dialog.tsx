@@ -11,14 +11,13 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, en
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
-// --- 1. OUR CUSTOM, UNBREAKABLE CALENDAR ---
+// --- CUSTOM CALENDAR COMPONENT ---
 const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
 
-  // Generate days
   const daysInMonth = () => {
     const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
     const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
@@ -76,24 +75,50 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 
 export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
-  const [date, setDate] = useState<Date | undefined>(new Date())
-  const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
+  const [date, setDate] = useState(new Date())
+  const [dueDate, setDueDate] = useState(new Date())
   const [size, setSize] = useState({ width: 1000, height: 800 })
+  const [position, setPosition] = useState({ x: 0, y: 0 })
 
+  // --- RESET HANDLER ---
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
-    // If the dialog is closing, reset the dates to today
     if (!newOpen) {
       setTimeout(() => {
         setDate(new Date())
         setDueDate(new Date())
-      }, 200) // Small delay so the user doesn't see the jump while it closes
+        setPosition({ x: 0, y: 0 }) // Reset position to center
+      }, 200)
     }
   }
 
-  // Resize Logic
-  const handleMouseDown = (direction: string) => (e: React.MouseEvent) => {
+  // --- DRAG LOGIC ---
+  const handleDrag = (e: React.MouseEvent) => {
+    // Allow dragging only from the header container specifically
+    if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
+    
     e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startPos = { ...position }
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - startX
+      const dy = moveEvent.clientY - startY
+      setPosition({ x: startPos.x + dx, y: startPos.y + dy })
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
+
+  // --- RESIZE LOGIC ---
+  const handleResize = (direction: string) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation() // Prevent triggering drag
     const startX = e.clientX
     const startY = e.clientY
     const startWidth = size.width
@@ -119,32 +144,23 @@ export function TestResizableDialog() {
 
   const isMobile = size.width < 800
 
-  // Updated helper using our SimpleCalendar
-  const DatePickerField = ({ selected, onSelect, placeholder }: { selected: Date | undefined, onSelect: (date: Date | undefined) => void, placeholder: string }) => {
+  const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
     const [popoverOpen, setPopoverOpen] = useState(false);
-    
+
     const handleSelectDate = (date: Date) => {
         onSelect(date);
-        setPopoverOpen(false); // Close popover on date selection
+        setPopoverOpen(false);
     }
-
     return (
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
             <PopoverTrigger asChild>
-                <Button
-                    variant={"outline"}
-                    className={cn(
-                        "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
-                        !selected && "text-muted-foreground"
-                    )}
-                >
+                 <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
                     <span className="truncate flex-1 min-w-0">
                         {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
                     </span>
                     <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            
             <PopoverContent className="w-auto p-0 border-0" align="start">
                  <SimpleCalendar selected={selected} onSelect={handleSelectDate} />
             </PopoverContent>
@@ -155,19 +171,36 @@ export function TestResizableDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
-      <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
-        <div className="relative bg-white border rounded-lg shadow-xl flex flex-col" style={{ width: size.width, height: size.height }}>
+      
+      {/* Center Frame */}
+      <DialogContent 
+        className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto"
+      >
+        {/* Resizable & Draggable Container */}
+        {/* We apply the 'transform' here to move it relative to the center */}
+        <div 
+          className="relative bg-white border rounded-lg shadow-xl flex flex-col transition-none" // transition-none prevents lag while dragging
+          style={{ 
+            width: size.width, 
+            height: size.height,
+            transform: `translate(${position.x}px, ${position.y}px)`
+          }}
+        >
           
-          <div className="flex-none p-6 pb-4 border-b">
-            <DialogHeader>
+          {/* DRAGGABLE HEADER */}
+          <div 
+            onMouseDown={handleDrag}
+            className="flex-none p-6 pb-4 border-b cursor-move select-none"
+          >
+            <DialogHeader className="pointer-events-none"> {/* Disable pointer events on text so drag works smoothly over it */}
               <DialogTitle>Créer un bon de réception</DialogTitle>
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
+          {/* Scrollable Body */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
             <form className="space-y-6">
               <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                 
                  {/* ZONE 1 */}
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
@@ -192,7 +225,7 @@ export function TestResizableDialog() {
                               <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                 <SelectValue placeholder="Sélectionnez un fournisseur" />
                               </SelectTrigger>
-                              <SelectContent><SelectItem value="f1">Fournisseur A</SelectItem></SelectContent>
+                              <SelectContent><SelectItem value="f1">AS ROMA</SelectItem></SelectContent>
                            </Select>
                         </div>
                      </div>
@@ -288,9 +321,9 @@ export function TestResizableDialog() {
             </DialogFooter>
           </div>
           {/* Resize Handles */}
-          <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
-          <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
-          <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
+          <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
+          <div onMouseDown={handleResize('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
+          <div onMouseDown={handleResize('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
         </div>
       </DialogContent>
     </Dialog>
