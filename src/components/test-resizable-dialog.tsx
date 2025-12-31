@@ -58,7 +58,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
                      !isCurrentMonth && "text-gray-300",
                      isCurrentMonth && "text-gray-700 hover:bg-gray-100",
                      isSelected && "bg-slate-900 text-white hover:bg-slate-800",
-                     isToday && !isSelected && "border border-slate-500 font-semibold"
+                     isToday && !isSelected && "border border-slate-400 font-semibold"
                    )}
                  >
                    {format(d, "d")}
@@ -220,10 +220,7 @@ export function TestResizableDialog() {
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
 
-            {/* OUTER SHELL (Handles Dock Positioning) 
-              - 'duration-100': SUPER FAST reaction to sidebar toggle (0.1s).
-              - 'z-30': Safe layering.
-            */}
+            {/* OUTER SHELL (Handles Dock Positioning) */}
             <DialogContent 
                 onInteractOutside={(e) => e.preventDefault()}
                 className={cn(
@@ -238,14 +235,12 @@ export function TestResizableDialog() {
                       : {}
                 }
             >
-                {/* INNER WINDOW (Handles Dragging & Sizing)
-                    - 'duration-100': Fast minimize animation.
-                    - 'transition-none' when dragging: Keeps dragging instant.
-                */}
+                {/* INNER WINDOW */}
                 <div 
+                  onClick={isMinimized ? toggleMinimize : undefined}
                   className={cn(
                     "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
-                    isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50" : "rounded-lg",
+                    isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
                     isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
                   )}
                   style={{ 
@@ -257,14 +252,16 @@ export function TestResizableDialog() {
                   
                   {/* CONTROL BUTTONS */}
                   <div className="absolute right-3 top-3 z-50 flex gap-1">
-                    <button 
-                      onClick={toggleMinimize}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
-                      title={isMinimized ? "Agrandir" : "Réduire"}
-                    >
-                      {isMinimized ? <Maximize2 className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
-                    </button>
+                    {!isMinimized && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+                        title="Réduire"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <button 
                       onClick={() => handleOpenChange(false)}
                       onMouseDown={(e) => e.stopPropagation()} 
