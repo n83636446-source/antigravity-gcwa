@@ -44,7 +44,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 
       {/* DAYS HEADER (L M M J V S D) */}
       <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => <span key={d} className="text-gray-400 font-medium">{d}</span>)}
+        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={i} className="text-gray-400 font-medium">{d}</span>)}
       </div>
 
       {/* CALENDAR GRID */}
@@ -107,7 +107,7 @@ export function TestResizableDialog() {
   const isMobile = size.width < 800
 
   // Updated helper using our SimpleCalendar
-  const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
+  const DatePickerField = ({ selected, onSelect, placeholder }: { selected: Date | undefined, onSelect: (date: Date | undefined) => void, placeholder: string }) => {
     const [popoverOpen, setPopoverOpen] = useState(false);
     
     const handleSelectDate = (date: Date) => {
