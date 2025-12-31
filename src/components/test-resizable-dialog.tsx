@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -86,7 +86,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 export function TestResizableDialog() { 
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
-    const [isDragging, setIsDragging] = useState(false) // NEW: Performance Flag
+    const [isDragging, setIsDragging] = useState(false) 
     const [date, setDate] = useState(new Date())
     const [dueDate, setDueDate] = useState(new Date())
     const [size, setSize] = useState({ width: 1000, height: 800 })
@@ -125,6 +125,21 @@ export function TestResizableDialog() {
             clearInterval(interval)
         }
     }, [])
+
+    // --- SMART BUTTON HANDLER --- 
+    // Replaces the default Trigger logic 
+    const handleMainButtonClick = () => { 
+        if (open) { 
+            // If open AND minimized, Restore it. 
+            if (isMinimized) { 
+                setIsMinimized(false) 
+            } 
+            // If open and NOT minimized, do nothing (it's already there) 
+        } else { 
+            // If closed, open it. 
+            setOpen(true) 
+        } 
+    }
 
     const handleOpenChange = (newOpen: boolean) => { 
         setOpen(newOpen)
@@ -211,221 +226,221 @@ export function TestResizableDialog() {
     )
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
-            <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
-            </DialogTrigger>
-            <DialogHeader className="sr-only">
-              <DialogTitle>Créer un bon de réception</DialogTitle>
-              <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
-            </DialogHeader>
+        <>
+            {/* 1. BUTTON IS NOW OUTSIDE THE DIALOG COMPONENT */}
+            <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
 
-            {/* OUTER SHELL (Handles Dock Positioning) */}
-            <DialogContent 
-                onInteractOutside={(e) => e.preventDefault()}
-                className={cn(
-                    "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:hidden pointer-events-none",
-                    isMinimized 
-                      ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
-                      : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
-                )}
-                style={
-                    isMinimized 
-                      ? { left: dockOffset + 16 } 
-                      : {}
-                }
-            >
-                {/* INNER WINDOW */}
-                <div 
-                  onClick={isMinimized ? toggleMinimize : undefined}
-                  className={cn(
-                    "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
-                    isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
-                    isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
-                  )}
-                  style={{ 
-                    width: isMinimized ? 280 : size.width, 
-                    height: isMinimized ? "auto" : size.height,
-                    transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
-                  }}
-                >
-                  
-                  {/* CONTROL BUTTONS */}
-                  <div className="absolute right-3 top-3 z-50 flex gap-1">
-                    {!isMinimized && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
-                        title="Réduire"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => handleOpenChange(false)}
-                      onMouseDown={(e) => e.stopPropagation()} 
-                      className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {/* HEADER */}
-                  <div 
-                    onMouseDown={handleDragStart}
+            {/* 2. CONTROLLED DIALOG WITHOUT A TRIGGER */}
+            <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
+                
+                {/* OUTER SHELL (Handles Dock Positioning) */}
+                <DialogContent 
+                    onInteractOutside={(e) => e.preventDefault()}
                     className={cn(
-                      "flex-none p-4 border-b select-none flex items-center gap-2",
-                      !isMinimized && "cursor-move",
-                      isMinimized && "py-3 px-3 border-b-0"
+                        "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:hidden pointer-events-none",
+                        isMinimized 
+                          ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
+                          : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
                     )}
-                  >
-                    {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                    
-                    <div className="pr-12 truncate font-semibold text-sm">
-                      {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
-                    </div>
-                  </div>
-                  {!isMinimized && (
-                     <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
-                        Remplissez les informations ci-dessous.
-                     </div>
-                  )}
-                  {/* BODY & FOOTER */}
-                  <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
-                    
-                    <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
-                      <form className="space-y-6">
-                        <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                           {/* ZONE 1 */}
-                           <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
-                              <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
-                              <div className="space-y-4 pt-2">
-                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
-                                    <Input value="BR-0001" className="w-full min-w-0" readOnly />
-                                 </div>
-                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
-                                    <DatePickerField selected={date} onSelect={setDate} placeholder="Sélectionner une date" />
-                                 </div>
-                              </div>
-                           </div>
-                           {/* ZONE 2 */}
-                           <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
-                              <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
-                               <div className="space-y-4 pt-2">
-                                  <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                     <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                     <Select>
-                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                          <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                        </SelectTrigger>
-                                        <SelectContent><SelectItem value="f1">AS ROMA</SelectItem></SelectContent>
-                                     </Select>
+                    style={
+                        isMinimized 
+                          ? { left: dockOffset + 16 } 
+                          : {}
+                    }
+                >
+                    {/* INNER WINDOW */}
+                    <div 
+                      onClick={isMinimized ? toggleMinimize : undefined}
+                      className={cn(
+                        "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
+                        isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
+                        isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
+                      )}
+                      style={{ 
+                        width: isMinimized ? 280 : size.width, 
+                        height: isMinimized ? "auto" : size.height,
+                        transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
+                      }}
+                    >
+                      
+                      {/* CONTROL BUTTONS */}
+                      <div className="absolute right-3 top-3 z-50 flex gap-1">
+                        {!isMinimized && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+                            title="Réduire"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => handleOpenChange(false)}
+                          onMouseDown={(e) => e.stopPropagation()} 
+                          className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {/* HEADER */}
+                      <div 
+                        onMouseDown={handleDragStart}
+                        className={cn(
+                          "flex-none p-4 border-b select-none flex items-center gap-2",
+                          !isMinimized && "cursor-move",
+                          isMinimized && "py-3 px-3 border-b-0"
+                        )}
+                      >
+                        {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+                        
+                        <div className="pr-12 truncate font-semibold text-sm">
+                          {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+                        </div>
+                      </div>
+                      {!isMinimized && (
+                         <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
+                            Remplissez les informations ci-dessous.
+                         </div>
+                      )}
+                      {/* BODY & FOOTER */}
+                      <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
+                        
+                        <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
+                          <form className="space-y-6">
+                            <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
+                               {/* ZONE 1 */}
+                               <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                                  <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
+                                  <div className="space-y-4 pt-2">
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
+                                        <Input value="BR-0001" className="w-full min-w-0" readOnly />
+                                     </div>
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
+                                        <DatePickerField selected={date} onSelect={setDate} placeholder="Sélectionner une date" />
+                                     </div>
                                   </div>
                                </div>
-                           </div>
-                           {/* ZONE 3 */}
-                           <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
-                              <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
-                              <div className="space-y-4 pt-2">
-                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
-                                    <Select>
-                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                          <SelectValue placeholder="Espèces" />
-                                        </SelectTrigger>
-                                        <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
-                                     </Select>
-                                 </div>
-                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
-                                    <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Date d'échéance" />
-                                 </div>
-                              </div>
-                           </div>
-                           {/* ZONE 4 */}
-                           <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
-                              <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
-                              <div className="space-y-4 pt-2">
-                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                                    <Select>
-                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                          <SelectValue placeholder="Sélectionnez un représentant" />
-                                        </SelectTrigger>
-                                        <SelectContent><SelectItem value="r1">Représentant 1</SelectItem></SelectContent>
-                                     </Select>
-                                 </div>
-                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                    <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
-                                    <Input placeholder="Référence" className="w-full min-w-0" />
-                                 </div>
-                              </div>
-                           </div>
+                               {/* ZONE 2 */}
+                               <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                                  <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
+                                   <div className="space-y-4 pt-2">
+                                      <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                         <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
+                                         <Select>
+                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                              <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                            </SelectTrigger>
+                                            <SelectContent><SelectItem value="f1">AS ROMA</SelectItem></SelectContent>
+                                         </Select>
+                                      </div>
+                                   </div>
+                               </div>
+                               {/* ZONE 3 */}
+                               <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                                  <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
+                                  <div className="space-y-4 pt-2">
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
+                                        <Select>
+                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                              <SelectValue placeholder="Espèces" />
+                                            </SelectTrigger>
+                                            <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
+                                         </Select>
+                                     </div>
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
+                                        <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Date d'échéance" />
+                                     </div>
+                                  </div>
+                               </div>
+                               {/* ZONE 4 */}
+                               <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                                  <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
+                                  <div className="space-y-4 pt-2">
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
+                                        <Select>
+                                            <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                              <SelectValue placeholder="Sélectionnez un représentant" />
+                                            </SelectTrigger>
+                                            <SelectContent><SelectItem value="r1">Représentant 1</SelectItem></SelectContent>
+                                         </Select>
+                                     </div>
+                                     <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                        <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
+                                        <Input placeholder="Référence" className="w-full min-w-0" />
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                            {/* Items Table */}
+                            <div className="border rounded-md overflow-hidden">
+                              <Table>
+                                <TableHeader className="bg-gray-50">
+                                  <TableRow>
+                                    <TableHead className="w-[40%] min-w-[200px]">Article</TableHead>
+                                    <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
+                                    <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
+                                    <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
+                                    <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell>
+                                      <Select defaultValue="article1">
+                                        <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </TableCell>
+                                    <TableCell><Input type="number" defaultValue="1" className="min-w-[60px]" /></TableCell>
+                                    <TableCell><Input type="number" defaultValue="45.00" className="min-w-[60px]" /></TableCell>
+                                    <TableCell><Input type="number" defaultValue="20" className="min-w-[60px]" /></TableCell>
+                                    <TableCell className="text-right font-medium">45,00 €</TableCell>
+                                    <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell colSpan={6}>
+                                       <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </form>
                         </div>
-                        {/* Items Table */}
-                        <div className="border rounded-md overflow-hidden">
-                          <Table>
-                            <TableHeader className="bg-gray-50">
-                              <TableRow>
-                                <TableHead className="w-[40%] min-w-[200px]">Article</TableHead>
-                                <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
-                                <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
-                                <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
-                                <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              <TableRow>
-                                <TableCell>
-                                  <Select defaultValue="article1">
-                                    <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell><Input type="number" defaultValue="1" className="min-w-[60px]" /></TableCell>
-                                <TableCell><Input type="number" defaultValue="45.00" className="min-w-[60px]" /></TableCell>
-                                <TableCell><Input type="number" defaultValue="20" className="min-w-[60px]" /></TableCell>
-                                <TableCell className="text-right font-medium">45,00 €</TableCell>
-                                <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
-                              </TableRow>
-                              <TableRow>
-                                <TableCell colSpan={6}>
-                                   <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
-                                </TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
+                        {/* Footer */}
+                        <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
+                          <div className="space-y-2 text-right mb-4">
+                              <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
+                              <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>0,00 €</span></div>
+                              <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
+                            <Button className="bg-slate-900 text-white">Créer</Button>
+                          </DialogFooter>
                         </div>
-                      </form>
-                    </div>
-                    {/* Footer */}
-                    <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
-                      <div className="space-y-2 text-right mb-4">
-                          <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
-                          <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>0,00 €</span></div>
-                          <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
-                        <Button className="bg-slate-900 text-white">Créer</Button>
-                      </DialogFooter>
+                      {/* Resize Handles */}
+                      {!isMinimized && (
+                        <>
+                          <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
+                          <div onMouseDown={handleResize('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
+                          <div onMouseDown={handleResize('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
+                        </>
+                      )}
                     </div>
-                  </div>
-                  {/* Resize Handles */}
-                  {!isMinimized && (
-                    <>
-                      <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
-                      <div onMouseDown={handleResize('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
-                      <div onMouseDown={handleResize('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
-                    </>
-                  )}
-                </div>
-            </DialogContent>
-        </Dialog>
-    )
+                </DialogContent>
+            </Dialog>
+        </>
+    ) 
 }
+
