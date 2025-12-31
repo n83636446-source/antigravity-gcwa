@@ -6,48 +6,51 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react" // Added X import
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
-// --- CUSTOM CALENDAR COMPONENT ---
-const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => {
+// --- CUSTOM CALENDAR COMPONENT --- 
+const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => { 
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
 
-  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
+  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1)) 
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
 
-  const daysInMonth = () => {
-    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
-    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
-    const days = []
-    let day = start
-    while (day <= end) {
-      days.push(day)
-      day = addDays(day, 1)
-    }
-    return days
+  // Jump to Today Logic 
+  const handleToday = () => { 
+    const today = new Date() 
+    onSelect(today) 
+    setCurrentMonth(today) // Also switch view to current month 
+  }
+
+  const daysInMonth = () => { 
+    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }) 
+    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }) 
+    const days = [] 
+    let day = start 
+    while (day <= end) { 
+      days.push(day) 
+      day = addDays(day, 1) 
+    } 
+    return days 
   }
 
   return (
     <div className="p-3 bg-white rounded-md w-[280px]">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-3">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
-        <span className="font-semibold text-sm capitalize">
-          {format(currentMonth, "MMMM yyyy", { locale: fr })}
-        </span>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={(e) => { e.preventDefault(); prevMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+        <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
+        <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
       </div>
-
-      {/* DAYS HEADER (L M M J V S D) */}
+      {/* DAYS HEADER */}
       <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
         {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
       </div>
-
-      {/* CALENDAR GRID */}
-      <div className="grid grid-cols-7 gap-1 text-sm">
+      {/* GRID */}
+      <div className="grid grid-cols-7 gap-1 text-sm mb-3">
         {daysInMonth().map((d, i) => {
            const isSelected = selected && isSameDay(d, selected)
            const isCurrentMonth = isSameMonth(d, currentMonth)
@@ -61,7 +64,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
                  !isCurrentMonth && "text-gray-300",
                  isCurrentMonth && "text-gray-700 hover:bg-gray-100",
                  isSelected && "bg-slate-900 text-white hover:bg-slate-800",
-                 isToday && !isSelected && "border border-slate-500 font-semibold"
+                 isToday && !isSelected && "border border-slate-400 font-semibold"
                )}
              >
                {format(d, "d")}
@@ -69,38 +72,51 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
            )
         })}
       </div>
+      {/* FOOTER */}
+      <div className="border-t pt-3 flex items-center gap-2">
+         {/* Read-only Display Box */}
+         <div className="bg-slate-100 text-slate-700 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border">
+            {selected ? format(selected, "dd/MM/yyyy") : "--/--/----"}
+         </div>
+         {/* Today Button */}
+         <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-8 text-xs font-medium"
+            onClick={(e) => { e.preventDefault(); handleToday() }}
+         >
+            Aujourd'hui
+         </Button>
+      </div>
     </div>
-  )
+  ) 
 }
 
-
-export function TestResizableDialog() {
+export function TestResizableDialog() { 
   const [open, setOpen] = useState(false)
-  const [date, setDate] = useState(new Date())
+  const [date, setDate] = useState(new Date()) 
   const [dueDate, setDueDate] = useState(new Date())
-  const [size, setSize] = useState({ width: 1000, height: 800 })
+  const [size, setSize] = useState({ width: 1000, height: 800 }) 
   const [position, setPosition] = useState({ x: 0, y: 0 })
 
-  // --- RESET HANDLER ---
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen)
-    if (!newOpen) {
-      setTimeout(() => {
-        setDate(new Date())
-        setDueDate(new Date())
-        setPosition({ x: 0, y: 0 }) // Reset position to center
-      }, 200)
-    }
+  // --- RESET HANDLER --- 
+  const handleOpenChange = (newOpen: boolean) => { 
+    setOpen(newOpen) 
+    if (!newOpen) { 
+      setTimeout(() => { 
+        setDate(new Date()) 
+        setDueDate(new Date()) 
+        setPosition({ x: 0, y: 0 }) 
+      }, 200) 
+    } 
   }
 
-  // --- DRAG LOGIC ---
-  const handleDrag = (e: React.MouseEvent) => {
-    // Allow dragging only from the header container specifically
-    if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
-    
-    e.preventDefault()
-    const startX = e.clientX
-    const startY = e.clientY
+  // --- DRAG LOGIC --- 
+  const handleDrag = (e: React.MouseEvent) => { 
+    if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return 
+    e.preventDefault() 
+    const startX = e.clientX 
+    const startY = e.clientY 
     const startPos = { ...position }
 
     const onMouseMove = (moveEvent: MouseEvent) => {
@@ -116,13 +132,13 @@ export function TestResizableDialog() {
     document.addEventListener('mouseup', onMouseUp)
   }
 
-  // --- RESIZE LOGIC ---
-  const handleResize = (direction: string) => (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation() // Prevent triggering drag
-    const startX = e.clientX
-    const startY = e.clientY
-    const startWidth = size.width
+  // --- RESIZE LOGIC --- 
+  const handleResize = (direction: string) => (e: React.MouseEvent) => { 
+    e.preventDefault() 
+    e.stopPropagation() 
+    const startX = e.clientX 
+    const startY = e.clientY 
+    const startWidth = size.width 
     const startHeight = size.height
 
     const onMouseMove = (moveEvent: MouseEvent) => {
@@ -145,7 +161,7 @@ export function TestResizableDialog() {
 
   const isMobile = size.width < 800
 
-  const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
+  const DatePickerField = ({ selected, onSelect, placeholder }: { selected: Date | undefined; onSelect: (date: Date) => void; placeholder: string; }) => {
     const [popoverOpen, setPopoverOpen] = useState(false);
 
     const handleSelectDate = (date: Date) => {
@@ -153,19 +169,19 @@ export function TestResizableDialog() {
         setPopoverOpen(false);
     }
     return (
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
-            <PopoverTrigger asChild>
-                 <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
-                    <span className="truncate flex-1 min-w-0">
-                        {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
-                    </span>
-                    <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-0" align="start">
-                 <SimpleCalendar selected={selected} onSelect={handleSelectDate} />
-            </PopoverContent>
-        </Popover>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
+        <PopoverTrigger asChild>
+          <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}> 
+            <span className="truncate flex-1 min-w-0">
+              {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
+            </span>
+            <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 border-0" align="start">
+          <SimpleCalendar selected={selected} onSelect={handleSelectDate} />
+        </PopoverContent>
+      </Popover>
     )
   }
 
@@ -173,7 +189,7 @@ export function TestResizableDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
       
-      {/* Center Frame - Added [&>button]:hidden to hide default close button */}
+      {/* Center Frame - [&>button]:hidden hides the default Close Button */}
       <DialogContent 
         className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto [&>button]:hidden"
       >
@@ -190,23 +206,21 @@ export function TestResizableDialog() {
           {/* CUSTOM CLOSE BUTTON - Moves with the box */}
           <button 
             onClick={() => handleOpenChange(false)}
-            onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking close
+            onMouseDown={(e) => e.stopPropagation()} 
             className="absolute right-4 top-4 p-2 opacity-70 hover:opacity-100 hover:bg-slate-100 rounded-sm transition-colors z-50 cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
-
           {/* DRAGGABLE HEADER */}
           <div 
             onMouseDown={handleDrag}
             className="flex-none p-6 pb-4 border-b cursor-move select-none"
           >
-            <DialogHeader className="pointer-events-none"> {/* Disable pointer events on text so drag works smoothly over it */}
+            <DialogHeader className="pointer-events-none">
               <DialogTitle>Créer un bon de réception</DialogTitle>
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
-
           {/* Scrollable Body */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
             <form className="space-y-6">
@@ -337,5 +351,5 @@ export function TestResizableDialog() {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  ) 
 }
