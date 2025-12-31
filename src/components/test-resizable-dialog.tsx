@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -120,7 +120,7 @@ export function TestResizableDialog() {
                 const currentSidebar = findSidebar();
                 if (currentSidebar) {
                     updateWidth(currentSidebar);
-                    if (interval) clearInterval(interval); // Stop polling once found
+                    if (interval) clearInterval(interval); 
                     observer = new ResizeObserver(entries => {
                         for (const entry of entries) {
                             updateWidth(entry.target);
@@ -212,7 +212,7 @@ export function TestResizableDialog() {
         document.addEventListener('mouseup', onMouseUp)
     }
 
-    const isMobile = typeof window !== 'undefined' ? window.innerWidth < 800 : false;
+    const isMobile = size.width < 800;
 
     const DatePickerField = ({ selected, onSelect, placeholder }: any) => (
         <Popover>
