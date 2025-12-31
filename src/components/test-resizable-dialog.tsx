@@ -388,7 +388,7 @@ export function TestResizableDialog() {
                                         </div>
                                     </div>
                                     {/* Items Table */}
-                                    <div className="border rounded-md overflow-hidden">
+                                    <div className="border border-blue-800 rounded-md overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-gray-50">
                                                 <TableRow>
@@ -453,5 +453,3 @@ export function TestResizableDialog() {
         </>
     )
 }
-
-    
