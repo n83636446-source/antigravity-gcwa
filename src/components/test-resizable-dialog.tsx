@@ -44,7 +44,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 
       {/* DAYS HEADER (L M M J V S D) */}
       <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={i} className="text-gray-400 font-medium">{d}</span>)}
+        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
       </div>
 
       {/* CALENDAR GRID */}
@@ -52,6 +52,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
         {daysInMonth().map((d, i) => {
            const isSelected = selected && isSameDay(d, selected)
            const isCurrentMonth = isSameMonth(d, currentMonth)
+           const isToday = isSameDay(d, new Date())
            return (
              <button
                key={i}
@@ -60,7 +61,8 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
                  "h-8 w-8 rounded-md flex items-center justify-center text-sm transition-colors",
                  !isCurrentMonth && "text-gray-300",
                  isCurrentMonth && "text-gray-700 hover:bg-gray-100",
-                 isSelected && "bg-slate-900 text-white hover:bg-slate-800"
+                 isSelected && "bg-slate-900 text-white hover:bg-slate-800",
+                 isToday && !isSelected && "border border-slate-500 font-semibold"
                )}
              >
                {format(d, "d")}
@@ -74,8 +76,8 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 
 export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
-  const [date, setDate] = useState<Date | undefined>()
-  const [dueDate, setDueDate] = useState<Date | undefined>()
+  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
   const [size, setSize] = useState({ width: 1000, height: 800 })
 
   // Resize Logic
