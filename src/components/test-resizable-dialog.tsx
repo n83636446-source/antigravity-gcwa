@@ -463,81 +463,72 @@ export function TestResizableDialog({
 
   return (
     <>
-      <Dialog open={openProp || open} onOpenChange={onOpenChangeProp || setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">Open Test Dialog</Button>
-        </DialogTrigger>
-        
-        {/* 1. CENTERED FRAME */}
+    <Dialog open={openProp || open} onOpenChange={onOpenChangeProp || setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">Open Test Dialog</Button>
+      </DialogTrigger>
+      
         <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
+        
+        <div 
+          className="relative bg-white border rounded-lg shadow-xl flex flex-col"
+          style={{ width: size.width, height: size.height }}
+        >
           
-          {/* 2. RESIZABLE BOX */}
-          <div 
-            className="relative bg-white border rounded-lg shadow-xl flex flex-col"
-            style={{ width: size.width, height: size.height }}
-          >
-            
-            {/* HEADER */}
-            <div className="flex-none p-6 pb-4 border-b">
-              <DialogHeader>
-                <DialogTitle>Créer un bon de réception</DialogTitle>
-                <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
-              </DialogHeader>
-            </div>
-        {/* BODY (The Missing Part) */}
-        <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 min-h-0">
-          <form className="space-y-6">
-             {/* --- RESTORE YOUR GRID HERE --- */}
-             <div className={cn("grid gap-6 mb-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                {/* Zone 1 */}
+          <div className="flex-none p-6 pb-4 border-b">
+            <DialogHeader>
+              <DialogTitle>Créer un bon de réception</DialogTitle>
+              <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
+            </DialogHeader>
+          </div>
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 min-h-0">
+        <form className="space-y-6">
+           <div className={cn("grid gap-6 mb-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                 <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-4")}>
                    <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                    <div className="space-y-4 pt-2">
-                      {/* Inputs... */}
-                      <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                         <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
-                         <Input defaultValue="BR-0001" className="w-full min-w-0" />
-                      </div>
-                      <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
+                         <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                            <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Numéro</Label>
+                            <Input defaultValue="BC-0001" className="w-full min-w-0" readOnly />
+                         </div>
+                         <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
+                           <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Date de la pièce</Label>
                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
-                                    !date && "text-muted-foreground"
-                                  )}
-                                >
-                                  <span className="truncate flex-1 min-w-0">
-                                    {date ? format(date, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
-                                  </span>
-                                  <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-white" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={date}
-                                  onSelect={setDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden",
+                                  !date && "text-muted-foreground"
+                                )}
+                              >
+                                <span className="truncate flex-1 min-w-0">
+                                  {date ? format(date, "d MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                                </span>
+                                <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-white" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                        </div>
                    </div>
                 </div>
-                
-                {/* Zone 2 (Fournisseur) */}
                 <div className={cn("border border-blue-800 p-4 rounded-md relative min-w-0", isMobile ? "col-span-1" : "col-span-8")}>
                    <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                    <div className="pt-2">
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                               <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Fournisseur</Label>
                               <Select>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                      <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                  </SelectTrigger>
+                                <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                </SelectTrigger>
                                   <SelectContent>
                                       {suppliers?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                                   </SelectContent>
@@ -551,9 +542,9 @@ export function TestResizableDialog({
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                               <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Mode de paiement</Label>
                               <Select>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                      <SelectValue placeholder="Mode de paiement" />
-                                  </SelectTrigger>
+                                <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                    <SelectValue placeholder="Mode de paiement" />
+                                </SelectTrigger>
                                    <SelectContent>
                                       <SelectItem value="Espèces">Espèces</SelectItem>
                                       <SelectItem value="Chèque">Chèque</SelectItem>
@@ -596,9 +587,9 @@ export function TestResizableDialog({
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 items-stretch gap-2" : "grid-cols-[110px_1fr]")}>
                               <Label className={cn("min-w-0", isMobile ? "text-left" : "text-right")}>Représentant</Label>
                               <Select>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                      <SelectValue placeholder="Sélectionnez un représentant" />
-                                  </SelectTrigger>
+                                <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                    <SelectValue placeholder="Sélectionnez un représentant" />
+                                </SelectTrigger>
                                   <SelectContent>
                                       {(representatives || []).map(rep => (
                                           <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
@@ -613,8 +604,7 @@ export function TestResizableDialog({
                       </div>
                   </div>
              </div>
-             {/* Table Wrapper */}
-            <div className="border rounded-md overflow-hidden">
+             <div className="border rounded-md overflow-hidden">
                 <Table>
                     <TableHeader className="bg-gray-50">
                     <TableRow>
@@ -629,8 +619,7 @@ export function TestResizableDialog({
                     <TableBody>
                     <TableRow>
                         <TableCell>
-                        {/* Truncate ensures the dropdown doesn't force width open */}
-                        <Select defaultValue="article1">
+                          <Select defaultValue="article1">
                             <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                 <SelectValue placeholder="Sélectionnez un article"/>
                             </SelectTrigger>
@@ -638,7 +627,7 @@ export function TestResizableDialog({
                             <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
                             <SelectItem value="article2">Pantalon Lin Beige</SelectItem>
                             </SelectContent>
-                        </Select>
+                          </Select>
                         </TableCell>
                         <TableCell><Input type="number" defaultValue="1" className="min-w-[60px] w-full min-w-0" /></TableCell>
                         <TableCell><Input type="number" defaultValue="45.00" className="min-w-[60px] w-full min-w-0" /></TableCell>
@@ -648,33 +637,31 @@ export function TestResizableDialog({
                     </TableRow>
                     <TableRow>
                         <TableCell colSpan={6}>
-                        <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
+                           <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
                         </TableCell>
                     </TableRow>
                     </TableBody>
                 </Table>
             </div>
-          </form>
-        </div>
-        {/* FOOTER */}
-        <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
-          <div className="space-y-2 text-right mb-4">
-              <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
-              <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>0,00 €</span></div>
-              <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => (onOpenChangeProp || setOpen)(false)}>Annuler</Button>
-            <Button className="bg-slate-900 text-white">Créer le bon de réception</Button>
-          </DialogFooter>
-        </div>
-        {/* HANDLES (Keep the Blue Hover) */}
-        <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
-        <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
-        <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md" />
+        </form>
       </div>
-    </DialogContent>
-  </Dialog>
+          <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
+            <div className="space-y-2 text-right mb-4">
+                <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
+                <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>0,00 €</span></div>
+                <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => (onOpenChangeProp || setOpen)(false)}>Annuler</Button>
+              <Button className="bg-slate-900 text-white">Créer</Button>
+            </DialogFooter>
+          </div>
+          <div onMouseDown={handleMouseDown('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
+          <div onMouseDown={handleMouseDown('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
+          <div onMouseDown={handleMouseDown('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200/50 hover:bg-blue-400 rounded-tl-md" />
+        </div>
+      </DialogContent>
+    </Dialog>
    <ArticleDialog
     isOpen={isArticleDialogOpen}
     onOpenChange={setArticleDialogOpen}
