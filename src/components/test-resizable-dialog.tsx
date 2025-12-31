@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Trash2 } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -44,10 +44,10 @@ export function TestResizableDialog() {
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  // LOWERED Breakpoint: Now allows side-by-side view on Tablet (down to 800px)
+  // Breakpoint: 800px
   const isMobile = size.width < 800;
 
-  // Helper for the "Safe" Date Picker
+  // Helper for the "Safe" Date Picker with FORCED STYLES
   const DatePickerField = ({ selected, onSelect, placeholder }: any) => (
     <Popover modal={true}>
       <PopoverTrigger asChild>
@@ -66,24 +66,26 @@ export function TestResizableDialog() {
       </PopoverTrigger>
       
       <PopoverContent className="w-auto p-0" align="start">
-        {/* >             FIXES:
-            1. dir="ltr": Forces standard Left-to-Right layout (prevents mirroring).
-            2. [&_.rdp-caption]:justify-center: Explicitly centers the Header Row.
-            3. [&_.rdp-caption_label]:text-center: Explicitly centers the Month Text.
-            4. [&_.rdp-nav]:justify-between: Pushes the arrows to the far edges.
-        */}
         <div className="bg-white rounded-md border p-0 relative z-50 pointer-events-auto" dir="ltr">
             <Calendar
               mode="single"
               selected={selected}
               onSelect={onSelect}
               initialFocus
-              className="p-3 [&_.rdp-caption]:justify-center [&_.rdp-caption]:relative [&_.rdp-caption_label]:text-sm [&_.rdp-caption_label]:font-medium"
+              className="p-3"
+              classNames={{
+                caption: "flex justify-center pt-1 relative items-center",
+                caption_label: "text-sm font-medium",
+                nav: "space-x-1 flex items-center",
+                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors",
+                nav_button_previous: "absolute left-1 top-1",
+                nav_button_next: "absolute right-1 top-1",
+              }}
             />
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -234,3 +236,4 @@ export function TestResizableDialog() {
     </Dialog>
   )
 }
+    
