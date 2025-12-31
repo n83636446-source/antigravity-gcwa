@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react" // Added X import
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -72,6 +72,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
     </div>
   )
 }
+
 
 export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
@@ -172,14 +173,13 @@ export function TestResizableDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
       
-      {/* Center Frame */}
+      {/* Center Frame - Added [&>button]:hidden to hide default close button */}
       <DialogContent 
-        className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto"
+        className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto [&>button]:hidden"
       >
         {/* Resizable & Draggable Container */}
-        {/* We apply the 'transform' here to move it relative to the center */}
         <div 
-          className="relative bg-white border rounded-lg shadow-xl flex flex-col transition-none" // transition-none prevents lag while dragging
+          className="relative bg-white border rounded-lg shadow-xl flex flex-col transition-none"
           style={{ 
             width: size.width, 
             height: size.height,
@@ -187,6 +187,15 @@ export function TestResizableDialog() {
           }}
         >
           
+          {/* CUSTOM CLOSE BUTTON - Moves with the box */}
+          <button 
+            onClick={() => handleOpenChange(false)}
+            onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking close
+            className="absolute right-4 top-4 p-2 opacity-70 hover:opacity-100 hover:bg-slate-100 rounded-sm transition-colors z-50 cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
           {/* DRAGGABLE HEADER */}
           <div 
             onMouseDown={handleDrag}
@@ -197,6 +206,7 @@ export function TestResizableDialog() {
               <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>
             </DialogHeader>
           </div>
+
           {/* Scrollable Body */}
           <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
             <form className="space-y-6">
