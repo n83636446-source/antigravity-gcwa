@@ -11,6 +11,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, en
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
+// --- CUSTOM CALENDAR --- 
 const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => {
     const [currentMonth, setCurrentMonth] = useState(selected || new Date())
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -90,6 +91,7 @@ export function TestResizableDialog() {
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
 
+    // --- ROBUST SIDEBAR OBSERVER --- 
     useEffect(() => {
         const findSidebar = () => {
             return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar');
@@ -135,6 +137,7 @@ export function TestResizableDialog() {
         };
     }, []);
 
+    // --- SMART BUTTON HANDLER --- 
     const handleMainButtonClick = () => {
         if (open) {
             if (isMinimized) {
@@ -159,6 +162,7 @@ export function TestResizableDialog() {
 
     const toggleMinimize = () => { setIsMinimized(!isMinimized) }
 
+    // --- DRAG LOGIC --- 
     const handleDragStart = (e: React.MouseEvent) => {
         if (isMinimized) return
         if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
@@ -210,7 +214,7 @@ export function TestResizableDialog() {
         document.addEventListener('mouseup', onMouseUp)
     }
     
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 800;
+    const isMobile = size.width < 800;
 
     const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
         return (
@@ -233,6 +237,7 @@ export function TestResizableDialog() {
     return (
         <>
             <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
+
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
@@ -267,6 +272,8 @@ export function TestResizableDialog() {
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
+
+                        {/* CONTROL BUTTONS */}
                         <div className="absolute right-3 top-3 z-50 flex gap-1">
                             {!isMinimized && (
                                 <button
@@ -286,6 +293,7 @@ export function TestResizableDialog() {
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         </div>
+                        {/* HEADER */}
                         <div
                             onMouseDown={handleDragStart}
                             className={cn(
@@ -295,6 +303,7 @@ export function TestResizableDialog() {
                             )}
                         >
                             {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+
                             <div className="pr-12 truncate font-semibold text-sm">
                                 {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
                             </div>
@@ -304,10 +313,13 @@ export function TestResizableDialog() {
                                 Remplissez les informations ci-dessous.
                             </div>
                         )}
+                        {/* BODY & FOOTER */}
                         <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
+
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
                                     <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
+                                        {/* ZONE 1 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                                             <div className="space-y-4 pt-2">
@@ -321,6 +333,7 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
+                                        {/* ZONE 2 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                                             <div className="space-y-4 pt-2">
@@ -335,6 +348,7 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
+                                        {/* ZONE 3 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                                             <div className="space-y-4 pt-2">
@@ -353,6 +367,7 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
+                                        {/* ZONE 4 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                                             <div className="space-y-4 pt-2">
@@ -372,6 +387,7 @@ export function TestResizableDialog() {
                                             </div>
                                         </div>
                                     </div>
+                                    {/* Items Table */}
                                     <div className="border rounded-md overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-gray-50">
@@ -410,6 +426,7 @@ export function TestResizableDialog() {
                                     </div>
                                 </form>
                             </div>
+                            {/* Footer */}
                             <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
                                 <div className="space-y-2 text-right mb-4">
                                     <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
@@ -422,6 +439,7 @@ export function TestResizableDialog() {
                                 </DialogFooter>
                             </div>
                         </div>
+                        {/* Resize Handles */}
                         {!isMinimized && (
                             <>
                                 <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
@@ -435,3 +453,5 @@ export function TestResizableDialog() {
         </>
     )
 }
+
+    
