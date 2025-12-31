@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus } from "lucide-react" // Added Minus
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2 } from "lucide-react" // Added Maximize2
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -93,11 +93,15 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 
 export function TestResizableDialog() { 
   const [open, setOpen] = useState(false)
-  const [isMinimized, setIsMinimized] = useState(false) // New State
+  const [isMinimized, setIsMinimized] = useState(false)
   const [date, setDate] = useState(new Date()) 
   const [dueDate, setDueDate] = useState(new Date())
-  const [size, setSize] = useState({ width: 1000, height: 800 }) 
-  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [size, setSize] = useState({ width: 1000, height: 800 })
+
+  // Position State
+  const [position, setPosition] = useState({ x: 0, y: 0 }) 
+  // Memory State: Remembers where the window was before docking
+  const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 })
 
   // --- RESET HANDLER --- 
   const handleOpenChange = (newOpen: boolean) => { 
@@ -107,13 +111,27 @@ export function TestResizableDialog() {
         setDate(new Date()) 
         setDueDate(new Date()) 
         setPosition({ x: 0, y: 0 }) 
-        setIsMinimized(false) // Reset minimize state on close
+        setLastPosition({ x: 0, y: 0 }) 
+        setIsMinimized(false) 
       }, 200) 
+    } 
+  }
+
+  // --- MINIMIZE / RESTORE LOGIC --- 
+  const toggleMinimize = () => { 
+    if (isMinimized) { 
+      // RESTORE: Go back to last floating position
+      setIsMinimized(false) 
+    } else { 
+      // MINIMIZE: Save current position first, then dock
+      // Note: We don't actually change 'position' state here, we handle the visual move via CSS classes
+      setIsMinimized(true) 
     } 
   }
 
   // --- DRAG LOGIC --- 
   const handleDrag = (e: React.MouseEvent) => { 
+    if (isMinimized) return // Cannot drag while docked
     if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return 
     e.preventDefault() 
     const startX = e.clientX 
@@ -135,7 +153,7 @@ export function TestResizableDialog() {
 
   // --- RESIZE LOGIC --- 
   const handleResize = (direction: string) => (e: React.MouseEvent) => { 
-    if (isMinimized) return // Disable resize when minimized
+    if (isMinimized) return 
     e.preventDefault() 
     e.stopPropagation() 
     const startX = e.clientX 
@@ -191,62 +209,81 @@ export function TestResizableDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
       <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
       
-      {/* onInteractOutside prevents auto-close when clicking background */}
+      {/* >           SMART DOCKING CONTAINER 
+          - If Normal: 'fixed left-[50%] top-[50%]' (Center)
+          - If Minimized: 'fixed left-4 bottom-0' (Dock Bottom Left)
+          - The 'transition-all' property makes it animate smoothly between the two states.
+      */}
       <DialogContent 
         onInteractOutside={(e) => e.preventDefault()}
-        className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto [&>button]:hidden pointer-events-none"
+        className={cn(
+            "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-500 ease-in-out [&>button]:hidden pointer-events-none",
+            isMinimized 
+              ? "fixed left-4 bottom-0 top-auto right-auto translate-x-0 translate-y-0" // DOCK POSITION
+              : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]" // CENTER POSITION
+        )}
       >
-        {/* Resizable & Draggable Container */}
+        {/* >             WINDOW FRAME
+            - If Normal: Uses 'position' state to drag around + 'size' state for width.
+            - If Minimized: Uses 'translate(0,0)' (locked) + Fixed Width (280px).
+        */}
         <div 
           className={cn(
-            "relative bg-white border rounded-lg shadow-xl flex flex-col transition-all duration-200 pointer-events-auto",
-            isMinimized ? "h-auto" : "" // Auto height when minimized
+            "relative bg-white border rounded-t-lg shadow-xl flex flex-col transition-all duration-500 ease-in-out pointer-events-auto",
+            isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50" : "rounded-lg"
           )}
           style={{ 
-            width: size.width, 
-            height: isMinimized ? "auto" : size.height, // Override height style if minimized
-            transform: `translate(${position.x}px, ${position.y}px)`
+            width: isMinimized ? 280 : size.width, 
+            height: isMinimized ? "auto" : size.height,
+            transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
           }}
         >
           
-          {/* CONTROL BUTTONS (Close & Minimize) */}
-          <div className="absolute right-4 top-4 z-50 flex gap-2">
-            {/* Minimize Button */}
+          {/* CONTROL BUTTONS */}
+          <div className="absolute right-3 top-3 z-50 flex gap-1">
             <button 
-              onClick={() => setIsMinimized(!isMinimized)}
+              onClick={toggleMinimize}
               onMouseDown={(e) => e.stopPropagation()}
-              className="p-2 opacity-70 hover:opacity-100 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer"
+              className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
               title={isMinimized ? "Agrandir" : "Réduire"}
             >
-              <Minus className="h-4 w-4" />
+              {isMinimized ? <Maximize2 className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
             </button>
-            {/* Close Button */}
             <button 
               onClick={() => handleOpenChange(false)}
               onMouseDown={(e) => e.stopPropagation()} 
-              className="p-2 opacity-70 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded-sm transition-colors cursor-pointer"
+              className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          {/* DRAGGABLE HEADER */}
+          {/* HEADER (Draggable only when not docked) */}
           <div 
             onMouseDown={handleDrag}
             className={cn(
-              "flex-none p-6 pb-4 border-b cursor-move select-none",
-              isMinimized && "border-b-0" // Remove border if minimized
+              "flex-none p-4 border-b select-none flex items-center gap-2",
+              !isMinimized && "cursor-move",
+              isMinimized && "py-3 px-3 border-b-0"
             )}
           >
-            <DialogHeader className="pointer-events-none pr-16">
-              <DialogTitle>Créer un bon de réception</DialogTitle>
-              {!isMinimized && <DialogDescription>Remplissez les informations ci-dessous.</DialogDescription>}
-            </DialogHeader>
+            {/* Tab Icon for docked mode */}
+            {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+            
+            <div className="pr-12 truncate font-semibold text-sm">
+              {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+            </div>
           </div>
-          {/* BODY & FOOTER - Hidden via CSS when minimized to preserve data */}
+          {/* HEADER DESC (Hidden when docked) */}
+          {!isMinimized && (
+             <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
+                Remplissez les informations ci-dessous.
+             </div>
+          )}
+          {/* BODY & FOOTER (Hidden when docked) */}
           <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
             
             {/* Scrollable Body */}
-            <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
+            <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6">
               <form className="space-y-6">
                 <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                    {/* ZONE 1 */}
