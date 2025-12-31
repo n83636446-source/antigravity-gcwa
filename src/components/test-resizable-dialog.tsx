@@ -80,6 +80,17 @@ export function TestResizableDialog() {
   const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
   const [size, setSize] = useState({ width: 1000, height: 800 })
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen)
+    // If the dialog is closing, reset the dates to today
+    if (!newOpen) {
+      setTimeout(() => {
+        setDate(new Date())
+        setDueDate(new Date())
+      }, 200) // Small delay so the user doesn't see the jump while it closes
+    }
+  }
+
   // Resize Logic
   const handleMouseDown = (direction: string) => (e: React.MouseEvent) => {
     e.preventDefault()
@@ -142,7 +153,7 @@ export function TestResizableDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button variant="outline" onClick={() => setOpen(true)}>Open Test Dialog</Button>
       <DialogContent className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] p-0 overflow-hidden bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto">
         <div className="relative bg-white border rounded-lg shadow-xl flex flex-col" style={{ width: size.width, height: size.height }}>
@@ -272,7 +283,7 @@ export function TestResizableDialog() {
                 <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+              <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
               <Button className="bg-slate-900 text-white">Créer</Button>
             </DialogFooter>
           </div>
