@@ -11,28 +11,26 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, en
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
-const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => { 
+const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => {
     const [currentMonth, setCurrentMonth] = useState(selected || new Date())
-    const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1)) 
-    const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1)) 
-    const handleToday = () => { 
+    const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
+    const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
+    const handleToday = () => {
         const today = new Date()
         onSelect(today)
-        setCurrentMonth(today) 
-    } 
-    
-    const daysInMonth = () => { 
-        const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }) 
-        const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }) 
-        const days = [] 
-        let day = start 
-        while (day <= end) { 
-            days.push(day) 
-            day = addDays(day, 1) 
-        } 
-        return days 
-    } 
-    
+        setCurrentMonth(today)
+    }
+    const daysInMonth = () => {
+        const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
+        const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
+        const days = []
+        let day = start
+        while (day <= end) {
+            days.push(day)
+            day = addDays(day, 1)
+        }
+        return days
+    }
     return (
         <div className="p-3 bg-white rounded-md w-[280px]">
           <div className="flex items-center justify-between mb-4">
@@ -69,9 +67,9 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
              <div className="bg-slate-100 text-slate-700 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border">
                 {selected ? format(selected, "dd/MM/yyyy") : "--/--/----"}
              </div>
-             <Button 
-                size="sm" 
-                variant="outline" 
+             <Button
+                size="sm"
+                variant="outline"
                 className="h-8 text-xs font-medium"
                 onClick={(e) => { e.preventDefault(); handleToday() }}
              >
@@ -82,7 +80,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
     )
 }
 
-export function TestResizableDialog() { 
+export function TestResizableDialog() {
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
@@ -120,7 +118,7 @@ export function TestResizableDialog() {
                 const currentSidebar = findSidebar();
                 if (currentSidebar) {
                     updateWidth(currentSidebar);
-                    if (interval) clearInterval(interval); 
+                    if (interval) clearInterval(interval);
                     observer = new ResizeObserver(entries => {
                         for (const entry of entries) {
                             updateWidth(entry.target);
@@ -211,24 +209,26 @@ export function TestResizableDialog() {
         document.addEventListener('mousemove', onMouseMove)
         document.addEventListener('mouseup', onMouseUp)
     }
+    
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 800;
 
-    const isMobile = size.width < 800;
-
-    const DatePickerField = ({ selected, onSelect, placeholder }: any) => (
-        <Popover>
-            <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
-                    <span className="truncate flex-1 min-w-0">
-                        {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
-                    </span>
-                    <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-0" align="start">
-                <SimpleCalendar selected={selected} onSelect={onSelect} />
-            </PopoverContent>
-        </Popover>
-    )
+    const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
+                        <span className="truncate flex-1 min-w-0">
+                            {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
+                        </span>
+                        <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 border-0" align="start">
+                    <SimpleCalendar selected={selected} onSelect={onSelect} />
+                </PopoverContent>
+            </Popover>
+        )
+    }
 
     return (
         <>
