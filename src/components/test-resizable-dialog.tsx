@@ -11,7 +11,6 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, en
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
-// --- CUSTOM CALENDAR --- 
 const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => { 
     const [currentMonth, setCurrentMonth] = useState(selected || new Date())
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1)) 
@@ -86,126 +85,136 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 export function TestResizableDialog() { 
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
-    const [isDragging, setIsDragging] = useState(false) 
-    const [date, setDate] = useState(new Date())
-    const [dueDate, setDueDate] = useState(new Date())
+    const [isDragging, setIsDragging] = useState(false)
+    const [date, setDate] = useState<Date | undefined>(new Date())
+    const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
     const [size, setSize] = useState({ width: 1000, height: 800 })
-    const [position, setPosition] = useState({ x: 0, y: 0 }) 
+    const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
 
-    // --- ROBUST SIDEBAR OBSERVER --- 
-    useEffect(() => { 
-        const findSidebar = () => { 
-            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar') 
-        } 
-        const updateWidth = (el: Element) => { 
-            const width = el.getBoundingClientRect().width 
-            if (width === 0) setDockOffset(70) 
-            else setDockOffset(width) 
-        }
+    useEffect(() => {
+        const findSidebar = () => {
+            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar');
+        };
 
-        const sidebar = findSidebar()
-        if (sidebar) updateWidth(sidebar)
-        
-        let observer: ResizeObserver | null = null
+        const updateWidth = (el: Element) => {
+            const width = el.getBoundingClientRect().width;
+            setDockOffset(width > 0 ? width : 70);
+        };
+
+        let observer: ResizeObserver | null = null;
+        let interval: NodeJS.Timeout | null = null;
+
+        const sidebar = findSidebar();
+
         if (sidebar) {
-            observer = new ResizeObserver((entries) => {
-                for (const entry of entries) updateWidth(entry.target)
-            })
-            observer.observe(sidebar)
+            updateWidth(sidebar);
+            observer = new ResizeObserver(entries => {
+                for (const entry of entries) {
+                    updateWidth(entry.target);
+                }
+            });
+            observer.observe(sidebar);
+        } else {
+            interval = setInterval(() => {
+                const currentSidebar = findSidebar();
+                if (currentSidebar) {
+                    updateWidth(currentSidebar);
+                    if (interval) clearInterval(interval); // Stop polling once found
+                    observer = new ResizeObserver(entries => {
+                        for (const entry of entries) {
+                            updateWidth(entry.target);
+                        }
+                    });
+                    observer.observe(currentSidebar);
+                }
+            }, 1000);
         }
-        
-        const interval = setInterval(() => {
-            const currentSidebar = findSidebar()
-            if (currentSidebar) updateWidth(currentSidebar)
-        }, 1000)
 
         return () => {
-            if (observer) observer.disconnect()
-            clearInterval(interval)
-        }
-    }, [])
+            if (observer) observer.disconnect();
+            if (interval) clearInterval(interval);
+        };
+    }, []);
 
-    // --- SMART BUTTON HANDLER --- 
-    const handleMainButtonClick = () => { 
-        if (open) { 
-            if (isMinimized) { 
-                setIsMinimized(false) 
-            } 
-        } else { 
-            setOpen(true) 
-        } 
+    const handleMainButtonClick = () => {
+        if (open) {
+            if (isMinimized) {
+                setIsMinimized(false)
+            }
+        } else {
+            setOpen(true)
+        }
     }
 
-    const handleOpenChange = (newOpen: boolean) => { 
+    const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen)
-        if (!newOpen) { 
-            setTimeout(() => { 
+        if (!newOpen) {
+            setTimeout(() => {
                 setDate(new Date())
                 setDueDate(new Date())
                 setPosition({ x: 0, y: 0 })
-                setIsMinimized(false) 
-            }, 200) 
-        } 
+                setIsMinimized(false)
+            }, 200)
+        }
     }
 
     const toggleMinimize = () => { setIsMinimized(!isMinimized) }
 
-    // --- DRAG LOGIC --- 
-    const handleDragStart = (e: React.MouseEvent) => { 
-        if (isMinimized) return 
-        if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return 
+    const handleDragStart = (e: React.MouseEvent) => {
+        if (isMinimized) return
+        if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
         e.preventDefault()
 
-        setIsDragging(true) 
-        const startX = e.clientX 
-        const startY = e.clientY 
+        setIsDragging(true)
+        const startX = e.clientX
+        const startY = e.clientY
         const startPos = { ...position }
 
         const onMouseMove = (moveEvent: MouseEvent) => {
-          const dx = moveEvent.clientX - startX
-          const dy = moveEvent.clientY - startY
-          setPosition({ x: startPos.x + dx, y: startPos.y + dy })
+            const dx = moveEvent.clientX - startX
+            const dy = moveEvent.clientY - startY
+            setPosition({ x: startPos.x + dx, y: startPos.y + dy })
         }
         const onMouseUp = () => {
-          setIsDragging(false) 
-          document.removeEventListener('mousemove', onMouseMove)
-          document.removeEventListener('mouseup', onMouseUp)
+            setIsDragging(false)
+            document.removeEventListener('mousemove', onMouseMove)
+            document.removeEventListener('mouseup', onMouseUp)
         }
         document.addEventListener('mousemove', onMouseMove)
         document.addEventListener('mouseup', onMouseUp)
     }
 
-    const handleResize = (direction: string) => (e: React.MouseEvent) => { 
-        if (isMinimized) return 
+    const handleResize = (direction: string) => (e: React.MouseEvent) => {
+        if (isMinimized) return
         e.preventDefault()
         e.stopPropagation()
-        const startX = e.clientX 
-        const startY = e.clientY 
-        const startWidth = size.width 
+        const startX = e.clientX
+        const startY = e.clientY
+        const startWidth = size.width
         const startHeight = size.height
 
         const onMouseMove = (moveEvent: MouseEvent) => {
-          if (direction === 'right' || direction === 'corner') {
-            const newWidth = Math.max(350, startWidth + (moveEvent.clientX - startX))
-            setSize(s => ({ ...s, width: newWidth }))
-          }
-          if (direction === 'bottom' || direction === 'corner') {
-            const newHeight = Math.max(400, startHeight + (moveEvent.clientY - startY))
-            setSize(s => ({ ...s, height: newHeight }))
-          }
+            if (direction === 'right' || direction === 'corner') {
+                const newWidth = Math.max(350, startWidth + (moveEvent.clientX - startX))
+                setSize(s => ({ ...s, width: newWidth }))
+            }
+            if (direction === 'bottom' || direction === 'corner') {
+                const newHeight = Math.max(400, startHeight + (moveEvent.clientY - startY))
+                setSize(s => ({ ...s, height: newHeight }))
+            }
         }
         const onMouseUp = () => {
-          document.removeEventListener('mousemove', onMouseMove)
-          document.removeEventListener('mouseup', onMouseUp)
+            document.removeEventListener('mousemove', onMouseMove)
+            document.removeEventListener('mouseup', onMouseUp)
         }
         document.addEventListener('mousemove', onMouseMove)
         document.addEventListener('mouseup', onMouseUp)
     }
 
-    const isMobile = size.width < 800
+    const isMobile = typeof window !== 'undefined' ? window.innerWidth < 800 : false;
 
-    const DatePickerField = ({ selected, onSelect, placeholder }: any) => ( 
+    const DatePickerField = ({ selected, onSelect, placeholder }: any) => (
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
@@ -225,40 +234,42 @@ export function TestResizableDialog() {
         <>
             <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
-                <DialogContent 
+                <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
                     className={cn(
                         "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:hidden pointer-events-none",
-                        isMinimized 
-                          ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
-                          : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
+                        isMinimized
+                            ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
+                            : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
                     )}
                     style={
-                        isMinimized 
-                          ? { left: dockOffset + 16 } 
-                          : {}
+                        isMinimized
+                            ? { left: dockOffset + 16 }
+                            : {}
                     }
                 >
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>Créer un bon de réception</DialogTitle>
-                        <DialogDescription>Remplissez les informations ci-dessous pour créer un bon de réception.</DialogDescription>
+                     <DialogHeader className="sr-only">
+                        <DialogTitle>Créer un bon de réception (Test)</DialogTitle>
+                        <DialogDescription>
+                            Cette boîte de dialogue est destinée aux tests de redimensionnement, de glisser-déposer et de minimisation.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div 
+                    <div
                         onClick={isMinimized ? toggleMinimize : undefined}
                         className={cn(
                             "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
                             isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
                             isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
                         )}
-                        style={{ 
-                            width: isMinimized ? 280 : size.width, 
+                        style={{
+                            width: isMinimized ? 280 : size.width,
                             height: isMinimized ? "auto" : size.height,
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
                         <div className="absolute right-3 top-3 z-50 flex gap-1">
                             {!isMinimized && (
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
                                     onMouseDown={(e) => e.stopPropagation()}
                                     className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
@@ -267,15 +278,15 @@ export function TestResizableDialog() {
                                     <Minus className="h-3.5 w-3.5" />
                                 </button>
                             )}
-                            <button 
+                            <button
                                 onClick={() => handleOpenChange(false)}
-                                onMouseDown={(e) => e.stopPropagation()} 
+                                onMouseDown={(e) => e.stopPropagation()}
                                 className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
                             >
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         </div>
-                        <div 
+                        <div
                             onMouseDown={handleDragStart}
                             className={cn(
                                 "flex-none p-4 border-b select-none flex items-center gap-2",
@@ -289,77 +300,77 @@ export function TestResizableDialog() {
                             </div>
                         </div>
                         {!isMinimized && (
-                           <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
-                              Remplissez les informations ci-dessous.
-                           </div>
+                            <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
+                                Remplissez les informations ci-dessous.
+                            </div>
                         )}
                         <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
                                     <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                                       <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
-                                          <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
-                                          <div className="space-y-4 pt-2">
-                                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
-                                                <Input value="BR-0001" className="w-full min-w-0" readOnly />
-                                             </div>
-                                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
-                                                <DatePickerField selected={date} onSelect={setDate} placeholder="Sélectionner une date" />
-                                             </div>
-                                          </div>
-                                       </div>
-                                       <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
-                                          <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
-                                           <div className="space-y-4 pt-2">
-                                              <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                 <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                                 <Select>
-                                                    <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                                      <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                                    </SelectTrigger>
-                                                    <SelectContent><SelectItem value="f1">AS ROMA</SelectItem></SelectContent>
-                                                 </Select>
-                                              </div>
-                                           </div>
-                                       </div>
-                                       <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
-                                          <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
-                                          <div className="space-y-4 pt-2">
-                                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
-                                                <Select>
-                                                    <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                                      <SelectValue placeholder="Espèces" />
-                                                    </SelectTrigger>
-                                                    <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
-                                                 </Select>
-                                             </div>
-                                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
-                                                <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Date d'échéance" />
-                                             </div>
-                                          </div>
-                                       </div>
-                                       <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
-                                          <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
-                                          <div className="space-y-4 pt-2">
-                                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                                                <Select>
-                                                    <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                                      <SelectValue placeholder="Sélectionnez un représentant" />
-                                                    </SelectTrigger>
-                                                    <SelectContent><SelectItem value="r1">Représentant 1</SelectItem></SelectContent>
-                                                 </Select>
-                                             </div>
-                                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                                <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
-                                                <Input placeholder="Référence" className="w-full min-w-0" />
-                                             </div>
-                                          </div>
-                                       </div>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
+                                            <div className="space-y-4 pt-2">
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
+                                                    <Input value="BR-0001" className="w-full min-w-0" readOnly />
+                                                </div>
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
+                                                    <DatePickerField selected={date} onSelect={setDate} placeholder="Sélectionner une date" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
+                                            <div className="space-y-4 pt-2">
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
+                                                    <Select>
+                                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                                            <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                                        </SelectTrigger>
+                                                        <SelectContent><SelectItem value="f1">AS ROMA</SelectItem></SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
+                                            <div className="space-y-4 pt-2">
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
+                                                    <Select>
+                                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                                            <SelectValue placeholder="Espèces" />
+                                                        </SelectTrigger>
+                                                        <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
+                                                    <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Date d'échéance" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
+                                            <div className="space-y-4 pt-2">
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
+                                                    <Select>
+                                                        <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                                            <SelectValue placeholder="Sélectionnez un représentant" />
+                                                        </SelectTrigger>
+                                                        <SelectContent><SelectItem value="r1">Représentant 1</SelectItem></SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                                    <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
+                                                    <Input placeholder="Référence" className="w-full min-w-0" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="border rounded-md overflow-hidden">
                                         <Table>
@@ -391,7 +402,7 @@ export function TestResizableDialog() {
                                                 </TableRow>
                                                 <TableRow>
                                                     <TableCell colSpan={6}>
-                                                       <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
+                                                        <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
                                                     </TableCell>
                                                 </TableRow>
                                             </TableBody>
@@ -422,5 +433,5 @@ export function TestResizableDialog() {
                 </DialogContent>
             </Dialog>
         </>
-    ) 
+    )
 }
