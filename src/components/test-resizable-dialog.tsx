@@ -221,13 +221,13 @@ export function TestResizableDialog() {
             </DialogHeader>
 
             {/* OUTER SHELL (Handles Dock Positioning) 
-              - transition-all duration-200: Fast reactive movement for sidebar.
-              - z-30: Safe layering under sidebar.
+              - 'duration-100': SUPER FAST reaction to sidebar toggle (0.1s).
+              - 'z-30': Safe layering.
             */}
             <DialogContent 
                 onInteractOutside={(e) => e.preventDefault()}
                 className={cn(
-                    "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-200 ease-in-out [&>button]:hidden pointer-events-none",
+                    "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:hidden pointer-events-none",
                     isMinimized 
                       ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                       : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
@@ -239,15 +239,14 @@ export function TestResizableDialog() {
                 }
             >
                 {/* INNER WINDOW (Handles Dragging & Sizing)
-                    - transition-none (When Dragging): ESSENTIAL for instant drag performance.
-                    - transition-all (When Docking/Restoring): Smooths the minimize animation.
+                    - 'duration-100': Fast minimize animation.
+                    - 'transition-none' when dragging: Keeps dragging instant.
                 */}
                 <div 
                   className={cn(
                     "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
                     isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50" : "rounded-lg",
-                    // THE MAGIC FIX: If dragging, disable animation immediately.
-                    isDragging ? "transition-none" : "transition-all duration-200 ease-in-out"
+                    isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
                   )}
                   style={{ 
                     width: isMinimized ? 280 : size.width, 
