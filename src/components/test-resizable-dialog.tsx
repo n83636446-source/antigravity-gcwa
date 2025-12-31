@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 // --- CUSTOM CALENDAR ---
 const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => {
     const [currentMonth, setCurrentMonth] = useState(selected || new Date())
+
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
     const handleToday = () => {
@@ -21,6 +22,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
         onSelect(today)
         setCurrentMonth(today)
     }
+
     const daysInMonth = () => {
         const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
         const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
@@ -32,6 +34,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
         }
         return days
     }
+
     return (
         <div className="p-3 bg-white rounded-md w-[280px]">
           {/* HEADER */}
@@ -40,11 +43,13 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
             <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
             <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
           </div>
-          {/* DAYS HEADER */}
+
+          {/* DAYS HEADER (L M M J V S D) */}
           <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
             {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
           </div>
-          {/* GRID */}
+
+          {/* CALENDAR GRID */}
           <div className="grid grid-cols-7 gap-1 text-sm mb-3">
             {daysInMonth().map((d, i) => {
                const isSelected = selected && isSameDay(d, selected)
@@ -59,7 +64,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
                      !isCurrentMonth && "text-gray-300",
                      isCurrentMonth && "text-gray-700 hover:bg-gray-100",
                      isSelected && "bg-slate-900 text-white hover:bg-slate-800",
-                     isToday && !isSelected && "border border-slate-400 font-semibold"
+                     isToday && !isSelected && "border border-slate-500 font-semibold"
                    )}
                  >
                    {format(d, "d")}
@@ -67,6 +72,7 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
                )
             })}
           </div>
+
           {/* FOOTER */}
           <div className="border-t pt-3 flex items-center gap-2">
              <div className="bg-slate-100 text-slate-700 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border">
@@ -86,45 +92,36 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
 }
 
 
-export function TestResizableDialog() {
+export function TestResizableDialog({ sidebarOffset: sidebarOffsetProp }: { sidebarOffset?: number }) {
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
     const [date, setDate] = useState(new Date())
     const [dueDate, setDueDate] = useState(new Date())
     const [size, setSize] = useState({ width: 1000, height: 800 })
     const [position, setPosition] = useState({ x: 0, y: 0 })
-    const [dockOffset, setDockOffset] = useState(0) // Tracks Sidebar Width
+    const [dockOffset, setDockOffset] = useState(sidebarOffsetProp || 0)
 
-    // --- SIDEBAR OBSERVER ---
-    // Automatically detects the width of the sidebar to position the dock correctly
     useEffect(() => {
-        // The sidebar created by the template uses a `div` with `data-sidebar="sidebar"`, not an `aside` tag.
+        if (sidebarOffsetProp !== undefined) return;
         const sidebar = document.querySelector('div[data-sidebar="sidebar"]')
 
-        if (!sidebar) {
+        if (!sidebar || !sidebar.parentElement) {
             setDockOffset(0)
             return
         }
 
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                // The parent `div` of the sidebar `div` is what actually resizes.
-                const parent = entry.target.parentElement;
-                if(parent){
-                    setDockOffset(parent.getBoundingClientRect().width)
-                }
+                setDockOffset(entry.target.getBoundingClientRect().width)
             }
         })
         
-        // We observe the parent element, which is the one that has the transition effect
-        if(sidebar.parentElement){
-            observer.observe(sidebar.parentElement)
-            setDockOffset(sidebar.parentElement.getBoundingClientRect().width)
-        }
+        observer.observe(sidebar.parentElement)
+        setDockOffset(sidebar.parentElement.getBoundingClientRect().width)
 
         return () => observer.disconnect()
-    }, [])
-
+    }, [sidebarOffsetProp])
+    
     const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen)
         if (!newOpen) {
@@ -223,7 +220,6 @@ export function TestResizableDialog() {
                 <DialogTitle>Créer un bon de réception</DialogTitle>
                 <DialogDescription>Remplissez les informations ci-dessous pour créer un nouveau bon de réception.</DialogDescription>
             </DialogHeader>
-
             <DialogContent
                 onInteractOutside={(e) => e.preventDefault()}
                 className={cn(
@@ -234,7 +230,7 @@ export function TestResizableDialog() {
                 )}
                 style={
                     isMinimized
-                        ? { left: dockOffset + 16 } // REACTIVE POSITION: Sidebar Width + Margin
+                        ? { left: dockOffset + 16 }
                         : {}
                 }
             >
@@ -419,4 +415,3 @@ export function TestResizableDialog() {
         </Dialog>
     )
 }
-" data-path-to-node="33,2">
