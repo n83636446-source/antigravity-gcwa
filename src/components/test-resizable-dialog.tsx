@@ -422,23 +422,23 @@ export function TestResizableDialog() {
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         </div>
-                        <div
+                        <DialogHeader
                             onMouseDown={handleDragStart}
                             className={cn(
-                                "flex-none p-4 border-b select-none flex items-center gap-2",
+                                "flex-none p-4 border-b select-none flex items-center gap-2 text-left",
                                 !isMinimized && "cursor-move",
                                 isMinimized && "py-3 px-3 border-b-0"
                             )}
                         >
                             {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                            <div className="pr-12 truncate font-semibold text-sm">
+                            <DialogTitle className="pr-12 truncate font-semibold text-sm">
                                 {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
-                            </div>
-                        </div>
+                            </DialogTitle>
+                        </DialogHeader>
                         {!isMinimized && (
-                            <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
+                            <DialogDescription className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
                                 Remplissez les informations ci-dessous.
-                            </div>
+                            </DialogDescription>
                         )}
                         <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
