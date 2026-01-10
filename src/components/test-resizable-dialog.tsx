@@ -1,4 +1,6 @@
 
+'use client';
+
 import React, { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -15,7 +17,12 @@ import { cn } from "@/lib/utils"
 import { collection, getDocs } from "firebase/firestore" 
 import { useFirestore } from "@/firebase"
 
-// --- TYPES BASED ON YOUR SCHEMA --- 
+// --- EXISTING COMPONENTS ---
+import { ArticleDialog } from "@/components/article-dialog"
+
+
+// --- TYPES --- 
+// We align this roughly with your ArticleDialog types to ensure compatibility 
 type Article = { 
   id: string 
   code: string 
@@ -25,7 +32,6 @@ type Article = {
   stockLevel?: number 
   reorderThreshold?: number 
   familyId?: string 
-  // We add this optional in case you add it later, otherwise default to 20 
   tva?: number 
 }
 
@@ -149,8 +155,9 @@ export function TestResizableDialog() {
     const [size, setSize] = useState({ width: 1000, height: 800 })
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
-
-    const firestore = useFirestore();
+    
+    // --- FIRESTORE HOOK --- 
+    const db = useFirestore()
 
     // --- DATA STATE --- 
     const [availableArticles, setAvailableArticles] = useState<Article[]>([])
@@ -158,40 +165,44 @@ export function TestResizableDialog() {
         { id: 1, articleId: "", qty: 1, price: 0, tva: 20 }
     ])
 
-    // --- REAL FIRESTORE FETCH --- 
+    // --- NEW ARTICLE MODAL STATE ---
+    const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
+    const [pendingRowId, setPendingRowId] = useState<number | null>(null)
+    
+    // --- CALCULATE LAST CODE NUMBER --- 
+    // Helper to pass to ArticleDialog so it can auto-increment (e.g. ART005 -> ART006) 
+    const lastArticleCodeNumber = React.useMemo(() => { 
+        return availableArticles.reduce((max, article) => { 
+            // Assuming format ARTxxx 
+            const match = article.code.match(/ART(\d+)/); 
+            if (match && match[1]) { 
+                const num = parseInt(match[1], 10); 
+                return num > max ? num : max; 
+            } return max; 
+        }, 0); 
+    }, [availableArticles]);
+
+    // --- FETCH ARTICLES --- 
     useEffect(() => {
         const fetchArticles = async () => {
-            if (!firestore) return;
+            if (!db) return;
             try {
-                // Connect to the 'products' collection
-                const querySnapshot = await getDocs(collection(firestore, "products"))
-
-                // Map the documents to our Article type
+                const querySnapshot = await getDocs(collection(db, "products"))
                 const articlesData = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 })) as Article[]
-
                 setAvailableArticles(articlesData)
-                console.log("Articles loaded:", articlesData.length)
             } catch (error) {
                 console.error("Error fetching articles:", error)
             }
         }
-        // Only fetch when the dialog is actually opened to save reads
-        if (open) {
-            fetchArticles()
-        }
-    }, [open, firestore]) // Dependency on 'open' and 'firestore'
+        if (open && db) fetchArticles()
+    }, [open, db])
 
+    // --- TABLE ACTIONS --- 
     const addItem = () => {
-        const newItem: InvoiceItem = {
-            id: Date.now(), // Unique ID based on timestamp
-            articleId: "",
-            qty: 1,
-            price: 0,
-            tva: 20
-        }
+        const newItem = { id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }
         setItems([...items, newItem])
     }
 
@@ -202,26 +213,42 @@ export function TestResizableDialog() {
     // --- SMART ARTICLE SELECTION --- 
     const handleArticleChange = (rowId: number, value: string) => {
         if (value === "create_new") {
-            console.log("TRIGGER: Open Create Article Modal")
-            // TODO: Implement your 'Create Article' dialog logic here
+            // Capture which row triggered the create and Open the existing ArticleDialog 
+            setPendingRowId(rowId)
+            setIsCreateArticleOpen(true)
             return
         }
 
-        // Find the selected article in the loaded data
         const selectedArticle = availableArticles.find(a => a.id === value)
         if (selectedArticle) {
-            // Update the specific row with the new article's data
-            // Defaulting TVA to 20 since it's not in the 'products' schema
             setItems(items.map(item =>
                 item.id === rowId
-                    ? { ...item, articleId: value, price: selectedArticle.price, tva: 20 }
+                    ? { ...item, articleId: value, price: selectedArticle.price, tva: selectedArticle.tva || 20 }
                     : item
             ))
         }
     }
+    
+    // --- CALLBACK: WHEN ARTICLE IS CREATED IN DIALOG --- 
+    const handleArticleCreated = (newArticle: any) => { 
+        // 1. Add to local list immediately 
+        // (We cast 'any' because ArticleDialog returns its own type, but it should match ours) 
+        const articleWithType = newArticle as Article; 
+        setAvailableArticles(prev => [articleWithType, ...prev]);
+        
+        // 2. Select it in the pending row 
+        if (pendingRowId) { 
+            setItems(items.map(item => 
+                item.id === pendingRowId 
+                    ? { ...item, articleId: articleWithType.id, price: articleWithType.price, tva: articleWithType.tva || 20 } 
+                    : item
+            ))
+        }
+        
+        // 3. Reset pending row 
+        setPendingRowId(null);
+    }
 
-
-    // --- SIDEBAR OBSERVER --- 
     useEffect(() => {
         let observer: ResizeObserver | null = null;
         let interval: NodeJS.Timeout | null = null;
@@ -337,12 +364,20 @@ export function TestResizableDialog() {
         document.addEventListener('mouseup', onMouseUp)
     }
 
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 800;
+    const isMobile = size.width < 800
 
 
     return (
         <>
             <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
+            
+            {/* --- REUSED ARTICLE DIALOG --- */}
+            <ArticleDialog 
+                isOpen={isCreateArticleOpen}
+                onOpenChange={setIsCreateArticleOpen}
+                onArticleCreated={handleArticleCreated}
+                lastArticleCodeNumber={lastArticleCodeNumber}
+            />
 
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
@@ -515,7 +550,6 @@ export function TestResizableDialog() {
                                                                             <span>Créer un nouvel article</span>
                                                                         </div>
                                                                     </SelectItem>
-
                                                                     {availableArticles.map(a => (
                                                                         <SelectItem key={a.id} value={a.id}>
                                                                             {a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span>
@@ -576,4 +610,4 @@ export function TestResizableDialog() {
     )
 }
 
-    
+" data-path-to-node="52,2">
