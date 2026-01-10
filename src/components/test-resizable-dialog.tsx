@@ -116,12 +116,33 @@ export function TestResizableDialog() {
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [date, setDate] = useState<Date | undefined>(new Date())
-    const [dueDate, setDueDate] = useState<Date | undefined>(new Date())
+    const [date, setDate] = useState(new Date())
+    const [dueDate, setDueDate] = useState(new Date())
     const [size, setSize] = useState({ width: 1000, height: 800 })
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
 
+    // --- ITEMS STATE --- 
+    const [items, setItems] = useState([
+        { id: 1, article: "article1", qty: 1, price: 45.00, tva: 20 }
+    ])
+
+    const addItem = () => {
+        const newItem = {
+            id: Date.now(), // Unique ID based on timestamp
+            article: "",
+            qty: 1,
+            price: 0,
+            tva: 20
+        }
+        setItems([...items, newItem])
+    }
+
+    const removeItem = (id: number) => {
+        setItems(items.filter(item => item.id !== id))
+    }
+
+    // --- ROBUST SIDEBAR OBSERVER --- 
     useEffect(() => {
         const findSidebar = () => {
             return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar')
@@ -132,28 +153,20 @@ export function TestResizableDialog() {
             else setDockOffset(width)
         }
         const sidebar = findSidebar()
-        if (sidebar) {
-            updateWidth(sidebar)
-        }
+        if (sidebar) updateWidth(sidebar)
         let observer: ResizeObserver | null = null
         if (sidebar) {
             observer = new ResizeObserver((entries) => {
-                for (const entry of entries) {
-                    updateWidth(entry.target)
-                }
+                for (const entry of entries) updateWidth(entry.target)
             })
             observer.observe(sidebar)
         }
         const interval = setInterval(() => {
             const currentSidebar = findSidebar()
-            if (currentSidebar) {
-                updateWidth(currentSidebar)
-            }
+            if (currentSidebar) updateWidth(currentSidebar)
         }, 1000)
         return () => {
-            if (observer) {
-                observer.disconnect()
-            }
+            if (observer) observer.disconnect()
             clearInterval(interval)
         }
     }, [])
@@ -237,6 +250,7 @@ export function TestResizableDialog() {
     return (
         <>
             <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
+
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
@@ -385,24 +399,46 @@ export function TestResizableDialog() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                <TableRow>
-                                                    <TableCell>
-                                                        <Select defaultValue="article1">
-                                                            <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0"><SelectValue /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </TableCell>
-                                                    <TableCell><Input type="number" defaultValue="1" className="min-w-[60px]" /></TableCell>
-                                                    <TableCell><Input type="number" defaultValue="45.00" className="min-w-[60px]" /></TableCell>
-                                                    <TableCell><Input type="number" defaultValue="20" className="min-w-[60px]" /></TableCell>
-                                                    <TableCell className="text-right font-medium">45,00 €</TableCell>
-                                                    <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                                </TableRow>
+                                                {items.map((item) => (
+                                                    <TableRow key={item.id}>
+                                                        <TableCell>
+                                                            <Select defaultValue={item.article || "article1"}>
+                                                                <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0"><SelectValue /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </TableCell>
+                                                        <TableCell><Input type="number" defaultValue={item.qty} className="min-w-[60px]" /></TableCell>
+                                                        <TableCell><Input type="number" defaultValue={item.price.toFixed(2)} className="min-w-[60px]" /></TableCell>
+                                                        <TableCell><Input type="number" defaultValue={item.tva} className="min-w-[60px]" /></TableCell>
+                                                        <TableCell className="text-right font-medium">
+                                                            {(item.price * item.qty).toFixed(2)} €
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-red-500"
+                                                                onClick={() => removeItem(item.id)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+
                                                 <TableRow>
                                                     <TableCell colSpan={6}>
-                                                        <Button variant="outline" className="w-full border-dashed text-muted-foreground">+ Ajouter une ligne</Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="w-full border-dashed text-muted-foreground"
+                                                            onClick={addItem}
+                                                        >
+                                                            + Ajouter une ligne
+                                                        </Button>
                                                     </TableCell>
                                                 </TableRow>
                                             </TableBody>
