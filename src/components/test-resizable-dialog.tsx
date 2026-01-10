@@ -1,5 +1,8 @@
+
+'use client';
+
 import React, { useState, useEffect, useRef } from "react"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,16 +14,17 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, en
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
-// --- CUSTOM CALENDAR --- 
-const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, onSelect: (d: Date) => void }) => {
+const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
     const [currentMonth, setCurrentMonth] = useState(selected || new Date())
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
+
     const handleToday = () => {
         const today = new Date()
         onSelect(today)
         setCurrentMonth(today)
     }
+
     const daysInMonth = () => {
         const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
         const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
@@ -32,52 +36,85 @@ const SimpleCalendar = ({ selected, onSelect }: { selected: Date | undefined, on
         }
         return days
     }
+
     return (
         <div className="p-3 bg-white rounded-md w-[280px]">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={(e) => { e.preventDefault(); prevMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-            <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
-            <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-            {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-sm mb-3">
-            {daysInMonth().map((d, i) => {
-               const isSelected = selected && isSameDay(d, selected)
-               const isCurrentMonth = isSameMonth(d, currentMonth)
-               const isToday = isSameDay(d, new Date())
-               return (
-                 <button
-                   key={i}
-                   onClick={(e) => { e.preventDefault(); onSelect(d) }}
-                   className={cn(
-                     "h-8 w-8 rounded-md flex items-center justify-center text-sm transition-colors",
-                     !isCurrentMonth && "text-gray-300",
-                     isCurrentMonth && "text-gray-700 hover:bg-gray-100",
-                     isSelected && "bg-slate-900 text-white hover:bg-slate-800",
-                     isToday && !isSelected && "border border-slate-400 font-semibold"
-                   )}
-                 >
-                   {format(d, "d")}
-                 </button>
-               )
-            })}
-          </div>
-          <div className="border-t pt-3 flex items-center gap-2">
-             <div className="bg-slate-100 text-slate-700 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border">
-                {selected ? format(selected, "dd/MM/yyyy") : "--/--/----"}
-             </div>
-             <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs font-medium"
-                onClick={(e) => { e.preventDefault(); handleToday() }}
-             >
-                Aujourd'hui
-             </Button>
-          </div>
+            <div className="flex items-center justify-between mb-4">
+                <button onClick={(e) => { e.preventDefault(); prevMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+                <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
+                <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-sm mb-3">
+                {daysInMonth().map((d, i) => {
+                    const isSelected = selected && isSameDay(d, selected)
+                    const isCurrentMonth = isSameMonth(d, currentMonth)
+                    const isToday = isSameDay(d, new Date())
+                    return (
+                        <button
+                            key={i}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onSelect(d);
+                            }}
+                            className={cn(
+                                "h-8 w-8 rounded-md flex items-center justify-center text-sm transition-colors",
+                                !isCurrentMonth && "text-gray-300",
+                                isCurrentMonth && "text-gray-700 hover:bg-gray-100",
+                                isSelected && "bg-slate-900 text-white hover:bg-slate-800",
+                                isToday && !isSelected && "border border-slate-400 font-semibold"
+                            )}
+                        >
+                            {format(d, "d")}
+                        </button>
+                    )
+                })}
+            </div>
+            <div className="border-t pt-3 flex items-center gap-2">
+                <div className="bg-slate-100 text-slate-700 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border truncate">
+                    {selected ? format(selected, "dd/MM/yyyy") : "--/--/----"}
+                </div>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs font-medium px-2"
+                    onClick={(e) => { e.preventDefault(); handleToday() }}
+                >
+                    Aujourd'hui
+                </Button>
+                <Button
+                    size="sm"
+                    className="h-8 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white px-3"
+                    onClick={(e) => { e.preventDefault(); onClose() }}
+                >
+                    OK
+                </Button>
+            </div>
         </div>
+    )
+}
+
+const DatePickerField = ({ selected, onSelect, placeholder }: { selected: Date | undefined, onSelect: (d: Date) => void, placeholder: string }) => {
+    const [isOpen, setIsOpen] = useState(false)
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
+                    <span className="truncate flex-1 min-w-0">
+                        {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
+                    </span>
+                    <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border-0" align="start">
+                <SimpleCalendar selected={selected} onSelect={onSelect} onClose={() => setIsOpen(false)} />
+            </PopoverContent>
+        </Popover>
     )
 }
 
@@ -91,58 +128,38 @@ export function TestResizableDialog() {
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
 
-    // --- ROBUST SIDEBAR OBSERVER --- 
     useEffect(() => {
         const findSidebar = () => {
-            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar');
-        };
-
+            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar')
+        }
         const updateWidth = (el: Element) => {
-            const width = el.getBoundingClientRect().width;
-            setDockOffset(width > 0 ? width : 70);
-        };
-
-        let observer: ResizeObserver | null = null;
-        let interval: NodeJS.Timeout | null = null;
-
-        const sidebar = findSidebar();
-
-        if (sidebar) {
-            updateWidth(sidebar);
-            observer = new ResizeObserver(entries => {
-                for (const entry of entries) {
-                    updateWidth(entry.target);
-                }
-            });
-            observer.observe(sidebar);
-        } else {
-            interval = setInterval(() => {
-                const currentSidebar = findSidebar();
-                if (currentSidebar) {
-                    updateWidth(currentSidebar);
-                    if (interval) clearInterval(interval);
-                    observer = new ResizeObserver(entries => {
-                        for (const entry of entries) {
-                            updateWidth(entry.target);
-                        }
-                    });
-                    observer.observe(currentSidebar);
-                }
-            }, 1000);
+            const width = el.getBoundingClientRect().width
+            if (width === 0) setDockOffset(70)
+            else setDockOffset(width)
         }
 
+        const sidebar = findSidebar()
+        if (sidebar) updateWidth(sidebar)
+        let observer: ResizeObserver | null = null
+        if (sidebar) {
+            observer = new ResizeObserver((entries) => {
+                for (const entry of entries) updateWidth(entry.target)
+            })
+            observer.observe(sidebar)
+        }
+        const interval = setInterval(() => {
+            const currentSidebar = findSidebar()
+            if (currentSidebar) updateWidth(currentSidebar)
+        }, 1000)
         return () => {
-            if (observer) observer.disconnect();
-            if (interval) clearInterval(interval);
-        };
-    }, []);
+            if (observer) observer.disconnect()
+            clearInterval(interval)
+        }
+    }, [])
 
-    // --- SMART BUTTON HANDLER --- 
     const handleMainButtonClick = () => {
         if (open) {
-            if (isMinimized) {
-                setIsMinimized(false)
-            }
+            if (isMinimized) setIsMinimized(false)
         } else {
             setOpen(true)
         }
@@ -160,14 +177,14 @@ export function TestResizableDialog() {
         }
     }
 
-    const toggleMinimize = () => { setIsMinimized(!isMinimized) }
+    const toggleMinimize = () => {
+        setIsMinimized(!isMinimized)
+    }
 
-    // --- DRAG LOGIC --- 
     const handleDragStart = (e: React.MouseEvent) => {
         if (isMinimized) return
         if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
         e.preventDefault()
-
         setIsDragging(true)
         const startX = e.clientX
         const startY = e.clientY
@@ -213,30 +230,14 @@ export function TestResizableDialog() {
         document.addEventListener('mousemove', onMouseMove)
         document.addEventListener('mouseup', onMouseUp)
     }
-    
-    const isMobile = size.width < 800;
 
-    const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
-        return (
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant={"outline"} className={cn("w-full flex items-center justify-between px-3 text-left font-normal overflow-hidden", !selected && "text-muted-foreground")}>
-                        <span className="truncate flex-1 min-w-0">
-                            {selected ? format(selected, "d MMMM yyyy", { locale: fr }) : placeholder}
-                        </span>
-                        <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 border-0" align="start">
-                    <SimpleCalendar selected={selected} onSelect={onSelect} />
-                </PopoverContent>
-            </Popover>
-        )
-    }
+    const isMobile = size.width < 800
 
     return (
         <>
-            <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
+            <Button variant="outline" onClick={handleMainButtonClick}>
+                Open Test Dialog
+            </Button>
 
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
@@ -247,11 +248,7 @@ export function TestResizableDialog() {
                             ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                             : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
                     )}
-                    style={
-                        isMinimized
-                            ? { left: dockOffset + 16 }
-                            : {}
-                    }
+                    style={isMinimized ? { left: dockOffset + 16 } : {}}
                 >
                      <DialogHeader className="sr-only">
                         <DialogTitle>Créer un bon de réception (Test)</DialogTitle>
@@ -272,8 +269,6 @@ export function TestResizableDialog() {
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
-
-                        {/* CONTROL BUTTONS */}
                         <div className="absolute right-3 top-3 z-50 flex gap-1">
                             {!isMinimized && (
                                 <button
@@ -293,7 +288,6 @@ export function TestResizableDialog() {
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         </div>
-                        {/* HEADER */}
                         <div
                             onMouseDown={handleDragStart}
                             className={cn(
@@ -303,7 +297,6 @@ export function TestResizableDialog() {
                             )}
                         >
                             {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-
                             <div className="pr-12 truncate font-semibold text-sm">
                                 {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
                             </div>
@@ -313,13 +306,10 @@ export function TestResizableDialog() {
                                 Remplissez les informations ci-dessous.
                             </div>
                         )}
-                        {/* BODY & FOOTER */}
                         <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
-
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
                                     <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                                        {/* ZONE 1 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                                             <div className="space-y-4 pt-2">
@@ -333,7 +323,6 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
-                                        {/* ZONE 2 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                                             <div className="space-y-4 pt-2">
@@ -348,7 +337,6 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
-                                        {/* ZONE 3 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                                             <div className="space-y-4 pt-2">
@@ -367,7 +355,6 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
-                                        {/* ZONE 4 */}
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                                             <div className="space-y-4 pt-2">
@@ -387,7 +374,6 @@ export function TestResizableDialog() {
                                             </div>
                                         </div>
                                     </div>
-                                    {/* Items Table */}
                                     <div className="border border-blue-800 rounded-md overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-gray-50">
@@ -426,7 +412,6 @@ export function TestResizableDialog() {
                                     </div>
                                 </form>
                             </div>
-                            {/* Footer */}
                             <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
                                 <div className="space-y-2 text-right mb-4">
                                     <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
@@ -439,7 +424,6 @@ export function TestResizableDialog() {
                                 </DialogFooter>
                             </div>
                         </div>
-                        {/* Resize Handles */}
                         {!isMinimized && (
                             <>
                                 <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
@@ -453,3 +437,4 @@ export function TestResizableDialog() {
         </>
     )
 }
+```
