@@ -1,6 +1,4 @@
 
-'use client';
-
 import React, { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -9,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2 } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, Check } from "lucide-react" 
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -44,11 +42,9 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
                 <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
                 <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
             </div>
-
             <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => <span key={d} className="text-gray-400 font-medium">{d}</span>)}
             </div>
-
             <div className="grid grid-cols-7 gap-1 text-sm mb-3">
                 {daysInMonth().map((d, i) => {
                     const isSelected = selected && isSameDay(d, selected)
@@ -98,7 +94,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     )
 }
 
-const DatePickerField = ({ selected, onSelect, placeholder }: { selected: Date | undefined, onSelect: (d: Date) => void, placeholder: string }) => {
+const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
     const [isOpen, setIsOpen] = useState(false)
 
     return (
@@ -117,6 +113,7 @@ const DatePickerField = ({ selected, onSelect, placeholder }: { selected: Date |
         </Popover>
     )
 }
+
 
 export function TestResizableDialog() {
     const [open, setOpen] = useState(false)
@@ -159,7 +156,9 @@ export function TestResizableDialog() {
 
     const handleMainButtonClick = () => {
         if (open) {
-            if (isMinimized) setIsMinimized(false)
+            if (isMinimized) {
+                setIsMinimized(false)
+            }
         } else {
             setOpen(true)
         }
@@ -185,6 +184,7 @@ export function TestResizableDialog() {
         if (isMinimized) return
         if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
         e.preventDefault()
+
         setIsDragging(true)
         const startX = e.clientX
         const startY = e.clientY
@@ -235,10 +235,7 @@ export function TestResizableDialog() {
 
     return (
         <>
-            <Button variant="outline" onClick={handleMainButtonClick}>
-                Open Test Dialog
-            </Button>
-
+            <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
@@ -250,7 +247,7 @@ export function TestResizableDialog() {
                     )}
                     style={isMinimized ? { left: dockOffset + 16 } : {}}
                 >
-                     <DialogHeader className="sr-only">
+                    <DialogHeader className="sr-only">
                         <DialogTitle>Créer un bon de réception (Test)</DialogTitle>
                         <DialogDescription>
                             Cette boîte de dialogue est destinée aux tests de redimensionnement, de glisser-déposer et de minimisation.
@@ -437,4 +434,3 @@ export function TestResizableDialog() {
         </>
     )
 }
-```
