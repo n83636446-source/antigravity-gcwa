@@ -14,14 +14,10 @@ import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 // --- FIREBASE IMPORTS --- 
 import { collection, getDocs } from "firebase/firestore" 
-import { useFirestore } from "@/firebase"
-
-// --- EXISTING COMPONENTS --- 
+import { useFirestore } from "@/firebase" 
 import { ArticleDialog } from "@/components/article-dialog"
 
-
 // --- TYPES --- 
-// We align this roughly with your ArticleDialog types to ensure compatibility 
 type Article = { 
   id: string 
   code: string 
@@ -255,46 +251,41 @@ export function TestResizableDialog() {
         setPendingRowId(null);
     }
 
-    // --- SIDEBAR OBSERVER --- 
+    // --- ROBUST SIDEBAR OBSERVER (FIXED) --- 
     useEffect(() => {
+        // We restored the full list of selectors to ensure we find the sidebar
         const findSidebar = () => {
-            return document.querySelector('aside') || document.querySelector('.sidebar');
-        };
-
-        const updateWidth = (el: Element) => {
-            const width = el.getBoundingClientRect().width;
-            setDockOffset(width === 0 ? 70 : width);
-        };
-
-        let observer: ResizeObserver | null = null;
-        let interval: NodeJS.Timeout | null = null;
-
-        const setupObserver = () => {
-            const sidebar = findSidebar();
-            if (sidebar) {
-                if (interval) clearInterval(interval);
-                updateWidth(sidebar);
-                observer = new ResizeObserver((entries) => {
-                    for (const entry of entries) updateWidth(entry.target);
-                });
-                observer.observe(sidebar);
-                return true;
-            }
-            return false;
-        };
-
-        if (!setupObserver()) {
-            interval = setInterval(() => {
-                if (setupObserver() && interval) {
-                    clearInterval(interval);
-                }
-            }, 500);
+            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar')
         }
 
+        const updateWidth = (el: Element) => {
+            const width = el.getBoundingClientRect().width
+            // If width is 0 (hidden), default to small icon width (70px)
+            if (width === 0) setDockOffset(70)
+            else setDockOffset(width)
+        }
+
+        const sidebar = findSidebar()
+        if (sidebar) updateWidth(sidebar)
+
+        let observer: ResizeObserver | null = null
+        if (sidebar) {
+            observer = new ResizeObserver((entries) => {
+                for (const entry of entries) updateWidth(entry.target)
+            })
+            observer.observe(sidebar)
+        }
+
+        // Interval check for safety in case DOM changes slowly
+        const interval = setInterval(() => {
+            const currentSidebar = findSidebar()
+            if (currentSidebar) updateWidth(currentSidebar)
+        }, 1000)
+
         return () => {
-            if (observer) observer.disconnect();
-            if (interval) clearInterval(interval);
-        };
+            if (observer) observer.disconnect()
+            clearInterval(interval)
+        }
     }, []);
 
     // --- MAIN CONTROL LOGIC --- 
@@ -418,7 +409,7 @@ export function TestResizableDialog() {
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
-                        <DialogHeader>
+                         <DialogHeader>
                             <div className="absolute right-3 top-3 z-50 flex gap-1">
                                 {!isMinimized && (
                                     <button
@@ -625,3 +616,13 @@ export function TestResizableDialog() {
         </>
     )
 }
+
+" data-path-to-node="49,2">
+
+Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
+
+<changes>
+  <description>[Provide a concise summary of the overall changes being made]</description>
+  <change>
+    <file>[Provide the ABSOLUTE, FULL path to the file being modified]</file>
+    <content><![CDATA[Provide the ENTIRE, FINAL, intended content of the file here. Do NOT provide diffs or partial snippets. Ensure all code is properly escaped within the CDATA section.
