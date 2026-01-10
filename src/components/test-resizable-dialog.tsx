@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -6,17 +7,43 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2 } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+// --- FIREBASE IMPORTS --- 
+import { collection, getDocs } from "firebase/firestore" 
+import { useFirestore } from "@/firebase"
 
-const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
+// --- TYPES BASED ON YOUR SCHEMA --- 
+type Article = { 
+  id: string 
+  code: string 
+  name: string 
+  description?: string 
+  price: number 
+  stockLevel?: number 
+  reorderThreshold?: number 
+  familyId?: string 
+  // We add this optional in case you add it later, otherwise default to 20 
+  tva?: number 
+}
+
+type InvoiceItem = { 
+  id: number 
+  articleId: string 
+  qty: number 
+  price: number 
+  tva: number 
+}
+
+// --- CUSTOM CALENDAR --- 
+const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => { 
     const [currentMonth, setCurrentMonth] = useState(selected || new Date())
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
 
-    const handleToday = () => {
+    const handleToday = () => { 
         const today = new Date()
         onSelect(today)
         setCurrentMonth(today)
@@ -42,7 +69,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
                 <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
+                 {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
             </div>
             <div className="grid grid-cols-7 gap-1 text-sm mb-3">
                 {daysInMonth().map((d, i) => {
@@ -93,7 +120,8 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     )
 }
 
-const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
+// --- DATE PICKER FIELD --- 
+const DatePickerField = ({ selected, onSelect, placeholder }: any) => { 
     const [isOpen, setIsOpen] = useState(false)
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -122,15 +150,44 @@ export function TestResizableDialog() {
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
 
-    // --- ITEMS STATE --- 
-    const [items, setItems] = useState([
-        { id: 1, article: "article1", qty: 1, price: 45.00, tva: 20 }
+    const firestore = useFirestore();
+
+    // --- DATA STATE --- 
+    const [availableArticles, setAvailableArticles] = useState<Article[]>([])
+    const [items, setItems] = useState<InvoiceItem[]>([
+        { id: 1, articleId: "", qty: 1, price: 0, tva: 20 }
     ])
 
+    // --- REAL FIRESTORE FETCH --- 
+    useEffect(() => {
+        const fetchArticles = async () => {
+            if (!firestore) return;
+            try {
+                // Connect to the 'products' collection
+                const querySnapshot = await getDocs(collection(firestore, "products"))
+
+                // Map the documents to our Article type
+                const articlesData = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })) as Article[]
+
+                setAvailableArticles(articlesData)
+                console.log("Articles loaded:", articlesData.length)
+            } catch (error) {
+                console.error("Error fetching articles:", error)
+            }
+        }
+        // Only fetch when the dialog is actually opened to save reads
+        if (open) {
+            fetchArticles()
+        }
+    }, [open, firestore]) // Dependency on 'open' and 'firestore'
+
     const addItem = () => {
-        const newItem = {
+        const newItem: InvoiceItem = {
             id: Date.now(), // Unique ID based on timestamp
-            article: "",
+            articleId: "",
             qty: 1,
             price: 0,
             tva: 20
@@ -142,34 +199,69 @@ export function TestResizableDialog() {
         setItems(items.filter(item => item.id !== id))
     }
 
-    // --- ROBUST SIDEBAR OBSERVER --- 
+    // --- SMART ARTICLE SELECTION --- 
+    const handleArticleChange = (rowId: number, value: string) => {
+        if (value === "create_new") {
+            console.log("TRIGGER: Open Create Article Modal")
+            // TODO: Implement your 'Create Article' dialog logic here
+            return
+        }
+
+        // Find the selected article in the loaded data
+        const selectedArticle = availableArticles.find(a => a.id === value)
+        if (selectedArticle) {
+            // Update the specific row with the new article's data
+            // Defaulting TVA to 20 since it's not in the 'products' schema
+            setItems(items.map(item =>
+                item.id === rowId
+                    ? { ...item, articleId: value, price: selectedArticle.price, tva: 20 }
+                    : item
+            ))
+        }
+    }
+
+
+    // --- SIDEBAR OBSERVER --- 
     useEffect(() => {
+        let observer: ResizeObserver | null = null;
+        let interval: NodeJS.Timeout | null = null;
+
         const findSidebar = () => {
-            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar')
-        }
+            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar');
+        };
+
         const updateWidth = (el: Element) => {
-            const width = el.getBoundingClientRect().width
-            if (width === 0) setDockOffset(70)
-            else setDockOffset(width)
+            const width = el.getBoundingClientRect().width;
+            setDockOffset(width === 0 ? 70 : width);
+        };
+
+        const setupObserver = () => {
+            const sidebar = findSidebar();
+            if (sidebar) {
+                if (interval) clearInterval(interval);
+                updateWidth(sidebar);
+                observer = new ResizeObserver((entries) => {
+                    for (const entry of entries) updateWidth(entry.target);
+                });
+                observer.observe(sidebar);
+                return true;
+            }
+            return false;
+        };
+
+        if (!setupObserver()) {
+            interval = setInterval(() => {
+                if (setupObserver() && interval) {
+                    clearInterval(interval);
+                }
+            }, 500);
         }
-        const sidebar = findSidebar()
-        if (sidebar) updateWidth(sidebar)
-        let observer: ResizeObserver | null = null
-        if (sidebar) {
-            observer = new ResizeObserver((entries) => {
-                for (const entry of entries) updateWidth(entry.target)
-            })
-            observer.observe(sidebar)
-        }
-        const interval = setInterval(() => {
-            const currentSidebar = findSidebar()
-            if (currentSidebar) updateWidth(currentSidebar)
-        }, 1000)
+
         return () => {
-            if (observer) observer.disconnect()
-            clearInterval(interval)
-        }
-    }, [])
+            if (observer) observer.disconnect();
+            if (interval) clearInterval(interval);
+        };
+    }, []);
 
     const handleMainButtonClick = () => {
         if (open) {
@@ -245,7 +337,8 @@ export function TestResizableDialog() {
         document.addEventListener('mouseup', onMouseUp)
     }
 
-    const isMobile = size.width < 800
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 800;
+
 
     return (
         <>
@@ -268,6 +361,7 @@ export function TestResizableDialog() {
                             Cette boîte de dialogue est destinée aux tests de redimensionnement, de glisser-déposer et de minimisation.
                         </DialogDescription>
                     </DialogHeader>
+
                     <div
                         onClick={isMinimized ? toggleMinimize : undefined}
                         className={cn(
@@ -281,6 +375,7 @@ export function TestResizableDialog() {
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
+
                         <div className="absolute right-3 top-3 z-50 flex gap-1">
                             {!isMinimized && (
                                 <button
@@ -322,6 +417,7 @@ export function TestResizableDialog() {
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
                                     <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
+
                                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                                             <div className="space-y-4 pt-2">
@@ -402,27 +498,40 @@ export function TestResizableDialog() {
                                                 {items.map((item) => (
                                                     <TableRow key={item.id}>
                                                         <TableCell>
-                                                            <Select defaultValue={item.article || "article1"}>
-                                                                <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0"><SelectValue /></SelectTrigger>
+                                                            <Select
+                                                                value={item.articleId}
+                                                                onValueChange={(val) => handleArticleChange(item.id, val)}
+                                                            >
+                                                                <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
+                                                                    <SelectValue placeholder="Sélectionner un article..." />
+                                                                </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="article1">Robe d'été à fleurs (Exemple)</SelectItem>
+                                                                    <SelectItem
+                                                                        value="create_new"
+                                                                        className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <PlusCircle className="h-4 w-4" />
+                                                                            <span>Créer un nouvel article</span>
+                                                                        </div>
+                                                                    </SelectItem>
+
+                                                                    {availableArticles.map(a => (
+                                                                        <SelectItem key={a.id} value={a.id}>
+                                                                            {a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span>
+                                                                        </SelectItem>
+                                                                    ))}
                                                                 </SelectContent>
                                                             </Select>
                                                         </TableCell>
                                                         <TableCell><Input type="number" defaultValue={item.qty} className="min-w-[60px]" /></TableCell>
-                                                        <TableCell><Input type="number" defaultValue={item.price.toFixed(2)} className="min-w-[60px]" /></TableCell>
-                                                        <TableCell><Input type="number" defaultValue={item.tva} className="min-w-[60px]" /></TableCell>
+                                                        <TableCell><Input type="number" value={item.price} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
+                                                        <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
                                                         <TableCell className="text-right font-medium">
                                                             {(item.price * item.qty).toFixed(2)} €
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-red-500"
-                                                                onClick={() => removeItem(item.id)}
-                                                            >
+                                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)}>
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </TableCell>
@@ -431,12 +540,7 @@ export function TestResizableDialog() {
 
                                                 <TableRow>
                                                     <TableCell colSpan={6}>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            className="w-full border-dashed text-muted-foreground"
-                                                            onClick={addItem}
-                                                        >
+                                                        <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>
                                                             + Ajouter une ligne
                                                         </Button>
                                                     </TableCell>
@@ -471,3 +575,5 @@ export function TestResizableDialog() {
         </>
     )
 }
+
+    
