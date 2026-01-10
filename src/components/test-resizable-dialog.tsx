@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 import { collection, getDocs } from "firebase/firestore" 
 import { useFirestore } from "@/firebase"
 
-// --- EXISTING COMPONENTS ---
+// --- EXISTING COMPONENTS --- 
 import { ArticleDialog } from "@/components/article-dialog"
 
 
@@ -149,27 +149,46 @@ export function TestResizableDialog() {
     const [open, setOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [date, setDate] = useState(new Date())
-    const [dueDate, setDueDate] = useState(new Date())
     const [size, setSize] = useState({ width: 1000, height: 800 })
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [dockOffset, setDockOffset] = useState(70)
     
-    // --- FIRESTORE HOOK --- 
-    const db = useFirestore()
+    // --- FORM STATE (Controlled for Reset) --- 
+    const [date, setDate] = useState(new Date())
+    const [dueDate, setDueDate] = useState(new Date())
+    const [supplierId, setSupplierId] = useState("")
+    const [paymentMethod, setPaymentMethod] = useState("cash")
+    const [representativeId, setRepresentativeId] = useState("")
+    const [reference, setReference] = useState("")
 
     // --- DATA STATE --- 
-    const [availableArticles, setAvailableArticles] = useState<Article[]>([])
     const [items, setItems] = useState<InvoiceItem[]>([
         { id: 1, articleId: "", qty: 1, price: 0, tva: 20 }
     ])
+    const [availableArticles, setAvailableArticles] = useState<Article[]>([])
+    
+    // --- FIRESTORE --- 
+    const db = useFirestore()
 
     // --- NEW ARTICLE MODAL STATE ---
     const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
     const [pendingRowId, setPendingRowId] = useState<number | null>(null)
-    
+
+    // --- RESET FUNCTION --- 
+    // This is ONLY called when the dialog completely closes (not minimizes) 
+    const resetForm = () => { 
+        setDate(new Date())
+        setDueDate(new Date())
+        setSupplierId("")
+        setPaymentMethod("cash")
+        setRepresentativeId("")
+        setReference("") 
+        // Reset to one empty row with unique ID 
+        setItems([{ id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }])
+        setPosition({ x: 0, y: 0 })
+    }
+
     // --- CALCULATE LAST CODE NUMBER --- 
-    // Helper to pass to ArticleDialog so it can auto-increment (e.g. ART005 -> ART006) 
     const lastArticleCodeNumber = React.useMemo(() => { 
         return availableArticles.reduce((max, article) => { 
             // Assuming format ARTxxx 
@@ -209,33 +228,22 @@ export function TestResizableDialog() {
         setItems(items.filter(item => item.id !== id))
     }
 
-    // --- SMART ARTICLE SELECTION --- 
     const handleArticleChange = (rowId: number, value: string) => {
         if (value === "create_new") {
-            // Capture which row triggered the create and Open the existing ArticleDialog 
             setPendingRowId(rowId)
             setIsCreateArticleOpen(true)
             return
         }
-
         const selectedArticle = availableArticles.find(a => a.id === value)
         if (selectedArticle) {
-            setItems(items.map(item =>
-                item.id === rowId
-                    ? { ...item, articleId: value, price: selectedArticle.price, tva: selectedArticle.tva || 20 }
-                    : item
-            ))
+            setItems(items.map(item => item.id === rowId ? { ...item, articleId: value, price: selectedArticle.price, tva: selectedArticle.tva || 20 } : item ))
         }
     }
     
-    // --- CALLBACK: WHEN ARTICLE IS CREATED IN DIALOG --- 
     const handleArticleCreated = (newArticle: any) => { 
-        // 1. Add to local list immediately 
-        // (We cast 'any' because ArticleDialog returns its own type, but it should match ours) 
         const articleWithType = newArticle as Article; 
         setAvailableArticles(prev => [articleWithType, ...prev]);
         
-        // 2. Select it in the pending row 
         if (pendingRowId) { 
             setItems(items.map(item => 
                 item.id === pendingRowId 
@@ -244,22 +252,22 @@ export function TestResizableDialog() {
             ))
         }
         
-        // 3. Reset pending row 
         setPendingRowId(null);
     }
 
+    // --- SIDEBAR OBSERVER --- 
     useEffect(() => {
-        let observer: ResizeObserver | null = null;
-        let interval: NodeJS.Timeout | null = null;
-
         const findSidebar = () => {
-            return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar');
+            return document.querySelector('aside') || document.querySelector('.sidebar');
         };
 
         const updateWidth = (el: Element) => {
             const width = el.getBoundingClientRect().width;
             setDockOffset(width === 0 ? 70 : width);
         };
+
+        let observer: ResizeObserver | null = null;
+        let interval: NodeJS.Timeout | null = null;
 
         const setupObserver = () => {
             const sidebar = findSidebar();
@@ -289,29 +297,36 @@ export function TestResizableDialog() {
         };
     }, []);
 
+    // --- MAIN CONTROL LOGIC --- 
+    // This handles the "Open/Restore" button 
     const handleMainButtonClick = () => {
         if (open) {
+            // If open AND minimized, just RESTORE (do not reset)
             if (isMinimized) {
                 setIsMinimized(false)
             }
         } else {
+            // If completely closed, OPEN FRESH (reset happens on close, so this is already clean)
             setOpen(true)
         }
     }
 
+    // This handles the Dialog's "onOpenChange" event (triggered by X, Esc, or our logic) 
     const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen)
+
+        // IF CLOSING (newOpen === false)
         if (!newOpen) {
+            // Wait for the 200ms exit animation, then RESET the form
             setTimeout(() => {
-                setDate(new Date())
-                setDueDate(new Date())
-                setPosition({ x: 0, y: 0 })
-                setIsMinimized(false)
+                resetForm() 
+                setIsMinimized(false) // Ensure next open isn't minimized
             }, 200)
         }
     }
 
     const toggleMinimize = () => {
+        // Just toggles visibility, DOES NOT trigger handleOpenChange(false)
         setIsMinimized(!isMinimized)
     }
 
@@ -376,13 +391,14 @@ export function TestResizableDialog() {
                 onOpenChange={setIsCreateArticleOpen}
                 onArticleCreated={handleArticleCreated}
                 lastArticleCodeNumber={lastArticleCodeNumber}
+                isChild={true} // Passed just in case, though likely not needed for logic
             />
-
+            {/* --- MAIN RESIZABLE DIALOG --- */}
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
                     className={cn(
-                        "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:hidden pointer-events-none",
+                        "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out pointer-events-none",
                         isMinimized
                             ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                             : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
@@ -402,44 +418,45 @@ export function TestResizableDialog() {
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
-
-                        <div className="absolute right-3 top-3 z-50 flex gap-1">
-                            {!isMinimized && (
+                          <DialogHeader>
+                            <div className="absolute right-3 top-3 z-50 flex gap-1">
+                                {!isMinimized && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+                                        title="Réduire"
+                                    >
+                                        <Minus className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
+                                    onClick={() => handleOpenChange(false)}
                                     onMouseDown={(e) => e.stopPropagation()}
-                                    className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
-                                    title="Réduire"
+                                    className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
                                 >
-                                    <Minus className="h-3.5 w-3.5" />
+                                    <X className="h-3.5 w-3.5" />
                                 </button>
-                            )}
-                            <button
-                                onClick={() => handleOpenChange(false)}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
+                            </div>
+                            <div
+                                onMouseDown={handleDragStart}
+                                className={cn(
+                                    "flex-none p-4 border-b select-none flex items-center gap-2",
+                                    !isMinimized && "cursor-move",
+                                    isMinimized && "py-3 px-3 border-b-0"
+                                )}
                             >
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                        <DialogHeader
-                            onMouseDown={handleDragStart}
-                            className={cn(
-                                "flex-none p-4 border-b select-none flex items-center gap-2 text-left",
-                                !isMinimized && "cursor-move",
-                                isMinimized && "py-3 px-3 border-b-0"
-                            )}
-                        >
-                            {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                            <DialogTitle className="pr-12 truncate font-semibold text-sm">
-                                {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
-                            </DialogTitle>
-                        </DialogHeader>
-                        {!isMinimized && (
+                                {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+                                <DialogTitle className="pr-12 truncate font-semibold text-sm">
+                                    {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+                                </DialogTitle>
+                            </div>
+                            {!isMinimized && (
                             <DialogDescription className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
                                 Remplissez les informations ci-dessous.
                             </DialogDescription>
-                        )}
+                            )}
+                        </DialogHeader>
                         <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
@@ -463,11 +480,13 @@ export function TestResizableDialog() {
                                              <div className="space-y-4 pt-2">
                                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                                    <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                                   <Select>
+                                                   <Select value={supplierId} onValueChange={setSupplierId}>
                                                       <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                                         <SelectValue placeholder="Sélectionnez un fournisseur" />
                                                       </SelectTrigger>
-                                                      <SelectContent><SelectItem value="f1">AS ROMA</SelectItem></SelectContent>
+                                                      <SelectContent>
+                                                         <SelectItem value="f1">AS ROMA</SelectItem>
+                                                      </SelectContent>
                                                    </Select>
                                                 </div>
                                              </div>
@@ -477,7 +496,7 @@ export function TestResizableDialog() {
                                             <div className="space-y-4 pt-2">
                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                                   <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
-                                                  <Select>
+                                                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                                                       <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                                         <SelectValue placeholder="Espèces" />
                                                       </SelectTrigger>
@@ -495,7 +514,7 @@ export function TestResizableDialog() {
                                             <div className="space-y-4 pt-2">
                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                                   <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                                                  <Select>
+                                                  <Select value={representativeId} onValueChange={setRepresentativeId}>
                                                       <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                                         <SelectValue placeholder="Sélectionnez un représentant" />
                                                       </SelectTrigger>
@@ -504,12 +523,17 @@ export function TestResizableDialog() {
                                                </div>
                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                                   <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
-                                                  <Input placeholder="Référence" className="w-full min-w-0" />
+                                                  <Input 
+                                                    placeholder="Référence" 
+                                                    className="w-full min-w-0" 
+                                                    value={reference}
+                                                    onChange={(e) => setReference(e.target.value)}
+                                                  />
                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="border border-blue-800 rounded-md overflow-hidden">
+                                    <div className="border rounded-md overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-gray-50">
                                                 <TableRow>
@@ -601,3 +625,13 @@ export function TestResizableDialog() {
         </>
     )
 }
+
+" data-path-to-node="52,2">
+
+Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
+
+<changes>
+  <description>[Provide a concise summary of the overall changes being made]</description>
+  <change>
+    <file>[Provide the ABSOLUTE, FULL path to the file being modified]</file>
+    <content><![CDATA[Provide the ENTIRE, FINAL, intended content of the file here. Do NOT provide diffs or partial snippets. Ensure all code is properly escaped within the CDATA section.
