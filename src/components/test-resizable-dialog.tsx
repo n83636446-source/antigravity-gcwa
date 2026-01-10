@@ -43,7 +43,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
                 <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => <span key={d} className="text-gray-400 font-medium">{d}</span>)}
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={i} className="text-gray-400 font-medium">{d}</span>)}
             </div>
             <div className="grid grid-cols-7 gap-1 text-sm mb-3">
                 {daysInMonth().map((d, i) => {
@@ -236,6 +236,7 @@ export function TestResizableDialog() {
     return (
         <>
             <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
+
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
@@ -245,7 +246,11 @@ export function TestResizableDialog() {
                             ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                             : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
                     )}
-                    style={isMinimized ? { left: dockOffset + 16 } : {}}
+                    style={
+                        isMinimized
+                            ? { left: dockOffset + 16 }
+                            : {}
+                    }
                 >
                     <DialogHeader className="sr-only">
                         <DialogTitle>Créer un bon de réception (Test)</DialogTitle>
@@ -434,3 +439,5 @@ export function TestResizableDialog() {
         </>
     )
 }
+
+    
