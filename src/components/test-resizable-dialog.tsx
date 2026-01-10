@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, Check } from "lucide-react" 
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2 } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -43,7 +42,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
                 <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
             </div>
             <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={i} className="text-gray-400 font-medium">{d}</span>)}
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
             </div>
             <div className="grid grid-cols-7 gap-1 text-sm mb-3">
                 {daysInMonth().map((d, i) => {
@@ -96,7 +95,6 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
 
 const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
     const [isOpen, setIsOpen] = useState(false)
-
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
@@ -113,7 +111,6 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
         </Popover>
     )
 }
-
 
 export function TestResizableDialog() {
     const [open, setOpen] = useState(false)
@@ -134,22 +131,29 @@ export function TestResizableDialog() {
             if (width === 0) setDockOffset(70)
             else setDockOffset(width)
         }
-
         const sidebar = findSidebar()
-        if (sidebar) updateWidth(sidebar)
+        if (sidebar) {
+            updateWidth(sidebar)
+        }
         let observer: ResizeObserver | null = null
         if (sidebar) {
             observer = new ResizeObserver((entries) => {
-                for (const entry of entries) updateWidth(entry.target)
+                for (const entry of entries) {
+                    updateWidth(entry.target)
+                }
             })
             observer.observe(sidebar)
         }
         const interval = setInterval(() => {
             const currentSidebar = findSidebar()
-            if (currentSidebar) updateWidth(currentSidebar)
+            if (currentSidebar) {
+                updateWidth(currentSidebar)
+            }
         }, 1000)
         return () => {
-            if (observer) observer.disconnect()
+            if (observer) {
+                observer.disconnect()
+            }
             clearInterval(interval)
         }
     }, [])
@@ -184,12 +188,10 @@ export function TestResizableDialog() {
         if (isMinimized) return
         if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
         e.preventDefault()
-
         setIsDragging(true)
         const startX = e.clientX
         const startY = e.clientY
         const startPos = { ...position }
-
         const onMouseMove = (moveEvent: MouseEvent) => {
             const dx = moveEvent.clientX - startX
             const dy = moveEvent.clientY - startY
@@ -212,7 +214,6 @@ export function TestResizableDialog() {
         const startY = e.clientY
         const startWidth = size.width
         const startHeight = size.height
-
         const onMouseMove = (moveEvent: MouseEvent) => {
             if (direction === 'right' || direction === 'corner') {
                 const newWidth = Math.max(350, startWidth + (moveEvent.clientX - startX))
@@ -236,7 +237,6 @@ export function TestResizableDialog() {
     return (
         <>
             <Button variant="outline" onClick={handleMainButtonClick}>Open Test Dialog</Button>
-
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
@@ -246,11 +246,7 @@ export function TestResizableDialog() {
                             ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                             : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
                     )}
-                    style={
-                        isMinimized
-                            ? { left: dockOffset + 16 }
-                            : {}
-                    }
+                    style={isMinimized ? { left: dockOffset + 16 } : {}}
                 >
                     <DialogHeader className="sr-only">
                         <DialogTitle>Créer un bon de réception (Test)</DialogTitle>
@@ -312,7 +308,7 @@ export function TestResizableDialog() {
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
                                     <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                                             <div className="space-y-4 pt-2">
                                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -325,7 +321,7 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                                             <div className="space-y-4 pt-2">
                                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -339,7 +335,7 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-4")}>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                                             <div className="space-y-4 pt-2">
                                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -357,7 +353,7 @@ export function TestResizableDialog() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-8")}>
+                                        <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                                             <div className="space-y-4 pt-2">
                                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -439,5 +435,3 @@ export function TestResizableDialog() {
         </>
     )
 }
-
-    
