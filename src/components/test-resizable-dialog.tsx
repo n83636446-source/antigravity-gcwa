@@ -420,7 +420,6 @@ export function TestResizableDialog() {
                 onOpenChange={setIsCreateArticleOpen}
                 onArticleCreated={handleArticleCreated}
                 lastArticleCodeNumber={lastArticleCodeNumber}
-                isChild={true} // Passed just in case, though likely not needed for logic
             />
             {/* --- MAIN RESIZABLE DIALOG --- */}
             <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
@@ -663,4 +662,3 @@ export function TestResizableDialog() {
         </>
     )
 }
-```
