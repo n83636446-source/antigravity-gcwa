@@ -266,7 +266,7 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
-  // --- SOUND EFFECT (TRIANGLE INSTRUMENT) ---
+  // --- SOUND EFFECT (BUZZER) ---
   const playWarningSound = () => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -275,29 +275,21 @@ export function TestResizableDialog() {
       const ctx = new AudioContext();
       const t = ctx.currentTime;
 
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(1760, t); // A6 (High, clear)
-      gain1.gain.setValueAtTime(0.08, t);
-      gain1.gain.exponentialRampToValueAtTime(0.00001, t + 1.5);
+      // Single Sawtooth wave (Rough, buzzy sound)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start();
-      osc1.stop(t + 1.5);
-
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(4500, t);
-      gain2.gain.setValueAtTime(0.04, t);
-      gain2.gain.exponentialRampToValueAtTime(0.00001, t + 0.3);
-
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start();
-      osc2.stop(t + 0.3);
+      osc.type = 'sawtooth'; // "Buzzy" wave
+      osc.frequency.setValueAtTime(150, t); // Low pitch start
+      osc.frequency.linearRampToValueAtTime(100, t + 0.25); // Slide down (Classic error sound)
+      
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.25);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(t + 0.25);
 
     } catch (e) {
       console.error("Audio play failed", e);
@@ -556,12 +548,15 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
+          // Custom backdrop handler for consistent behavior
           onInteractOutside={(e) => {
             e.preventDefault(); 
             if (isFormDirty()) {
                if (isMinimized) setIsMinimized(false);
                setShowCloseAlert(true);
-               handleOverlayClick();
+               setIsShaking(true);
+               setTimeout(() => setIsShaking(false), 400);
+               playWarningSound();
             } else {
                setOpen(false);
                setTimeout(() => { resetForm(); setIsMinimized(false); }, 200);
@@ -588,7 +583,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & BUZZER SOUND) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
@@ -643,6 +638,7 @@ export function TestResizableDialog() {
               </button>
             </div>
 
+            {/* HEADER - No border-b here to allow clean separation with subtitle */}
             <div 
               onMouseDown={handleDragStart}
               className={cn(
@@ -668,6 +664,7 @@ export function TestResizableDialog() {
                 <form className="space-y-6">
                   <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                      
+                     {/* ZONE 1 (Left) */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                         <div className="space-y-4 pt-2">
@@ -682,6 +679,7 @@ export function TestResizableDialog() {
                         </div>
                      </div>
 
+                     {/* ZONE 2 (Right) */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                          <div className="space-y-4 pt-2">
@@ -712,6 +710,7 @@ export function TestResizableDialog() {
                          </div>
                      </div>
 
+                     {/* ZONE 3 (Left) */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                         <div className="space-y-4 pt-2">
@@ -731,6 +730,7 @@ export function TestResizableDialog() {
                         </div>
                      </div>
 
+                     {/* ZONE 4 (Right) */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
@@ -772,6 +772,7 @@ export function TestResizableDialog() {
 
                   </div>
 
+                  {/* Items Table - Added border-blue-800 */}
                   <div className="border border-blue-800 rounded-md overflow-hidden">
                     <Table>
                       <TableHeader className="bg-gray-50">
@@ -796,6 +797,7 @@ export function TestResizableDialog() {
                                     <SelectValue placeholder="Sélectionner un article..." />
                                 </SelectTrigger>
                                 <SelectContent>
+                                  {/* ALWAYS TOP: Create Action */}
                                   <SelectItem 
                                     value="create_new" 
                                     className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
@@ -805,6 +807,8 @@ export function TestResizableDialog() {
                                         <span>Créer un nouvel article</span>
                                     </div>
                                   </SelectItem>
+                                  
+                                  {/* DATABASE ITEMS */}
                                   {availableArticles.map(a => (
                                     <SelectItem key={a.id} value={a.id}>
                                         {a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span>
@@ -863,6 +867,7 @@ export function TestResizableDialog() {
                 </form>
               </div>
 
+              {/* Footer */}
               <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
                 <div className="space-y-2 text-right mb-4">
                     <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
