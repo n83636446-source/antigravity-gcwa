@@ -192,6 +192,18 @@ export function TestResizableDialog() {
     setPosition({ x: 0, y: 0 })
   }
 
+  // --- DIRTY CHECK ---
+  const isFormDirty = () => {
+    // Check main fields
+    if (supplierId !== "" || representativeId !== "" || reference !== "") return true;
+    
+    // Check items (dirty if more than 1 row, or if the first row has an article selected)
+    if (items.length > 1) return true;
+    if (items.length === 1 && items[0].articleId !== "") return true;
+
+    return false;
+  }
+
   // --- CALCULATE LAST CODES ---
   const lastArticleCodeNumber = React.useMemo(() => {
     return availableArticles.reduce((max, article) => {
@@ -267,12 +279,14 @@ export function TestResizableDialog() {
     
     if (field === 'qty') {
         const num = Number(value);
-        finalValue = Math.max(1, num);
+        if (num < 1) finalValue = 1;
+        else finalValue = num;
     }
     
     if (field === 'price') {
         const num = Number(value);
-        finalValue = Math.max(0, num);
+        if (num < 0) finalValue = 0;
+        else finalValue = num;
     }
 
     setItems(prev => prev.map(item => {
@@ -384,12 +398,26 @@ export function TestResizableDialog() {
   }
 
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen)
+    // CLOSING ATTEMPT
     if (!newOpen) {
+      if (isFormDirty()) {
+        const confirmClose = window.confirm("Voulez-vous vraiment fermer ? Vos modifications seront perdues.")
+        if (!confirmClose) {
+          // User clicked Cancel, do NOT close
+          return 
+        }
+      }
+
+      // Proceed to close
+      setOpen(false)
       setTimeout(() => {
         resetForm() 
         setIsMinimized(false)
       }, 200)
+    } 
+    // OPENING
+    else {
+      setOpen(true)
     }
   }
 
@@ -488,6 +516,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
+          {/* We add a visually hidden title for accessibility, as required by Radix. */}
           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
