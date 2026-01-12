@@ -407,7 +407,6 @@ export function TestResizableDialog() {
     // ATTEMPT TO CLOSE
     if (!newOpen) {
       if (isFormDirty()) {
-        // If minimized, maximize it to show alert
         if (isMinimized) setIsMinimized(false)
         setShowCloseAlert(true)
         return 
@@ -522,7 +521,7 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => e.preventDefault()}
           className={cn(
-              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:hidden pointer-events-none",
+              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
@@ -543,20 +542,17 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY --- */}
+            {/* --- CUSTOM ALERT OVERLAY (SIMPLIFIED) --- */}
             {showCloseAlert && (
-              <div className="absolute inset-0 z-[60] bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-lg p-4">
-                <div className="bg-white border shadow-2xl p-6 rounded-md max-w-sm text-center animate-in fade-in zoom-in duration-200">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">Modifications non enregistrées</h3>
+              <div className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5">
+                <div className="bg-white border shadow-lg p-6 rounded-md max-w-sm text-center">
+                    <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
-                        Vous avez des modifications en cours. Si vous fermez maintenant, vos données seront perdues.
+                        Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
                     </p>
                     <div className="flex justify-center gap-3">
-                        <Button variant="outline" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
-                        <Button variant="destructive" onClick={confirmClose}>Fermer sans sauvegarder</Button>
+                        <Button variant="outline" size="sm" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
+                        <Button variant="destructive" size="sm" onClick={confirmClose}>Fermer</Button>
                     </div>
                 </div>
               </div>
