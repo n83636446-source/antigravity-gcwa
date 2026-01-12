@@ -156,6 +156,7 @@ export function TestResizableDialog() {
   
   // --- ALERT STATE ---
   const [showCloseAlert, setShowCloseAlert] = useState(false)
+  const [isShaking, setIsShaking] = useState(false)
 
   // --- FORM STATE ---
   const [date, setDate] = useState<Date>(new Date())
@@ -194,6 +195,7 @@ export function TestResizableDialog() {
     setItems([{ id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }])
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
+    setIsShaking(false)
   }
 
   // --- DIRTY CHECK ---
@@ -424,6 +426,11 @@ export function TestResizableDialog() {
       }, 200)
   }
 
+  const handleOverlayClick = () => {
+      setIsShaking(true)
+      setTimeout(() => setIsShaking(false), 400)
+  }
+
   const toggleMinimize = () => {
     setIsMinimized(!isMinimized)
   }
@@ -533,10 +540,19 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (CLEAN) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE) --- */}
             {showCloseAlert && (
-              <div className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5">
-                <div className="bg-white border shadow-lg p-6 rounded-md max-w-sm text-center">
+              <div 
+                className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
+                onClick={handleOverlayClick}
+              >
+                <div 
+                    className={cn(
+                        "bg-white border shadow-lg p-6 rounded-md max-w-sm text-center",
+                        isShaking && "animate-shake"
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
@@ -546,6 +562,16 @@ export function TestResizableDialog() {
                         <Button variant="destructive" size="sm" onClick={confirmClose}>Fermer</Button>
                     </div>
                 </div>
+                <style>{`
+                  @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-4px); }
+                    75% { transform: translateX(4px); }
+                  }
+                  .animate-shake {
+                    animation: shake 0.2s ease-in-out 0s 2;
+                  }
+                `}</style>
               </div>
             )}
 
