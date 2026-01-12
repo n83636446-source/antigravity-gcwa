@@ -474,7 +474,6 @@ export function TestResizableDialog() {
                                     <X className="h-3.5 w-3.5" />
                                 </button>
                             </div>
-                            {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
                             <DialogTitle className="pr-12 truncate font-semibold text-sm">
                                 {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
                             </DialogTitle>
@@ -604,6 +603,7 @@ export function TestResizableDialog() {
                                                                             <span>Créer un nouvel article</span>
                                                                         </div>
                                                                     </SelectItem>
+                                                                    <Separator />
                                                                     {availableArticles.map(a => (
                                                                         <SelectItem key={a.id} value={a.id}>
                                                                             {a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span>
@@ -663,5 +663,4 @@ export function TestResizableDialog() {
         </>
     )
 }
-
-" data-path-to-node="52,2">
+```
