@@ -265,7 +265,7 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
-  // --- SOUND EFFECT ---
+  // --- SOUND EFFECT (UPDATED TO BELL) ---
   const playWarningSound = () => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -278,14 +278,15 @@ export function TestResizableDialog() {
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      // Low "bump" sound
+      // Bell-like sound (High pitch sine wave)
       osc.type = "sine";
-      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 (880Hz)
       gain.gain.setValueAtTime(0.1, ctx.currentTime);
       
       osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.15);
-      osc.stop(ctx.currentTime + 0.15);
+      // Longer exponential decay for a "ring" effect
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+      osc.stop(ctx.currentTime + 0.5);
     } catch (e) {
       console.error("Audio play failed", e);
     }
@@ -552,7 +553,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -566,7 +567,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & SOUND) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & BELL SOUND) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
@@ -878,3 +879,4 @@ export function TestResizableDialog() {
     </>
   )
 }
+```
