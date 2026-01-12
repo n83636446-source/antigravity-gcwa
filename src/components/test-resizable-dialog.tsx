@@ -87,7 +87,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
         <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
+        {['L', 'M', 'Me', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-1 text-sm mb-3">
         {daysInMonth().map((d, i) => {
@@ -556,7 +556,6 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          // Custom backdrop handler for consistent behavior
           onInteractOutside={(e) => {
             e.preventDefault(); 
             if (isFormDirty()) {
@@ -578,7 +577,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16, transition: "left 0.3s ease-out" } : {}}
         >
-         <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+        <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
