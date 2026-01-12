@@ -164,6 +164,4 @@ export function RepresentativeDialog({
           </form>
         </Form>
       </DialogContent>
-    </Dialog>
-  );
-}
+    </Dialog
