@@ -570,6 +570,7 @@ export function TestResizableDialog() {
                                             </div>
                                         </div>
                                     </div>
+                                    {/* Items Table */}
                                     <div className="border rounded-md overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-gray-50">
@@ -662,4 +663,5 @@ export function TestResizableDialog() {
         </>
     )
 }
-```
+
+" data-path-to-node="52,2">
