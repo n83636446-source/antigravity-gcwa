@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -263,11 +261,23 @@ export function TestResizableDialog() {
     setItems(items.filter(item => item.id !== id))
   }
 
-  // Handle manual changes to Qty or Price
+  // Handle manual changes to Qty or Price with Validation
   const handleLineChange = (id: number, field: keyof InvoiceItem, value: string | number) => {
+    let finalValue = value;
+    
+    if (field === 'qty') {
+        const num = Number(value);
+        finalValue = Math.max(1, num);
+    }
+    
+    if (field === 'price') {
+        const num = Number(value);
+        finalValue = Math.max(0, num);
+    }
+
     setItems(prev => prev.map(item => {
         if (item.id === id) {
-            return { ...item, [field]: value }
+            return { ...item, [field]: finalValue }
         }
         return item
     }))
@@ -449,6 +459,7 @@ export function TestResizableDialog() {
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
         lastArticleCodeNumber={lastArticleCodeNumber}
+        isChild={true} 
       />
 
       <RepresentativeDialog
@@ -693,7 +704,8 @@ export function TestResizableDialog() {
                             <TableCell>
                                 <Input 
                                     type="number" 
-                                    value={item.qty} 
+                                    value={item.qty}
+                                    min={1} 
                                     onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))}
                                     className="min-w-[60px]" 
                                 />
@@ -702,8 +714,9 @@ export function TestResizableDialog() {
                                 <Input 
                                     type="number" 
                                     value={item.price} 
+                                    min={0}
                                     onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))}
-                                    className="min-w-[60px] bg-slate-50" 
+                                    className="min-w-[60px]" 
                                 />
                             </TableCell>
                             <TableCell>
@@ -754,8 +767,8 @@ export function TestResizableDialog() {
 
             {!isMinimized && (
               <>
-                <div onMouseDown={handleResize('right')} className="absolute -right-3 top-0 bottom-0 w-3 cursor-ew-resize z-50" />
-                <div onMouseDown={handleResize('bottom')} className="absolute -bottom-3 left-0 right-0 h-3 cursor-ns-resize z-50" />
+                <div onMouseDown={handleResize('right')} className="absolute -right-3 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
+                <div onMouseDown={handleResize('bottom')} className="absolute -bottom-3 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
                 <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
               </>
             )}
