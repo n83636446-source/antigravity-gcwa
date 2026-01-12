@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+
+import React, { useState, useEffect, useMemo } from "react"
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save, AlertTriangle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, AlertTriangle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -51,7 +52,7 @@ type Representative = {
 }
 
 type InvoiceItem = {
-  id: string // Changed to string for safer UUID
+  id: string
   articleId: string
   qty: number
   price: number
@@ -100,7 +101,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
         <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-        {['L', 'M', 'Me', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
+        {['L', 'Ma', 'Me', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-1 text-sm mb-3">
         {daysInMonth().map((d, i) => {
@@ -165,7 +166,7 @@ export function TestResizableDialog() {
   const [isDragging, setIsDragging] = useState(false)
   const [size, setSize] = useState({ width: 1000, height: 800 })
   const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [dockOffset, setDockOffset] = useState(70)
+  const [dockOffset, setDockOffset] = useState(0) // Default to 0 to be safe
   
   // --- ALERT STATE ---
   const [showCloseAlert, setShowCloseAlert] = useState(false)
@@ -195,7 +196,7 @@ export function TestResizableDialog() {
   const [isCreateRepOpen, setIsCreateRepOpen] = useState(false)
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   
-  const [pendingRowId, setPendingRowId] = useState<string | null>(null) // Changed to string for ID
+  const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
   // --- RESET FUNCTION ---
   const resetForm = () => {
@@ -222,7 +223,7 @@ export function TestResizableDialog() {
   }
 
   // --- CALCULATE LAST CODES ---
-  const lastArticleCodeNumber = React.useMemo(() => {
+  const lastArticleCodeNumber = useMemo(() => {
     return availableArticles.reduce((max, article) => {
       const match = article.code.match(/ART(\d+)/);
       if (match && match[1]) {
@@ -233,7 +234,7 @@ export function TestResizableDialog() {
     }, 0);
   }, [availableArticles]);
 
-  const lastSupplierCodeNumber = React.useMemo(() => {
+  const lastSupplierCodeNumber = useMemo(() => {
     return availableSuppliers.reduce((max, supplier) => {
       const match = supplier.code.match(/FOU(\d+)/);
       if (match && match[1]) {
@@ -293,30 +294,21 @@ export function TestResizableDialog() {
       const ctx = new AudioContext();
       const t = ctx.currentTime;
 
-      // Helper to create a harsh square wave
       const createOsc = (freq: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        
-        // Square wave is naturally "buzzy" and "hollow"
         osc.type = "square"; 
         osc.frequency.setValueAtTime(freq, t);
-        
-        // Low volume because square waves are loud
         gain.gain.setValueAtTime(0.05, t);
-        // Short decay
         gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.3);
-        
         osc.connect(gain);
         gain.connect(ctx.destination);
-        
         osc.start();
         osc.stop(t + 0.3);
       }
 
-      // Play two dissonant frequencies to create the "Wrong" texture
-      createOsc(100); // Fundamental
-      createOsc(106); // Clash note (approx. semi-tone difference)
+      createOsc(100); 
+      createOsc(106); 
 
     } catch (e) {
       console.error("Audio play failed", e);
@@ -333,7 +325,6 @@ export function TestResizableDialog() {
     setItems(items.filter(item => item.id !== id))
   }
 
-  // Handle manual changes
   const handleLineChange = (id: string, field: keyof InvoiceItem, value: string | number) => {
     let finalValue = value;
     if (field === 'qty') {
@@ -370,10 +361,8 @@ export function TestResizableDialog() {
     }
   }
 
-  // --- CREATION CALLBACKS ---
   const handleArticleCreated = (newArticle: any) => {
      const articleWithType = newArticle as Article;
-     // Deduplicate just in case
      setAvailableArticles(prev => deduplicate([articleWithType, ...prev]));
      if (pendingRowId) {
         setItems(items.map(item => 
@@ -414,43 +403,28 @@ export function TestResizableDialog() {
   }
 
 
-  // --- SIDEBAR OBSERVER (FIXED + SAFE) ---
+  // --- ROBUST SIDEBAR TRACKING ---
   useEffect(() => {
-    const findSidebar = () => {
-      return document.querySelector('aside') || 
-             document.querySelector('nav[class*="sidebar"]') ||
-             document.querySelector('[data-sidebar]') ||
-             document.querySelector('.sidebar')
+    const getSidebarWidth = () => {
+      const sidebar = document.querySelector('aside') || 
+                      document.querySelector('[data-sidebar]') ||
+                      document.querySelector('nav[class*="sidebar"]') ||
+                      document.querySelector('.sidebar');
+      
+      if (!sidebar) return 0;
+      
+      const rect = sidebar.getBoundingClientRect();
+      return rect.width > 10 ? rect.width : 0;
     }
-    const updateWidth = (el: Element) => {
-       const width = el.getBoundingClientRect().width
-       // If sidebar is hidden/collapsed (width 0), set offset to 0
-       if (width === 0) setDockOffset(0) 
-       else setDockOffset(width)
-    }
-    const sidebar = findSidebar()
-    if (sidebar) updateWidth(sidebar)
-    
-    let observer: ResizeObserver | null = null
-    if (sidebar) {
-        observer = new ResizeObserver((entries) => {
-            for (const entry of entries) updateWidth(entry.target)
-        })
-        observer.observe(sidebar)
-    }
+
+    setDockOffset(getSidebarWidth());
+
     const interval = setInterval(() => {
-        const currentSidebar = findSidebar()
-        if (currentSidebar) {
-            updateWidth(currentSidebar)
-        } else {
-            // FALLBACK: If sidebar DOM element is gone, reset offset to 0
-            setDockOffset(0)
-        }
-    }, 500)
-    return () => {
-        if (observer) observer.disconnect()
-        clearInterval(interval)
-    }
+       const w = getSidebarWidth();
+       setDockOffset(w);
+    }, 100); 
+
+    return () => clearInterval(interval);
   }, [])
 
   // --- CONTROL LOGIC ---
@@ -463,7 +437,6 @@ export function TestResizableDialog() {
   }
 
   const handleOpenChange = (newOpen: boolean) => {
-    // ATTEMPT TO CLOSE
     if (!newOpen) {
       if (isFormDirty()) {
         if (isMinimized) setIsMinimized(false)
@@ -475,9 +448,7 @@ export function TestResizableDialog() {
         resetForm() 
         setIsMinimized(false)
       }, 200)
-    } 
-    // OPEN
-    else {
+    } else {
       setOpen(true)
     }
   }
@@ -583,7 +554,6 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          // Custom backdrop handler
           onInteractOutside={(e) => {
             e.preventDefault(); 
             if (isFormDirty()) {
@@ -600,12 +570,11 @@ export function TestResizableDialog() {
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
-                ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[200]" // Fix for sidebar overlap
+                ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
-          style={isMinimized ? { left: dockOffset + 16, transition: "left 0.3s ease-out" } : {}}
+          style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -619,10 +588,15 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & DISSONANT BUZZER) --- */}
+            {/* --- ACCESSIBILITY TITLE --- */}
+            <div className="sr-only">
+               <DialogTitle>Créer un bon de réception</DialogTitle>
+            </div>
+            
+            {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
-                className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
+                className="absolute inset-0 z-[10000] flex items-center justify-center rounded-lg p-4 bg-black/5"
                 onClick={handleOverlayClick}
               >
                 <div 
@@ -632,7 +606,6 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* ALERT ICON */}
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
                         <AlertTriangle className="h-6 w-6 text-red-600" />
                     </div>
@@ -678,7 +651,7 @@ export function TestResizableDialog() {
               </button>
             </div>
 
-            {/* HEADER - No border-b here to allow clean separation with subtitle */}
+            {/* HEADER */}
             <div 
               onMouseDown={handleDragStart}
               className={cn(
@@ -702,9 +675,9 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                 <form className="space-y-6">
+                  {/* ... FORM CONTENT ... */}
                   <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                     
-                     {/* ZONE 1 (Left) */}
+                     {/* ZONE 1 */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                         <div className="space-y-4 pt-2">
@@ -718,8 +691,7 @@ export function TestResizableDialog() {
                            </div>
                         </div>
                      </div>
-
-                     {/* ZONE 2 (Right) */}
+                     {/* ZONE 2 */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                          <div className="space-y-4 pt-2">
@@ -730,27 +702,16 @@ export function TestResizableDialog() {
                                     <SelectValue placeholder="Sélectionnez un fournisseur" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem 
-                                       value="create_new_supplier" 
-                                       className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
-                                     >
-                                       <div className="flex items-center gap-2">
-                                           <PlusCircle className="h-4 w-4" />
-                                           <span>Créer un nouveau fournisseur</span>
-                                       </div>
-                                     </SelectItem>
-                                     {availableSuppliers.map(s => (
-                                       <SelectItem key={s.id} value={s.id}>
-                                         {s.name}
-                                       </SelectItem>
-                                     ))}
+                                    <SelectItem value="create_new_supplier" className="text-blue-600 font-semibold bg-blue-50">
+                                       <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau fournisseur</span></div>
+                                    </SelectItem>
+                                     {availableSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                                   </SelectContent>
                                </Select>
                             </div>
                          </div>
                      </div>
-
-                     {/* ZONE 3 (Left) */}
+                     {/* ZONE 3 */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                         <div className="space-y-4 pt-2">
@@ -769,8 +730,7 @@ export function TestResizableDialog() {
                            </div>
                         </div>
                      </div>
-
-                     {/* ZONE 4 (Right) */}
+                     {/* ZONE 4 */}
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
@@ -781,38 +741,22 @@ export function TestResizableDialog() {
                                     <SelectValue placeholder="Sélectionnez un représentant" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem 
-                                       value="create_new_rep" 
-                                       className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
-                                     >
-                                       <div className="flex items-center gap-2">
-                                           <PlusCircle className="h-4 w-4" />
-                                           <span>Créer un nouveau représentant</span>
-                                       </div>
-                                     </SelectItem>
-                                     {availableRepresentatives.map(r => (
-                                       <SelectItem key={r.id} value={r.id}>
-                                         {r.name}
-                                       </SelectItem>
-                                     ))}
+                                    <SelectItem value="create_new_rep" className="text-blue-600 font-semibold bg-blue-50">
+                                       <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau représentant</span></div>
+                                    </SelectItem>
+                                     {availableRepresentatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                                   </SelectContent>
                                </Select>
                            </div>
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                               <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
-                              <Input 
-                                placeholder="Référence" 
-                                className="w-full min-w-0" 
-                                value={reference}
-                                onChange={(e) => setReference(e.target.value)}
-                              />
+                              <Input placeholder="Référence" className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
                            </div>
                         </div>
                      </div>
-
                   </div>
 
-                  {/* Items Table - Added border-blue-800 */}
+                  {/* ITEMS TABLE */}
                   <div className="border border-blue-800 rounded-md overflow-hidden">
                     <Table>
                       <TableHeader className="bg-gray-50">
@@ -829,76 +773,30 @@ export function TestResizableDialog() {
                         {items.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell>
-                              <Select 
-                                value={item.articleId} 
-                                onValueChange={(val) => handleArticleChange(item.id, val)}
-                              >
+                              <Select value={item.articleId} onValueChange={(val) => handleArticleChange(item.id, val)}>
                                 <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
                                     <SelectValue placeholder="Sélectionner un article..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {/* ALWAYS TOP: Create Action */}
-                                  <SelectItem 
-                                    value="create_new" 
-                                    className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                        <PlusCircle className="h-4 w-4" />
-                                        <span>Créer un nouvel article</span>
-                                    </div>
+                                  <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
+                                    <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
                                   </SelectItem>
-                                  
-                                  {/* DATABASE ITEMS */}
-                                  {availableArticles.map(a => (
-                                    <SelectItem key={a.id} value={a.id}>
-                                        {a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span>
-                                    </SelectItem>
-                                  ))}
+                                  {availableArticles.map(a => <SelectItem key={a.id} value={a.id}>{a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span></SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </TableCell>
+                            <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
+                            <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
+                            <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
+                            <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
                             <TableCell>
-                                <Input 
-                                    type="number" 
-                                    value={item.qty}
-                                    min={1} 
-                                    onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))}
-                                    className="min-w-[60px]" 
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <Input 
-                                    type="number" 
-                                    value={item.price} 
-                                    min={0}
-                                    onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))}
-                                    className="min-w-[60px] bg-slate-50" 
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <Input 
-                                    type="number" 
-                                    value={item.tva} 
-                                    readOnly 
-                                    className="min-w-[60px] bg-slate-50" 
-                                />
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                                {(item.price * item.qty).toFixed(2)} €
-                            </TableCell>
-                            <TableCell>
-                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                             </TableCell>
                           </TableRow>
                         ))}
-                        
                         <TableRow>
                           <TableCell colSpan={6}>
-                             <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>
-                                + Ajouter une ligne
-                             </Button>
+                             <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -907,7 +805,7 @@ export function TestResizableDialog() {
                 </form>
               </div>
 
-              {/* Footer */}
+              {/* FOOTER */}
               <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
                 <div className="space-y-2 text-right mb-4">
                     <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
@@ -928,7 +826,6 @@ export function TestResizableDialog() {
                 <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
               </>
             )}
-
           </div>
         </DialogContent>
       </Dialog>
