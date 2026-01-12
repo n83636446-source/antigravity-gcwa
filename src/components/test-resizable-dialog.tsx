@@ -569,19 +569,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => {
-            e.preventDefault(); 
-            // FIX: If minimized, do nothing (allow interaction with app)
-            if (isMinimized) return; 
-
-            if (isFormDirty()) {
-               setShowCloseAlert(true);
-               setIsShaking(true);
-               setTimeout(() => setIsShaking(false), 400);
-               playWarningSound();
-            } 
-            // ELSE: DO NOTHING. We strictly block closing on backdrop click.
-          }}
+          onInteractOutside={(e) => e.preventDefault()}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -603,11 +591,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- ACCESSIBILITY TITLE --- */}
-            <div className="sr-only">
-               <DialogTitle>Créer un bon de réception</DialogTitle>
-            </div>
-            
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -621,7 +604,7 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <h3 className="font-semibold text-lg mb-2">Attention</h3>
+                    <h3 className="font-semibold text-lg mb-4">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
                     </p>
