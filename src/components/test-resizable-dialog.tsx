@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save, AlertTriangle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -198,13 +198,9 @@ export function TestResizableDialog() {
 
   // --- DIRTY CHECK ---
   const isFormDirty = () => {
-    // Check main fields
     if (supplierId !== "" || representativeId !== "" || reference !== "") return true;
-    
-    // Check items (dirty if more than 1 row, or if the first row has an article selected)
     if (items.length > 1) return true;
     if (items.length === 1 && items[0].articleId !== "") return true;
-
     return false;
   }
 
@@ -280,21 +276,16 @@ export function TestResizableDialog() {
   // Handle manual changes to Qty or Price with Validation
   const handleLineChange = (id: number, field: keyof InvoiceItem, value: string | number) => {
     let finalValue = value;
-    
-    // ENFORCE POSITIVE QUANTITY
     if (field === 'qty') {
         const num = Number(value);
         if (num < 1) finalValue = 1;
         else finalValue = num;
     }
-    
-    // ENFORCE NON-NEGATIVE PRICE
     if (field === 'price') {
         const num = Number(value);
         if (num < 0) finalValue = 0;
         else finalValue = num;
     }
-
     setItems(prev => prev.map(item => {
         if (item.id === id) {
             return { ...item, [field]: finalValue }
@@ -521,14 +512,14 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => e.preventDefault()}
           className={cn(
-              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out pointer-events-none",
+              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -542,7 +533,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (SIMPLIFIED) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (CLEAN) --- */}
             {showCloseAlert && (
               <div className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5">
                 <div className="bg-white border shadow-lg p-6 rounded-md max-w-sm text-center">
