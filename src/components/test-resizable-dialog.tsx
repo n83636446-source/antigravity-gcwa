@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, AlertTriangle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -188,7 +188,7 @@ export function TestResizableDialog() {
   const [availableRepresentatives, setAvailableRepresentatives] = useState<Representative[]>([])
 
   // --- FIRESTORE ---
-  const db = useFirestore()
+  const firestore = useFirestore()
 
   // --- MODAL STATES ---
   const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
@@ -261,12 +261,12 @@ export function TestResizableDialog() {
   // --- FETCH ALL DATA ---
   useEffect(() => {
     const fetchData = async () => {
-      if (!db) return;
+      if (!firestore) return;
       try {
         const [articlesSnap, suppliersSnap, repsSnap] = await Promise.all([
-            getDocs(collection(db, "products")),
-            getDocs(collection(db, "suppliers")),
-            getDocs(collection(db, "representatives"))
+            getDocs(collection(firestore, "products")),
+            getDocs(collection(firestore, "suppliers")),
+            getDocs(collection(firestore, "representatives"))
         ])
 
         const articles = articlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Article[];
@@ -281,8 +281,8 @@ export function TestResizableDialog() {
         console.error("Error fetching data:", error)
       }
     }
-    if (open && db) fetchData()
-  }, [open, db])
+    if (open && firestore) fetchData()
+  }, [open, firestore])
 
   // --- SOUND EFFECT (DISSONANT BUZZER) ---
   const playWarningSound = () => {
@@ -555,7 +555,6 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => {
             e.preventDefault(); 
-            // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
 
             if (isFormDirty()) {
@@ -589,7 +588,11 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+             {/* ACCESSIBILITY TITLE */}
+             <div className="sr-only">
+                <DialogTitle>Créer un bon de réception</DialogTitle>
+             </div>
+             
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -603,9 +606,6 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                    </div>
                     <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
