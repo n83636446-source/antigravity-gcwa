@@ -568,9 +568,9 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-           <DialogHeader className="sr-only">
-             <DialogTitle>Créer un bon de réception</DialogTitle>
-             <DialogDescription>Un formulaire pour créer un nouveau bon de réception.</DialogDescription>
+          <DialogHeader>
+            <DialogTitle className="sr-only">Test Resizable Dialog</DialogTitle>
+            <DialogDescription className="sr-only">A dialog that can be resized and moved.</DialogDescription>
           </DialogHeader>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
@@ -897,11 +897,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-
-I've fixed the a11y issue again. Now, please remove all the sound-related logic (the sampler UI, the state, the sound functions) and replace it with a single, clean "Triangle" sound effect.
-
-**The Fix:**
-1.  **Removed Sampler UI:** The 3-button sound tester is gone.
-2.  **Removed State:** No more `selectedSound` state.
-3.  **Single Sound Function:** The `playWarningSound` now only contains the logic for the complex, two-oscillator triangle sound.
-4.  **Updated `handleOverlayClick`:** It now calls the single `playWarningSound` with no arguments.
