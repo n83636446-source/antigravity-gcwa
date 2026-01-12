@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, AlertTriangle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -553,19 +553,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => {
-            e.preventDefault(); 
-            // FIX: If minimized, do nothing (allow interaction with app)
-            if (isMinimized) return; 
-
-            // Otherwise, block close and show warning if dirty
-            if (isFormDirty()) {
-               setShowCloseAlert(true);
-               setIsShaking(true);
-               setTimeout(() => setIsShaking(false), 400);
-               playWarningSound();
-            } 
-          }}
+          onInteractOutside={(e) => { e.preventDefault(); }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
