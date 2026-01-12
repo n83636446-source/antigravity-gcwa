@@ -200,17 +200,11 @@ export function TestResizableDialog() {
 
   // --- DIRTY CHECK ---
   const isFormDirty = () => {
-    // Check Date Fields (Dirty if not today)
     if (!isSameDay(date, new Date())) return true;
     if (!isSameDay(dueDate, new Date())) return true;
-
-    // Check Text/Select Fields
     if (supplierId !== "" || representativeId !== "" || reference !== "") return true;
-    
-    // Check Items
     if (items.length > 1) return true;
     if (items.length === 1 && items[0].articleId !== "") return true;
-
     return false;
   }
 
@@ -282,30 +276,21 @@ export function TestResizableDialog() {
       const ctx = new AudioContext();
       const t = ctx.currentTime;
 
-      // Helper to create a harsh square wave
       const createOsc = (freq: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        
-        // Square wave is naturally "buzzy" and "hollow"
         osc.type = "square"; 
         osc.frequency.setValueAtTime(freq, t);
-        
-        // Low volume because square waves are loud
         gain.gain.setValueAtTime(0.05, t);
-        // Short decay
         gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.3);
-        
         osc.connect(gain);
         gain.connect(ctx.destination);
-        
         osc.start();
         osc.stop(t + 0.3);
       }
 
-      // Play two dissonant frequencies to create the "Wrong" texture
-      createOsc(100); // Fundamental
-      createOsc(106); // Clash note (approx. semi-tone difference)
+      createOsc(100); 
+      createOsc(106); 
 
     } catch (e) {
       console.error("Audio play failed", e);
@@ -564,6 +549,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
+          // Custom backdrop handler for consistent behavior
           onInteractOutside={(e) => {
             e.preventDefault(); 
             if (isFormDirty()) {
@@ -598,7 +584,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+             <DialogTitle className="sr-only">Test Dialog</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & DISSONANT BUZZER) --- */}
             {showCloseAlert && (
               <div 
@@ -750,32 +736,32 @@ export function TestResizableDialog() {
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                              <Select value={representativeId} onValueChange={handleRepresentativeChange}>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                    <SelectValue placeholder="Sélectionnez un représentant" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem 
-                                       value="create_new_rep" 
-                                       className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
-                                     >
-                                       <div className="flex items-center gap-2">
-                                           <PlusCircle className="h-4 w-4" />
-                                           <span>Créer un nouveau représentant</span>
-                                       </div>
-                                     </SelectItem>
-                                     {availableRepresentatives.map(r => (
-                                       <SelectItem key={r.id} value={r.id}>
-                                         {r.name}
-                                       </SelectItem>
-                                     ))}
-                                  </SelectContent>
-                               </Select>
+                           <div className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                            <Label className="text-right">Représentant</Label>
+                            <Select value={representativeId} onValueChange={handleRepresentativeChange}>
+                                <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                <SelectValue placeholder="Sélectionnez un représentant" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                <SelectItem 
+                                    value="create_new_rep" 
+                                    className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <PlusCircle className="h-4 w-4" />
+                                        <span>Créer un nouveau représentant</span>
+                                    </div>
+                                </SelectItem>
+                                {availableRepresentatives.map(r => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                    {r.name}
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
                            </div>
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
+                           <div className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
+                              <Label className="text-right">Référence</Label>
                               <Input 
                                 placeholder="Référence" 
                                 className="w-full min-w-0" 
@@ -911,3 +897,58 @@ export function TestResizableDialog() {
     </>
   )
 }
+I see this error with the app, reported by NextJS, please fix it. The error is reported as HTML but presented visually to the user).
+
+A > before the line number in the error source usually indicates the line of interest: 
+
+> Build Error: Parsing ecmascript source code failed. Error source: ./src/components/ui/textarea.tsx (1:1)
+> Parsing ecmascript source code failed
+> > 1 | I see this error with the app, reported by NextJS, please fix it. The error is reported as HTML but presented visually to the user).
+>     | ^
+>   2 |
+>   3 | A > before the line number in the error source usually indicates the line of interest:
+>   4 |
+> 
+> Expected ';', '}' or <eof>
+> 
+> Import traces:
+>   Client Component Browser:
+>     ./src/components/ui/textarea.tsx [Client Component Browser]
+>     ./src/components/supplier-dialog.tsx [Client Component Browser]
+>     ./src/components/test-resizable-dialog.tsx [Client Component Browser]
+>     ./src/app/test-resize/page.tsx [Client Component Browser]
+>     ./src/app/test-resize/page.tsx [Server Component]
+> 
+>   Client Component SSR:
+>     ./src/components/ui/textarea.tsx [Client Component SSR]
+>     ./src/components/supplier-dialog.tsx [Client Component SSR]
+>     ./src/components/test-resizable-dialog.tsx [Client Component SSR]
+>     ./src/app/test-resize/page.tsx [Client Component SSR]
+>     ./src/app/test-resize/page.tsx [Server Component]
+
+I see this error with the app, reported by NextJS, please fix it. The error is reported as HTML but presented visually to the user).
+
+A > before the line number in the error source usually indicates the line of interest: 
+
+> Build Error: Parsing ecmascript source code failed. Error source: ./src/hooks/use-firestore.ts (1:1)
+> Parsing ecmascript source code failed
+> > 1 | import { useContext, useEffect, useState, useMemo } from 'react';
+>     | ^
+>   2 | import { getFirestore } from 'firebase/firestore';
+>   3 | import { FirebaseContext } from './provider';
+>   4 |
+> 
+> A separate 'export type' is not allowed
+> 
+> Import traces:
+>   Client Component Browser:
+>     ./src/hooks/use-firestore.ts [Client Component Browser]
+>     ./src/components/test-resizable-dialog.tsx [Client Component Browser]
+>     ./src/app/test-resize/page.tsx [Client Component Browser]
+>     ./src/app/test-resize/page.tsx [Server Component]
+> 
+>   Client Component SSR:
+>     ./src/hooks/use-firestore.ts [Client Component SSR]
+>     ./src/components/test-resizable-dialog.tsx [Client Component SSR]
+>     ./src/app/test-resize/page.tsx [Client Component SSR]
+>     ./src/app/test-resize/page.tsx [Server Component]
