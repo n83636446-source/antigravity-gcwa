@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save, AlertTriangle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -153,6 +153,9 @@ export function TestResizableDialog() {
   const [size, setSize] = useState({ width: 1000, height: 800 })
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(70)
+  
+  // --- ALERT STATE ---
+  const [showCloseAlert, setShowCloseAlert] = useState(false)
 
   // --- FORM STATE ---
   const [date, setDate] = useState<Date>(new Date())
@@ -190,6 +193,7 @@ export function TestResizableDialog() {
     setReference("")
     setItems([{ id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }])
     setPosition({ x: 0, y: 0 })
+    setShowCloseAlert(false)
   }
 
   // --- DIRTY CHECK ---
@@ -277,12 +281,15 @@ export function TestResizableDialog() {
   const handleLineChange = (id: number, field: keyof InvoiceItem, value: string | number) => {
     let finalValue = value;
     
+    // ENFORCE POSITIVE QUANTITY
     if (field === 'qty') {
         const num = Number(value);
+        // If user tries to type 0 or negative, force it to 1
         if (num < 1) finalValue = 1;
         else finalValue = num;
     }
     
+    // ENFORCE NON-NEGATIVE PRICE
     if (field === 'price') {
         const num = Number(value);
         if (num < 0) finalValue = 0;
@@ -398,27 +405,34 @@ export function TestResizableDialog() {
   }
 
   const handleOpenChange = (newOpen: boolean) => {
-    // CLOSING ATTEMPT
+    // ATTEMPT TO CLOSE
     if (!newOpen) {
       if (isFormDirty()) {
-        const confirmClose = window.confirm("Voulez-vous vraiment fermer ? Vos modifications seront perdues.")
-        if (!confirmClose) {
-          // User clicked Cancel, do NOT close
-          return 
-        }
+        // If minimized, maximize it to show alert
+        if (isMinimized) setIsMinimized(false)
+        setShowCloseAlert(true)
+        return 
       }
-
-      // Proceed to close
+      // If not dirty, close normally
       setOpen(false)
       setTimeout(() => {
         resetForm() 
         setIsMinimized(false)
       }, 200)
     } 
-    // OPENING
+    // OPEN
     else {
       setOpen(true)
     }
+  }
+
+  const confirmClose = () => {
+      setShowCloseAlert(false)
+      setOpen(false)
+      setTimeout(() => {
+        resetForm() 
+        setIsMinimized(false)
+      }, 200)
   }
 
   const toggleMinimize = () => {
@@ -516,8 +530,6 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-          {/* We add a visually hidden title for accessibility, as required by Radix. */}
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -531,6 +543,25 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+            {/* --- CUSTOM ALERT OVERLAY --- */}
+            {showCloseAlert && (
+              <div className="absolute inset-0 z-[60] bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-lg p-4">
+                <div className="bg-white border shadow-2xl p-6 rounded-md max-w-sm text-center animate-in fade-in zoom-in duration-200">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Modifications non enregistrées</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                        Vous avez des modifications en cours. Si vous fermez maintenant, vos données seront perdues.
+                    </p>
+                    <div className="flex justify-center gap-3">
+                        <Button variant="outline" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
+                        <Button variant="destructive" onClick={confirmClose}>Fermer sans sauvegarder</Button>
+                    </div>
+                </div>
+              </div>
+            )}
+
             <div className="absolute right-3 top-3 z-50 flex gap-1">
               {!isMinimized && (
                 <button 
@@ -745,7 +776,7 @@ export function TestResizableDialog() {
                                     value={item.price} 
                                     min={0}
                                     onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))}
-                                    className="min-w-[60px]" 
+                                    className="min-w-[60px] bg-slate-50" 
                                 />
                             </TableCell>
                             <TableCell>
