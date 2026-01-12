@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs } from "firebase/firestore"
-import { useFirestore } from "@/firebase" 
+import { useFirestore } from "@/hooks/use-firestore" 
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
@@ -188,7 +188,7 @@ export function TestResizableDialog() {
   const [availableRepresentatives, setAvailableRepresentatives] = useState<Representative[]>([])
 
   // --- FIRESTORE ---
-  const firestore = useFirestore()
+  const db = useFirestore()
 
   // --- MODAL STATES ---
   const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
@@ -261,12 +261,12 @@ export function TestResizableDialog() {
   // --- FETCH ALL DATA ---
   useEffect(() => {
     const fetchData = async () => {
-      if (!firestore) return;
+      if (!db) return;
       try {
         const [articlesSnap, suppliersSnap, repsSnap] = await Promise.all([
-            getDocs(collection(firestore, "products")),
-            getDocs(collection(firestore, "suppliers")),
-            getDocs(collection(firestore, "representatives"))
+            getDocs(collection(db, "products")),
+            getDocs(collection(db, "suppliers")),
+            getDocs(collection(db, "representatives"))
         ])
 
         const articles = articlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Article[];
@@ -281,8 +281,8 @@ export function TestResizableDialog() {
         console.error("Error fetching data:", error)
       }
     }
-    if (open && firestore) fetchData()
-  }, [open, firestore])
+    if (open && db) fetchData()
+  }, [open, db])
 
   // --- SOUND EFFECT (DISSONANT BUZZER) ---
   const playWarningSound = () => {
@@ -555,6 +555,7 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => {
             e.preventDefault(); 
+            // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
 
             if (isFormDirty()) {
@@ -562,10 +563,8 @@ export function TestResizableDialog() {
                setIsShaking(true);
                setTimeout(() => setIsShaking(false), 400);
                playWarningSound();
-            } else {
-               setOpen(false);
-               setTimeout(() => { resetForm(); setIsMinimized(false); }, 200);
-            }
+            } 
+            // ELSE: DO NOTHING. We strictly block closing on backdrop click.
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -588,11 +587,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-             {/* ACCESSIBILITY TITLE */}
-             <div className="sr-only">
-                <DialogTitle>Créer un bon de réception</DialogTitle>
-             </div>
-             
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
