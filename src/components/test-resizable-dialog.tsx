@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs } from "firebase/firestore"
-import { useFirestore } from "@/firebase" 
+import { useFirestore } from "@/hooks/use-firestore" 
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
@@ -187,6 +187,9 @@ export function TestResizableDialog() {
   const [availableSuppliers, setAvailableSuppliers] = useState<Supplier[]>([])
   const [availableRepresentatives, setAvailableRepresentatives] = useState<Representative[]>([])
 
+  // --- FOCUS STATE ---
+  const [newRowId, setNewRowId] = useState<string | null>(null)
+
   // --- FIRESTORE ---
   const db = useFirestore()
 
@@ -284,6 +287,17 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
+  // --- AUTO-FOCUS NEW ROW ---
+  useEffect(() => {
+    if (newRowId) {
+      const element = document.getElementById(`article-trigger-${newRowId}`)
+      if (element) {
+        element.focus()
+        setNewRowId(null)
+      }
+    }
+  }, [items, newRowId])
+
   // --- SOUND EFFECT (DISSONANT BUZZER) ---
   const playWarningSound = () => {
     try {
@@ -316,8 +330,10 @@ export function TestResizableDialog() {
 
   // --- TABLE ACTIONS ---
   const addItem = () => {
-    const newItem = { id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }
+    const id = generateId()
+    const newItem = { id, articleId: "", qty: 1, price: 0, tva: 20 }
     setItems([...items, newItem])
+    setNewRowId(id) // Trigger auto-focus
   }
 
   const removeItem = (id: string) => {
@@ -553,7 +569,19 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            e.preventDefault(); 
+            // FIX: If minimized, do nothing (allow interaction with app)
+            if (isMinimized) return; 
+
+            if (isFormDirty()) {
+               setShowCloseAlert(true);
+               setIsShaking(true);
+               setTimeout(() => setIsShaking(false), 400);
+               playWarningSound();
+            } 
+            // ELSE: DO NOTHING. We strictly block closing on backdrop click.
+          }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -575,7 +603,11 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+            {/* --- ACCESSIBILITY TITLE --- */}
+            <div className="sr-only">
+               <DialogTitle>Créer un bon de réception</DialogTitle>
+            </div>
+            
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -754,7 +786,7 @@ export function TestResizableDialog() {
                           <TableRow key={item.id}>
                             <TableCell>
                               <Select value={item.articleId} onValueChange={(val) => handleArticleChange(item.id, val)}>
-                                <SelectTrigger className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
+                                <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
                                     <SelectValue placeholder="Sélectionner un article..." />
                                 </SelectTrigger>
                                 <SelectContent>
