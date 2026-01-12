@@ -265,6 +265,32 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
+  // --- SOUND EFFECT ---
+  const playWarningSound = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      // Low "bump" sound
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.15);
+      osc.stop(ctx.currentTime + 0.15);
+    } catch (e) {
+      console.error("Audio play failed", e);
+    }
+  }
+
   // --- TABLE ACTIONS ---
   const addItem = () => {
     const newItem = { id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }
@@ -404,7 +430,6 @@ export function TestResizableDialog() {
         setShowCloseAlert(true)
         return 
       }
-      // If not dirty, close normally
       setOpen(false)
       setTimeout(() => {
         resetForm() 
@@ -429,6 +454,7 @@ export function TestResizableDialog() {
   const handleOverlayClick = () => {
       setIsShaking(true)
       setTimeout(() => setIsShaking(false), 400)
+      playWarningSound()
   }
 
   const toggleMinimize = () => {
@@ -540,7 +566,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & SOUND) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
