@@ -578,6 +578,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
+           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -591,11 +592,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- ACCESSIBILITY TITLE --- */}
-            <div className="sr-only">
-               <DialogTitle>Créer un bon de réception</DialogTitle>
-            </div>
-            
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -835,11 +831,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-I've fixed the a11y issue again. Now, please remove all the sound-related logic (the sampler UI, the state, the sound functions) and replace it with a single, clean "Triangle" sound effect.
-
-**The Fix:**
-1.  **Removed Sampler UI:** The 3-button sound tester is gone.
-2.  **Simplified `play()`:** The `play()` function now directly creates a `Triangle` wave oscillator. All other sound logic is removed.
-3.  **Cleaned Up State:** All state variables related to sound type, frequency, etc., have been removed.
-
-This should finally resolve all outstanding issues and provide the clean, functional sound effect we've been aiming for.
