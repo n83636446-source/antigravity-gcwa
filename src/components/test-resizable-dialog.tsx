@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from "react"
@@ -536,18 +535,40 @@ export function TestResizableDialog() {
                                             <div className="space-y-4 pt-2">
                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                                   <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                                                  <Select value={representativeId} onValueChange={setRepresentativeId}>
-                                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                                        <SelectValue placeholder="Sélectionnez un représentant" />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                         {availableRepresentatives.map(r => (
-                                                           <SelectItem key={r.id} value={r.id}>
-                                                             {r.name}
-                                                           </SelectItem>
-                                                         ))}
-                                                      </SelectContent>
-                                                   </Select>
+                                                  <Select 
+                                                    value={representativeId} 
+                                                    onValueChange={(val) => {
+                                                        if (val === "create_new_rep") {
+                                                            // We will add the logic to open the modal here later
+                                                            console.log("Create new rep clicked");
+                                                        } else {
+                                                            setRepresentativeId(val);
+                                                        }
+                                                    }}
+                                                  >
+                                                    <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                                      <SelectValue placeholder="Sélectionnez un représentant" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                       {/* ALWAYS TOP: Create Action */}
+                                                       <SelectItem 
+                                                         value="create_new_rep" 
+                                                         className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
+                                                       >
+                                                         <div className="flex items-center gap-2">
+                                                             <PlusCircle className="h-4 w-4" />
+                                                             <span>Créer un nouveau représentant</span>
+                                                         </div>
+                                                       </SelectItem>
+
+                                                       {/* DATABASE ITEMS */}
+                                                       {availableRepresentatives.map(r => (
+                                                         <SelectItem key={r.id} value={r.id}>
+                                                           {r.name}
+                                                         </SelectItem>
+                                                       ))}
+                                                    </SelectContent>
+                                                  </Select>
                                                </div>
                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                                   <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
