@@ -289,9 +289,8 @@ export function TestResizableDialog() {
         setPendingRowId(null);
     }
 
-    // --- ROBUST SIDEBAR OBSERVER (FIXED) --- 
+    // --- ROBUST SIDEBAR OBSERVER --- 
     useEffect(() => {
-        // We restored the full list of selectors to ensure we find the sidebar
         const findSidebar = () => {
             return document.querySelector('aside') || document.querySelector('nav[class*="sidebar"]') || document.querySelector('[data-sidebar]') || document.querySelector('.sidebar')
         }
@@ -326,36 +325,29 @@ export function TestResizableDialog() {
         }
     }, []);
 
-    // --- MAIN CONTROL LOGIC --- 
-    // This handles the "Open/Restore" button 
+    // --- CONTROL LOGIC --- 
     const handleMainButtonClick = () => {
         if (open) {
-            // If open AND minimized, just RESTORE (do not reset)
             if (isMinimized) {
                 setIsMinimized(false)
             }
         } else {
-            // If completely closed, OPEN FRESH (reset happens on close, so this is already clean)
             setOpen(true)
         }
     }
 
-    // This handles the Dialog's "onOpenChange" event (triggered by X, Esc, or our logic) 
     const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen)
 
-        // IF CLOSING (newOpen === false)
         if (!newOpen) {
-            // Wait for the 200ms exit animation, then RESET the form
             setTimeout(() => {
                 resetForm() 
-                setIsMinimized(false) // Ensure next open isn't minimized
+                setIsMinimized(false)
             }, 200)
         }
     }
 
     const toggleMinimize = () => {
-        // Just toggles visibility, DOES NOT trigger handleOpenChange(false)
         setIsMinimized(!isMinimized)
     }
 
@@ -426,7 +418,7 @@ export function TestResizableDialog() {
                 <DialogContent
                     onInteractOutside={(e) => e.preventDefault()}
                     className={cn(
-                        "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out pointer-events-none",
+                        "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
                         isMinimized
                             ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                             : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
@@ -662,3 +654,12 @@ export function TestResizableDialog() {
         </>
     )
 }
+" data-path-to-node="51,2">
+
+Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
+
+<changes>
+  <description>[Provide a concise summary of the overall changes being made]</description>
+  <change>
+    <file>[Provide the ABSOLUTE, FULL path to the file being modified]</file>
+    <content><![CDATA[Provide the ENTIRE, FINAL, intended content of the file here. Do NOT provide diffs or partial snippets. Ensure all code is properly escaped within the CDATA section.
