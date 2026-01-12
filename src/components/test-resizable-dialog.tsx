@@ -30,6 +30,20 @@ type Article = {
   tva?: number 
 }
 
+type Supplier = { 
+  id: string 
+  code: string 
+  name: string 
+  city?: string 
+}
+
+type Representative = {
+  id: string
+  name: string
+  email?: string
+}
+
+
 type InvoiceItem = { 
   id: number 
   articleId: string 
@@ -162,6 +176,8 @@ export function TestResizableDialog() {
         { id: 1, articleId: "", qty: 1, price: 0, tva: 20 }
     ])
     const [availableArticles, setAvailableArticles] = useState<Article[]>([])
+    const [availableSuppliers, setAvailableSuppliers] = useState<Supplier[]>([])
+    const [availableRepresentatives, setAvailableRepresentatives] = useState<Representative[]>([])
     
     // --- FIRESTORE --- 
     const db = useFirestore()
@@ -196,22 +212,44 @@ export function TestResizableDialog() {
         }, 0); 
     }, [availableArticles]);
 
-    // --- FETCH ARTICLES --- 
+    // --- FETCH ALL DATA --- 
     useEffect(() => {
-        const fetchArticles = async () => {
+        const fetchData = async () => {
             if (!db) return;
             try {
-                const querySnapshot = await getDocs(collection(db, "products"))
-                const articlesData = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
+                // Fetch Articles, Suppliers, and Representatives in parallel
+                const [articlesSnap, suppliersSnap, repsSnap] = await Promise.all([
+                    getDocs(collection(db, "products")),
+                    getDocs(collection(db, "suppliers")),
+                    getDocs(collection(db, "representatives"))
+                ])
+
+                // Process Articles
+                const articlesData = articlesSnap.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data()
                 })) as Article[]
                 setAvailableArticles(articlesData)
-            } catch (error) {
-                console.error("Error fetching articles:", error)
-            }
+                
+                // Process Suppliers
+                const suppliersData = suppliersSnap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })) as Supplier[]
+                setAvailableSuppliers(suppliersData)
+
+                // Process Representatives
+                const repsData = repsSnap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })) as Representative[]
+                setAvailableRepresentatives(repsData)
+
+              } catch (error) {
+                console.error("Error fetching data:", error)
+              }
         }
-        if (open && db) fetchArticles()
+        if (open && db) fetchData()
     }, [open, db])
 
     // --- TABLE ACTIONS --- 
@@ -409,8 +447,15 @@ export function TestResizableDialog() {
                             transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
                         }}
                     >
-                        <DialogHeader>
-                            <div className="absolute right-3 top-3 z-50 flex gap-1">
+                         <DialogHeader
+                            onMouseDown={handleDragStart}
+                            className={cn(
+                                "flex-row flex-none p-4 border-b select-none flex items-center gap-2",
+                                !isMinimized && "cursor-move",
+                                isMinimized && "py-3 px-3 border-b-0"
+                            )}
+                        >
+                             <div className="absolute right-3 top-3 z-50 flex gap-1">
                                 {!isMinimized && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
@@ -429,25 +474,16 @@ export function TestResizableDialog() {
                                     <X className="h-3.5 w-3.5" />
                                 </button>
                             </div>
-                            <div
-                                onMouseDown={handleDragStart}
-                                className={cn(
-                                    "flex-none p-4 border-b select-none flex items-center gap-2",
-                                    !isMinimized && "cursor-move",
-                                    isMinimized && "py-3 px-3 border-b-0"
-                                )}
-                            >
-                                {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                                <DialogTitle className="pr-12 truncate font-semibold text-sm">
-                                    {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
-                                </DialogTitle>
-                            </div>
-                            {!isMinimized && (
-                            <DialogDescription className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
-                                Remplissez les informations ci-dessous.
-                            </DialogDescription>
-                            )}
+                            {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+                            <DialogTitle className="pr-12 truncate font-semibold text-sm">
+                                {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+                            </DialogTitle>
                         </DialogHeader>
+                        {!isMinimized && (
+                         <DialogDescription className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
+                            Remplissez les informations ci-dessous.
+                        </DialogDescription>
+                        )}
                         <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
                             <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                                 <form className="space-y-6">
@@ -476,7 +512,11 @@ export function TestResizableDialog() {
                                                         <SelectValue placeholder="Sélectionnez un fournisseur" />
                                                       </SelectTrigger>
                                                       <SelectContent>
-                                                         <SelectItem value="f1">AS ROMA</SelectItem>
+                                                         {availableSuppliers.map(s => (
+                                                           <SelectItem key={s.id} value={s.id}>
+                                                             {s.name}
+                                                           </SelectItem>
+                                                         ))}
                                                       </SelectContent>
                                                    </Select>
                                                 </div>
@@ -509,7 +549,13 @@ export function TestResizableDialog() {
                                                       <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                                         <SelectValue placeholder="Sélectionnez un représentant" />
                                                       </SelectTrigger>
-                                                      <SelectContent><SelectItem value="r1">Représentant 1</SelectItem></SelectContent>
+                                                      <SelectContent>
+                                                         {availableRepresentatives.map(r => (
+                                                           <SelectItem key={r.id} value={r.id}>
+                                                             {r.name}
+                                                           </SelectItem>
+                                                         ))}
+                                                      </SelectContent>
                                                    </Select>
                                                </div>
                                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -616,5 +662,4 @@ export function TestResizableDialog() {
         </>
     )
 }
-
-    
+```
