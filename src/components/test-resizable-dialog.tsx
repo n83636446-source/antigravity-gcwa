@@ -18,8 +18,10 @@ import { collection, getDocs } from "firebase/firestore"
 import { useFirestore } from "@/firebase" 
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
+import { SupplierDialog } from "@/components/supplier-dialog"
 
 // --- TYPES ---
+// Updated to match your schemas more closely
 type Article = {
   id: string
   code: string
@@ -36,7 +38,13 @@ type Supplier = {
   id: string
   code: string
   name: string
+  contactName?: string
+  contactEmail?: string
+  contactPhone?: string
+  street?: string
   city?: string
+  country?: string
+  ice?: string
 }
 
 type Representative = {
@@ -149,7 +157,7 @@ export function TestResizableDialog() {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(70)
 
-  // --- FORM STATE (Controlled for Reset) ---
+  // --- FORM STATE ---
   const [date, setDate] = useState<Date>(new Date())
   const [dueDate, setDueDate] = useState<Date>(new Date())
   const [supplierId, setSupplierId] = useState<string>("")
@@ -171,6 +179,8 @@ export function TestResizableDialog() {
   // --- MODAL STATES ---
   const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
   const [isCreateRepOpen, setIsCreateRepOpen] = useState(false)
+  const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
+  
   const [pendingRowId, setPendingRowId] = useState<number | null>(null)
 
   // --- RESET FUNCTION ---
@@ -185,7 +195,7 @@ export function TestResizableDialog() {
     setPosition({ x: 0, y: 0 })
   }
 
-  // --- CALCULATE LAST CODE NUMBER ---
+  // --- CALCULATE LAST CODES ---
   const lastArticleCodeNumber = React.useMemo(() => {
     return availableArticles.reduce((max, article) => {
       const match = article.code.match(/ART(\d+)/);
@@ -196,6 +206,18 @@ export function TestResizableDialog() {
       return max;
     }, 0);
   }, [availableArticles]);
+
+  const lastSupplierCodeNumber = React.useMemo(() => {
+    return availableSuppliers.reduce((max, supplier) => {
+      const match = supplier.code.match(/FOU(\d+)/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+  }, [availableSuppliers]);
+
 
   // --- FETCH ALL DATA ---
   useEffect(() => {
@@ -245,6 +267,7 @@ export function TestResizableDialog() {
     }
   }
 
+  // --- CREATION CALLBACKS ---
   const handleArticleCreated = (newArticle: any) => {
      const articleWithType = newArticle as Article;
      setAvailableArticles(prev => [articleWithType, ...prev]);
@@ -258,7 +281,6 @@ export function TestResizableDialog() {
      setPendingRowId(null);
   }
 
-  // --- REPRESENTATIVE LOGIC ---
   const handleRepresentativeChange = (value: string) => {
       if (value === "create_new_rep") {
           setIsCreateRepOpen(true)
@@ -272,6 +294,21 @@ export function TestResizableDialog() {
       setAvailableRepresentatives(prev => [repWithType, ...prev])
       setRepresentativeId(repWithType.id)
   }
+
+  const handleSupplierChange = (value: string) => {
+      if (value === "create_new_supplier") {
+          setIsCreateSupplierOpen(true)
+          return
+      }
+      setSupplierId(value)
+  }
+
+  const handleSupplierCreated = (newSupplier: any) => {
+      const supplierWithType = newSupplier as Supplier
+      setAvailableSuppliers(prev => [supplierWithType, ...prev])
+      setSupplierId(supplierWithType.id)
+  }
+
 
   // --- SIDEBAR OBSERVER ---
   useEffect(() => {
@@ -384,6 +421,7 @@ export function TestResizableDialog() {
         Open Test Dialog
       </Button>
 
+      {/* --- MODALS --- */}
       <ArticleDialog 
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
@@ -397,6 +435,15 @@ export function TestResizableDialog() {
         onRepresentativeCreated={handleRepresentativeCreated}
       />
 
+      <SupplierDialog
+        isOpen={isCreateSupplierOpen}
+        onOpenChange={setIsCreateSupplierOpen}
+        onSupplierCreated={handleSupplierCreated}
+        lastSupplierCodeNumber={lastSupplierCodeNumber}
+        suppliers={availableSuppliers}
+      />
+
+
       <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
         <DialogContent 
           onInteractOutside={(e) => e.preventDefault()}
@@ -408,6 +455,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -421,7 +469,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             <div className="absolute right-3 top-3 z-50 flex gap-1">
               {!isMinimized && (
                 <button 
@@ -488,11 +535,20 @@ export function TestResizableDialog() {
                          <div className="space-y-4 pt-2">
                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                               <Select value={supplierId} onValueChange={setSupplierId}>
+                               <Select value={supplierId} onValueChange={handleSupplierChange}>
                                   <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                     <SelectValue placeholder="Sélectionnez un fournisseur" />
                                   </SelectTrigger>
                                   <SelectContent>
+                                    <SelectItem 
+                                       value="create_new_supplier" 
+                                       className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
+                                     >
+                                       <div className="flex items-center gap-2">
+                                           <PlusCircle className="h-4 w-4" />
+                                           <span>Créer un nouveau fournisseur</span>
+                                       </div>
+                                     </SelectItem>
                                      {availableSuppliers.map(s => (
                                        <SelectItem key={s.id} value={s.id}>
                                          {s.name}
@@ -666,3 +722,11 @@ export function TestResizableDialog() {
     </>
   )
 }
+
+Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
+
+<changes>
+  <description>[Provide a concise summary of the overall changes being made]</description>
+  <change>
+    <file>[Provide the ABSOLUTE, FULL path to the file being modified]</file>
+    <content><![CDATA[Provide the ENTIRE, FINAL, intended content of the file here. Do NOT provide diffs or partial snippets. Ensure all code is properly escaped within the CDATA section.
