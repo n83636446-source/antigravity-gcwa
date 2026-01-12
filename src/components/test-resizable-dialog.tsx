@@ -81,6 +81,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
   }
   return (
     <div className="p-3 w-[300px]">
+      <DialogTitle className="sr-only">Calendrier</DialogTitle>
       <div className="flex items-center justify-between mb-4">
         <button onClick={(e) => { e.preventDefault(); prevMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
         <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
@@ -274,13 +275,11 @@ export function TestResizableDialog() {
       const ctx = new AudioContext();
       const t = ctx.currentTime;
 
-      // Oscillator 1: Fundamental Tone (Sine wave, high pitch)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(1760, t); // A6 (High, clear)
       gain1.gain.setValueAtTime(0.08, t);
-      // Long exponential decay for "ring"
       gain1.gain.exponentialRampToValueAtTime(0.00001, t + 1.5);
       
       osc1.connect(gain1);
@@ -288,13 +287,11 @@ export function TestResizableDialog() {
       osc1.start();
       osc1.stop(t + 1.5);
 
-      // Oscillator 2: Metallic Overtone (Triangle wave, clashing pitch)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
-      osc2.type = 'triangle'; // Triangle wave adds the "metal" buzz
-      osc2.frequency.setValueAtTime(4500, t); // High harmonic
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(4500, t);
       gain2.gain.setValueAtTime(0.04, t);
-      // Fast decay for the initial "clink" attack
       gain2.gain.exponentialRampToValueAtTime(0.00001, t + 0.3);
 
       osc2.connect(gain2);
@@ -439,7 +436,7 @@ export function TestResizableDialog() {
   }
 
   const handleOpenChange = (newOpen: boolean) => {
-    // ATTEMPT TO CLOSE
+    // ATTEMPT TO CLOSE (via X button)
     if (!newOpen) {
       if (isFormDirty()) {
         if (isMinimized) setIsMinimized(false)
@@ -559,7 +556,20 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
         <DialogContent 
-          onInteractOutside={(e) => e.preventDefault()}
+          // FIX: Trigger warning when clicking backdrop
+          onInteractOutside={(e) => {
+            e.preventDefault(); 
+            if (isFormDirty()) {
+               if (isMinimized) setIsMinimized(false);
+               setShowCloseAlert(true);
+               setIsShaking(true);
+               setTimeout(() => setIsShaking(false), 400);
+               playWarningSound();
+            } else {
+               setOpen(false);
+               setTimeout(() => { resetForm(); setIsMinimized(false); }, 200);
+            }
+          }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -570,7 +580,6 @@ export function TestResizableDialog() {
         >
           <DialogHeader>
             <DialogTitle className="sr-only">Test Resizable Dialog</DialogTitle>
-            <DialogDescription className="sr-only">A dialog that can be resized and moved.</DialogDescription>
           </DialogHeader>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
