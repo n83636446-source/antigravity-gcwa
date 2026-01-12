@@ -51,7 +51,7 @@ type Representative = {
 }
 
 type InvoiceItem = {
-  id: string // Changed to string for safer UUID
+  id: string
   articleId: string
   qty: number
   price: number
@@ -554,9 +554,14 @@ export function TestResizableDialog() {
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
           onInteractOutside={(e) => {
+            // FIX: If minimized, do nothing (allow interaction with app)
+            if (isMinimized) {
+              e.preventDefault(); 
+              return;
+            }
+
             e.preventDefault(); 
             if (isFormDirty()) {
-               if (isMinimized) setIsMinimized(false);
                setShowCloseAlert(true);
                setIsShaking(true);
                setTimeout(() => setIsShaking(false), 400);
@@ -587,9 +592,11 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+             {/* --- ACCESSIBILITY TITLE --- */}
              <div className="sr-only">
-               <DialogTitle>Créer un bon de réception</DialogTitle>
+                <DialogTitle>Créer un bon de réception</DialogTitle>
              </div>
+             
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
