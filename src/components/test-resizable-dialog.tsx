@@ -157,7 +157,6 @@ export function TestResizableDialog() {
   // --- ALERT STATE ---
   const [showCloseAlert, setShowCloseAlert] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
-  const [selectedSound, setSelectedSound] = useState(1) // Default to 1
 
   // --- FORM STATE ---
   const [date, setDate] = useState<Date>(new Date())
@@ -266,7 +265,7 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
-    // --- SOUND EFFECT (TRIANGLE INSTRUMENT) ---
+  // --- SOUND EFFECT (TRIANGLE INSTRUMENT) ---
   const playWarningSound = () => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -307,7 +306,6 @@ export function TestResizableDialog() {
       console.error("Audio play failed", e);
     }
   }
-
 
   // --- TABLE ACTIONS ---
   const addItem = () => {
@@ -561,10 +559,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
         <DialogContent 
-          onInteractOutside={(e) => {
-            // Prevent closing on outside click, but allow our custom logic to run
-            e.preventDefault()
-          }}
+          onInteractOutside={(e) => e.preventDefault()}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -573,12 +568,10 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-          {/* This DialogTitle is required for accessibility but is visually hidden */}
-          <DialogHeader className="sr-only">
+           <DialogHeader className="sr-only">
              <DialogTitle>Créer un bon de réception</DialogTitle>
              <DialogDescription>Un formulaire pour créer un nouveau bon de réception.</DialogDescription>
           </DialogHeader>
-
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -592,7 +585,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (SAMPLER REMOVED) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & TRIANGLE SOUND) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
