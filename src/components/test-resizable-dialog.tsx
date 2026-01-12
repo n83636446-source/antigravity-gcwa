@@ -200,9 +200,17 @@ export function TestResizableDialog() {
 
   // --- DIRTY CHECK ---
   const isFormDirty = () => {
+    // Check Date Fields (Dirty if not today)
+    if (!isSameDay(date, new Date())) return true;
+    if (!isSameDay(dueDate, new Date())) return true;
+
+    // Check Text/Select Fields
     if (supplierId !== "" || representativeId !== "" || reference !== "") return true;
+    
+    // Check Items
     if (items.length > 1) return true;
     if (items.length === 1 && items[0].articleId !== "") return true;
+
     return false;
   }
 
@@ -556,7 +564,6 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          // Custom backdrop handler for consistent behavior
           onInteractOutside={(e) => {
             e.preventDefault(); 
             if (isFormDirty()) {
@@ -591,7 +598,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & DISSONANT BUZZER) --- */}
             {showCloseAlert && (
               <div 
