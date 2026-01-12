@@ -431,6 +431,7 @@ export function TestResizableDialog() {
         setShowCloseAlert(true)
         return 
       }
+      // If not dirty, close normally
       setOpen(false)
       setTimeout(() => {
         resetForm() 
@@ -879,4 +880,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-```
