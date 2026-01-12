@@ -387,7 +387,7 @@ export function TestResizableDialog() {
   }
 
 
-  // --- SIDEBAR OBSERVER ---
+  // --- SIDEBAR OBSERVER (FIXED) ---
   useEffect(() => {
     const findSidebar = () => {
       return document.querySelector('aside') || 
@@ -397,11 +397,13 @@ export function TestResizableDialog() {
     }
     const updateWidth = (el: Element) => {
        const width = el.getBoundingClientRect().width
-       if (width === 0) setDockOffset(70) 
+       // Default small offset if collapsed to 0
+       if (width === 0) setDockOffset(0) 
        else setDockOffset(width)
     }
     const sidebar = findSidebar()
     if (sidebar) updateWidth(sidebar)
+    
     let observer: ResizeObserver | null = null
     if (sidebar) {
         observer = new ResizeObserver((entries) => {
@@ -411,8 +413,13 @@ export function TestResizableDialog() {
     }
     const interval = setInterval(() => {
         const currentSidebar = findSidebar()
-        if (currentSidebar) updateWidth(currentSidebar)
-    }, 1000)
+        if (currentSidebar) {
+            updateWidth(currentSidebar)
+        } else {
+            // FALLBACK: If sidebar is gone, reset offset to 0
+            setDockOffset(0)
+        }
+    }, 500) // Faster check (500ms)
     return () => {
         if (observer) observer.disconnect()
         clearInterval(interval)
@@ -566,11 +573,12 @@ export function TestResizableDialog() {
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
-                ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
+                ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[200]" // Increased Z-Index
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
-          style={isMinimized ? { left: dockOffset + 16 } : {}}
+          style={isMinimized ? { left: dockOffset + 16, transition: "left 0.3s ease-out" } : {}}
         >
+         <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -584,8 +592,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-             <DialogTitle className="sr-only">Test Dialog</DialogTitle>
-            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & DISSONANT BUZZER) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & BUZZER) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
@@ -736,32 +743,32 @@ export function TestResizableDialog() {
                      <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
-                           <div className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                            <Label className="text-right">Représentant</Label>
-                            <Select value={representativeId} onValueChange={handleRepresentativeChange}>
-                                <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                <SelectValue placeholder="Sélectionnez un représentant" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                <SelectItem 
-                                    value="create_new_rep" 
-                                    className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <PlusCircle className="h-4 w-4" />
-                                        <span>Créer un nouveau représentant</span>
-                                    </div>
-                                </SelectItem>
-                                {availableRepresentatives.map(r => (
-                                    <SelectItem key={r.id} value={r.id}>
-                                    {r.name}
-                                    </SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
+                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                              <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
+                              <Select value={representativeId} onValueChange={handleRepresentativeChange}>
+                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                    <SelectValue placeholder="Sélectionnez un représentant" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem 
+                                       value="create_new_rep" 
+                                       className="text-blue-600 font-semibold focus:text-blue-700 bg-blue-50 focus:bg-blue-100 cursor-pointer"
+                                     >
+                                       <div className="flex items-center gap-2">
+                                           <PlusCircle className="h-4 w-4" />
+                                           <span>Créer un nouveau représentant</span>
+                                       </div>
+                                     </SelectItem>
+                                     {availableRepresentatives.map(r => (
+                                       <SelectItem key={r.id} value={r.id}>
+                                         {r.name}
+                                       </SelectItem>
+                                     ))}
+                                  </SelectContent>
+                               </Select>
                            </div>
-                           <div className="grid grid-cols-[110px_1fr] items-center gap-4 space-y-0">
-                              <Label className="text-right">Référence</Label>
+                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                              <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
                               <Input 
                                 placeholder="Référence" 
                                 className="w-full min-w-0" 
@@ -897,58 +904,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-I see this error with the app, reported by NextJS, please fix it. The error is reported as HTML but presented visually to the user).
-
-A > before the line number in the error source usually indicates the line of interest: 
-
-> Build Error: Parsing ecmascript source code failed. Error source: ./src/components/ui/textarea.tsx (1:1)
-> Parsing ecmascript source code failed
-> > 1 | I see this error with the app, reported by NextJS, please fix it. The error is reported as HTML but presented visually to the user).
->     | ^
->   2 |
->   3 | A > before the line number in the error source usually indicates the line of interest:
->   4 |
-> 
-> Expected ';', '}' or <eof>
-> 
-> Import traces:
->   Client Component Browser:
->     ./src/components/ui/textarea.tsx [Client Component Browser]
->     ./src/components/supplier-dialog.tsx [Client Component Browser]
->     ./src/components/test-resizable-dialog.tsx [Client Component Browser]
->     ./src/app/test-resize/page.tsx [Client Component Browser]
->     ./src/app/test-resize/page.tsx [Server Component]
-> 
->   Client Component SSR:
->     ./src/components/ui/textarea.tsx [Client Component SSR]
->     ./src/components/supplier-dialog.tsx [Client Component SSR]
->     ./src/components/test-resizable-dialog.tsx [Client Component SSR]
->     ./src/app/test-resize/page.tsx [Client Component SSR]
->     ./src/app/test-resize/page.tsx [Server Component]
-
-I see this error with the app, reported by NextJS, please fix it. The error is reported as HTML but presented visually to the user).
-
-A > before the line number in the error source usually indicates the line of interest: 
-
-> Build Error: Parsing ecmascript source code failed. Error source: ./src/hooks/use-firestore.ts (1:1)
-> Parsing ecmascript source code failed
-> > 1 | import { useContext, useEffect, useState, useMemo } from 'react';
->     | ^
->   2 | import { getFirestore } from 'firebase/firestore';
->   3 | import { FirebaseContext } from './provider';
->   4 |
-> 
-> A separate 'export type' is not allowed
-> 
-> Import traces:
->   Client Component Browser:
->     ./src/hooks/use-firestore.ts [Client Component Browser]
->     ./src/components/test-resizable-dialog.tsx [Client Component Browser]
->     ./src/app/test-resize/page.tsx [Client Component Browser]
->     ./src/app/test-resize/page.tsx [Server Component]
-> 
->   Client Component SSR:
->     ./src/hooks/use-firestore.ts [Client Component SSR]
->     ./src/components/test-resizable-dialog.tsx [Client Component SSR]
->     ./src/app/test-resize/page.tsx [Client Component SSR]
->     ./src/app/test-resize/page.tsx [Server Component]
