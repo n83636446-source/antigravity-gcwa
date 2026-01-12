@@ -655,6 +655,3 @@ export function TestResizableDialog() {
         </>
     )
 }
-```
-
-" data-path-to-node="49,2">
