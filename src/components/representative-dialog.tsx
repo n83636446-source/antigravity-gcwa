@@ -90,12 +90,15 @@ export function RepresentativeDialog({
       });
     } else {
       const representativesRef = collection(firestore, 'representatives');
+      // We wait for the ID here to pass it back
       const docRef = await addDocumentNonBlocking(representativesRef, data);
-      toast({
-        title: 'Représentant ajouté',
-        description: `Le représentant "${data.name}" a été ajouté avec succès.`,
-      });
+      
       if (docRef) {
+        toast({
+            title: 'Représentant ajouté',
+            description: `Le représentant "${data.name}" a été ajouté avec succès.`,
+        });
+        // Call the callback with the new ID
         onRepresentativeCreated?.({ ...data, id: docRef.id });
       }
     }
@@ -164,4 +167,6 @@ export function RepresentativeDialog({
           </form>
         </Form>
       </DialogContent>
-    </Dialog
+    </Dialog>
+  );
+}
