@@ -526,7 +526,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+        <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
