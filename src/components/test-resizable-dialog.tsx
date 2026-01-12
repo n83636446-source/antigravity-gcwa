@@ -554,13 +554,10 @@ export function TestResizableDialog() {
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
           onInteractOutside={(e) => {
-            // FIX: If minimized, do nothing (allow interaction with app)
-            if (isMinimized) {
-              e.preventDefault(); 
-              return;
-            }
-
             e.preventDefault(); 
+            // FIX: If minimized, do nothing (allow interaction with app)
+            if (isMinimized) return; 
+
             if (isFormDirty()) {
                setShowCloseAlert(true);
                setIsShaking(true);
@@ -836,3 +833,4 @@ export function TestResizableDialog() {
     </>
   )
 }
+    
