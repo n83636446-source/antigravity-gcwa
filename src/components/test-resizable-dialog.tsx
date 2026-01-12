@@ -654,7 +654,7 @@ export function TestResizableDialog() {
         </>
     )
 }
-" data-path-to-node="51,2">
+" data-path-to-node="46,2">
 
 Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
 
