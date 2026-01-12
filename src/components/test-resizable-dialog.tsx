@@ -333,7 +333,23 @@ export function TestResizableDialog() {
     const id = generateId()
     const newItem = { id, articleId: "", qty: 1, price: 0, tva: 20 }
     setItems([...items, newItem])
-    setNewRowId(id) // Trigger auto-focus
+    setNewRowId(id) 
+  }
+
+  const insertItemAfter = (currentId: string) => {
+    const newId = generateId()
+    const newItem = { id: newId, articleId: "", qty: 1, price: 0, tva: 20 }
+
+    setItems(prevItems => {
+        const index = prevItems.findIndex(item => item.id === currentId)
+        if (index === -1) return prevItems
+        
+        // Create new array with item inserted at index + 1
+        const newItems = [...prevItems]
+        newItems.splice(index + 1, 0, newItem)
+        return newItems
+    })
+    setNewRowId(newId) // Trigger auto-focus
   }
 
   const removeItem = (id: string) => {
@@ -569,7 +585,14 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            e.preventDefault(); 
+            // FIX: If minimized, do nothing (allow interaction with app)
+            if (isMinimized) return; 
+
+            // FIX: DO NOTHING if clicked outside when dirty. 
+            // Just block the close event. No warning, no shake.
+          }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -763,7 +786,7 @@ export function TestResizableDialog() {
                           <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
                           <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
                           <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead className="w-[90px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -786,8 +809,13 @@ export function TestResizableDialog() {
                             <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
                             <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
                             <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
-                            <TableCell>
-                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                            <TableCell className="flex items-center justify-end gap-1">
+                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)}>
+                                 <PlusCircle className="h-4 w-4" />
+                               </Button>
+                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)}>
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
                             </TableCell>
                           </TableRow>
                         ))}
