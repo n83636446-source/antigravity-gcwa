@@ -427,7 +427,6 @@ export function TestResizableDialog() {
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
         lastArticleCodeNumber={lastArticleCodeNumber}
-        onArticleCreated={handleArticleCreated}
       />
 
       <RepresentativeDialog
@@ -449,14 +448,14 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => e.preventDefault()}
           className={cn(
-              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out pointer-events-none",
+              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-30"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
