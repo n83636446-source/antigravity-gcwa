@@ -596,11 +596,11 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <h3 className="font-semibold text-lg mb-2">Attention</h3>
-                    <p className="text-sm text-muted-foreground mb-6">
+                    <DialogTitle className="font-semibold text-lg mb-2">Attention</DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
-                    </p>
-                    <div className="flex justify-center gap-3">
+                    </DialogDescription>
+                    <div className="flex justify-center gap-3 mt-6">
                         <Button variant="outline" size="sm" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
                         <Button variant="destructive" size="sm" onClick={confirmClose}>Fermer</Button>
                     </div>
@@ -637,27 +637,24 @@ export function TestResizableDialog() {
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-
-            {/* HEADER - No border-b here to allow clean separation with subtitle */}
-            <div 
-              onMouseDown={handleDragStart}
-              className={cn(
-                "flex-none p-4 select-none flex items-center gap-2",
-                !isMinimized && "cursor-move",
-                isMinimized && "py-3 px-3 border-b-0"
-              )}
-            >
-              {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-              <div className="pr-12 truncate font-semibold text-sm">
-                {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
-              </div>
-            </div>
-
-            {!isMinimized && (
-               <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
-                  Remplissez les informations ci-dessous.
-               </div>
-            )}
+            
+            <DialogHeader className="p-4 flex-none select-none" onMouseDown={handleDragStart}>
+                <div className={cn(
+                    "flex items-center gap-2",
+                    !isMinimized && "cursor-move",
+                    isMinimized && "py-3 px-3 border-b-0"
+                )}>
+                  {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+                  <DialogTitle className="pr-12 truncate font-semibold text-sm">
+                    {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+                  </DialogTitle>
+                </div>
+                {!isMinimized && (
+                  <DialogDescription className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
+                      Remplissez les informations ci-dessous.
+                  </DialogDescription>
+                )}
+            </DialogHeader>
 
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
