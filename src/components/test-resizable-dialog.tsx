@@ -217,6 +217,19 @@ export function TestResizableDialog() {
     }, 0);
   }, [availableSuppliers]);
 
+  // --- CALCULATE TOTALS ---
+  const { totalHT, totalTVA, totalTTC } = items.reduce(
+    (acc, item) => {
+      const lineHT = item.price * item.qty;
+      const lineTVA = lineHT * (item.tva / 100);
+      return {
+        totalHT: acc.totalHT + lineHT,
+        totalTVA: acc.totalTVA + lineTVA,
+        totalTTC: acc.totalTTC + lineHT + lineTVA,
+      };
+    },
+    { totalHT: 0, totalTVA: 0, totalTTC: 0 }
+  );
 
   // --- FETCH ALL DATA ---
   useEffect(() => {
@@ -248,6 +261,16 @@ export function TestResizableDialog() {
 
   const removeItem = (id: number) => {
     setItems(items.filter(item => item.id !== id))
+  }
+
+  // Handle manual changes to Qty or Price
+  const handleLineChange = (id: number, field: keyof InvoiceItem, value: string | number) => {
+    setItems(prev => prev.map(item => {
+        if (item.id === id) {
+            return { ...item, [field]: value }
+        }
+        return item
+    }))
   }
 
   const handleArticleChange = (rowId: number, value: string) => {
@@ -454,11 +477,11 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
-              "relative bg-white border rounded-lg shadow-xl flex flex-col pointer-events-auto",
+              "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
               isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
             )}
@@ -494,7 +517,7 @@ export function TestResizableDialog() {
               className={cn(
                 "flex-none p-4 select-none flex items-center gap-2",
                 !isMinimized && "cursor-move",
-                isMinimized && "py-3 px-3"
+                isMinimized && "py-3 px-3 border-b-0"
               )}
             >
               {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
@@ -667,9 +690,30 @@ export function TestResizableDialog() {
                                 </SelectContent>
                               </Select>
                             </TableCell>
-                            <TableCell><Input type="number" defaultValue={item.qty} className="min-w-[60px]" /></TableCell>
-                            <TableCell><Input type="number" value={item.price} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
-                            <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
+                            <TableCell>
+                                <Input 
+                                    type="number" 
+                                    value={item.qty} 
+                                    onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))}
+                                    className="min-w-[60px]" 
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <Input 
+                                    type="number" 
+                                    value={item.price} 
+                                    onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))}
+                                    className="min-w-[60px] bg-slate-50" 
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <Input 
+                                    type="number" 
+                                    value={item.tva} 
+                                    readOnly 
+                                    className="min-w-[60px] bg-slate-50" 
+                                />
+                            </TableCell>
                             <TableCell className="text-right font-medium">
                                 {(item.price * item.qty).toFixed(2)} €
                             </TableCell>
@@ -697,9 +741,9 @@ export function TestResizableDialog() {
               {/* Footer */}
               <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
                 <div className="space-y-2 text-right mb-4">
-                    <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>0,00 €</span></div>
-                    <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>0,00 €</span></div>
-                    <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>0,00 €</span></div>
+                    <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
+                    <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>{totalTVA.toFixed(2)} €</span></div>
+                    <div className="flex justify-end gap-4 font-bold text-lg"><span>Total TTC:</span> <span>{totalTTC.toFixed(2)} €</span></div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
@@ -712,7 +756,7 @@ export function TestResizableDialog() {
               <>
                 <div onMouseDown={handleResize('right')} className="absolute -right-3 top-0 bottom-0 w-3 cursor-ew-resize z-50" />
                 <div onMouseDown={handleResize('bottom')} className="absolute -bottom-3 left-0 right-0 h-3 cursor-ns-resize z-50" />
-                <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-4 w-4 cursor-nwse-resize z-50" />
+                <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
               </>
             )}
 
