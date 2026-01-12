@@ -81,7 +81,6 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
   }
   return (
     <div className="p-3 w-[300px]">
-      <DialogTitle className="sr-only">Calendrier</DialogTitle>
       <div className="flex items-center justify-between mb-4">
         <button onClick={(e) => { e.preventDefault(); prevMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
         <span className="font-semibold text-sm capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</span>
@@ -266,7 +265,7 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
-  // --- SOUND EFFECT (BUZZER) ---
+  // --- SOUND EFFECT (DISSONANT BUZZER) ---
   const playWarningSound = () => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -275,21 +274,30 @@ export function TestResizableDialog() {
       const ctx = new AudioContext();
       const t = ctx.currentTime;
 
-      // Single Sawtooth wave (Rough, buzzy sound)
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.type = 'sawtooth'; // "Buzzy" wave
-      osc.frequency.setValueAtTime(150, t); // Low pitch start
-      osc.frequency.linearRampToValueAtTime(100, t + 0.25); // Slide down (Classic error sound)
-      
-      gain.gain.setValueAtTime(0.1, t);
-      gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.25);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(t + 0.25);
+      // Helper to create a harsh square wave
+      const createOsc = (freq: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        // Square wave is naturally "buzzy" and "hollow"
+        osc.type = "square"; 
+        osc.frequency.setValueAtTime(freq, t);
+        
+        // Low volume because square waves are loud
+        gain.gain.setValueAtTime(0.05, t);
+        // Short decay
+        gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.3);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(t + 0.3);
+      }
+
+      // Play two dissonant frequencies to create the "Wrong" texture
+      createOsc(100); // Fundamental
+      createOsc(106); // Clash note (approx. semi-tone difference)
 
     } catch (e) {
       console.error("Audio play failed", e);
@@ -583,8 +591,8 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-             <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
-            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & BUZZER SOUND) --- */}
+           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & DISSONANT BUZZER) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
