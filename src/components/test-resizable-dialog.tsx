@@ -578,7 +578,8 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          {/* ACCESSIBILITY: Add a screen-reader only title */}
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -605,9 +606,6 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                    </div>
                     <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
