@@ -427,6 +427,7 @@ export function TestResizableDialog() {
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
         lastArticleCodeNumber={lastArticleCodeNumber}
+        onArticleCreated={handleArticleCreated}
       />
 
       <RepresentativeDialog
@@ -455,7 +456,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -489,10 +490,11 @@ export function TestResizableDialog() {
               </button>
             </div>
 
+            {/* HEADER - No border-b here to allow clean separation with subtitle */}
             <div 
               onMouseDown={handleDragStart}
               className={cn(
-                "flex-none p-4 border-b select-none flex items-center gap-2",
+                "flex-none p-4 select-none flex items-center gap-2",
                 !isMinimized && "cursor-move",
                 isMinimized && "py-3 px-3 border-b-0"
               )}
@@ -622,8 +624,8 @@ export function TestResizableDialog() {
 
                   </div>
 
-                  {/* Items Table */}
-                  <div className="border rounded-md overflow-hidden">
+                  {/* Items Table - Added border-blue-800 */}
+                  <div className="border border-blue-800 rounded-md overflow-hidden">
                     <Table>
                       <TableHeader className="bg-gray-50">
                         <TableRow>
