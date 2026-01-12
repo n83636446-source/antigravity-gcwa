@@ -44,12 +44,14 @@ type RepresentativeDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
+  onRepresentativeCreated?: (rep: Representative) => void;
 };
 
 export function RepresentativeDialog({
   isOpen,
   onOpenChange,
   representative,
+  onRepresentativeCreated,
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -76,7 +78,7 @@ export function RepresentativeDialog({
     }
   }, [representative, isEditMode, isOpen, form]);
 
-  const onSubmit = (data: RepresentativeFormValues) => {
+  const onSubmit = async (data: RepresentativeFormValues) => {
     if (!firestore) return;
 
     if (isEditMode && representative) {
@@ -88,11 +90,14 @@ export function RepresentativeDialog({
       });
     } else {
       const representativesRef = collection(firestore, 'representatives');
-      addDocumentNonBlocking(representativesRef, data);
+      const docRef = await addDocumentNonBlocking(representativesRef, data);
       toast({
         title: 'Représentant ajouté',
         description: `Le représentant "${data.name}" a été ajouté avec succès.`,
       });
+      if (docRef) {
+        onRepresentativeCreated?.({ ...data, id: docRef.id });
+      }
     }
 
     onOpenChange(false);
