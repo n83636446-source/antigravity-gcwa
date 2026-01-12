@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, Maximize2, PlusCircle, Save, AlertTriangle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -51,12 +51,25 @@ type Representative = {
 }
 
 type InvoiceItem = {
-  id: number
+  id: string // Changed to string for safer UUID
   articleId: string
   qty: number
   price: number
   tva: number
 }
+
+// --- HELPER: SAFE ID GENERATOR ---
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+// --- HELPER: DEDUPLICATE LISTS ---
+const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
+  const seen = new Set();
+  return items.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
 
 // --- CUSTOM CALENDAR ---
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
@@ -168,7 +181,7 @@ export function TestResizableDialog() {
   
   // --- DATA STATE ---
   const [items, setItems] = useState<InvoiceItem[]>([
-    { id: 1, articleId: "", qty: 1, price: 0, tva: 20 }
+    { id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }
   ])
   const [availableArticles, setAvailableArticles] = useState<Article[]>([])
   const [availableSuppliers, setAvailableSuppliers] = useState<Supplier[]>([])
@@ -182,7 +195,7 @@ export function TestResizableDialog() {
   const [isCreateRepOpen, setIsCreateRepOpen] = useState(false)
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   
-  const [pendingRowId, setPendingRowId] = useState<number | null>(null)
+  const [pendingRowId, setPendingRowId] = useState<string | null>(null) // Changed to string for ID
 
   // --- RESET FUNCTION ---
   const resetForm = () => {
@@ -192,7 +205,7 @@ export function TestResizableDialog() {
     setPaymentMethod("cash")
     setRepresentativeId("")
     setReference("")
-    setItems([{ id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }])
+    setItems([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }])
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
     setIsShaking(false)
@@ -256,9 +269,13 @@ export function TestResizableDialog() {
             getDocs(collection(db, "representatives"))
         ])
 
-        setAvailableArticles(articlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Article[])
-        setAvailableSuppliers(suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Supplier[])
-        setAvailableRepresentatives(repsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Representative[])
+        const articles = articlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Article[];
+        const suppliers = suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Supplier[];
+        const reps = repsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Representative[];
+
+        setAvailableArticles(deduplicate(articles));
+        setAvailableSuppliers(deduplicate(suppliers));
+        setAvailableRepresentatives(deduplicate(reps));
 
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -276,21 +293,30 @@ export function TestResizableDialog() {
       const ctx = new AudioContext();
       const t = ctx.currentTime;
 
+      // Helper to create a harsh square wave
       const createOsc = (freq: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+        
+        // Square wave is naturally "buzzy" and "hollow"
         osc.type = "square"; 
         osc.frequency.setValueAtTime(freq, t);
+        
+        // Low volume because square waves are loud
         gain.gain.setValueAtTime(0.05, t);
+        // Short decay
         gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.3);
+        
         osc.connect(gain);
         gain.connect(ctx.destination);
+        
         osc.start();
         osc.stop(t + 0.3);
       }
 
-      createOsc(100); 
-      createOsc(106); 
+      // Play two dissonant frequencies to create the "Wrong" texture
+      createOsc(100); // Fundamental
+      createOsc(106); // Clash note (approx. semi-tone difference)
 
     } catch (e) {
       console.error("Audio play failed", e);
@@ -299,16 +325,16 @@ export function TestResizableDialog() {
 
   // --- TABLE ACTIONS ---
   const addItem = () => {
-    const newItem = { id: Date.now(), articleId: "", qty: 1, price: 0, tva: 20 }
+    const newItem = { id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }
     setItems([...items, newItem])
   }
 
-  const removeItem = (id: number) => {
+  const removeItem = (id: string) => {
     setItems(items.filter(item => item.id !== id))
   }
 
-  // Handle manual changes to Qty or Price with Validation
-  const handleLineChange = (id: number, field: keyof InvoiceItem, value: string | number) => {
+  // Handle manual changes
+  const handleLineChange = (id: string, field: keyof InvoiceItem, value: string | number) => {
     let finalValue = value;
     if (field === 'qty') {
         const num = Number(value);
@@ -328,7 +354,7 @@ export function TestResizableDialog() {
     }))
   }
 
-  const handleArticleChange = (rowId: number, value: string) => {
+  const handleArticleChange = (rowId: string, value: string) => {
     if (value === "create_new") {
         setPendingRowId(rowId)
         setIsCreateArticleOpen(true)
@@ -347,7 +373,8 @@ export function TestResizableDialog() {
   // --- CREATION CALLBACKS ---
   const handleArticleCreated = (newArticle: any) => {
      const articleWithType = newArticle as Article;
-     setAvailableArticles(prev => [articleWithType, ...prev]);
+     // Deduplicate just in case
+     setAvailableArticles(prev => deduplicate([articleWithType, ...prev]));
      if (pendingRowId) {
         setItems(items.map(item => 
             item.id === pendingRowId 
@@ -368,7 +395,7 @@ export function TestResizableDialog() {
 
   const handleRepresentativeCreated = (newRep: any) => {
       const repWithType = newRep as Representative
-      setAvailableRepresentatives(prev => [repWithType, ...prev])
+      setAvailableRepresentatives(prev => deduplicate([repWithType, ...prev]))
       setRepresentativeId(repWithType.id)
   }
 
@@ -382,12 +409,12 @@ export function TestResizableDialog() {
 
   const handleSupplierCreated = (newSupplier: any) => {
       const supplierWithType = newSupplier as Supplier
-      setAvailableSuppliers(prev => [supplierWithType, ...prev])
+      setAvailableSuppliers(prev => deduplicate([supplierWithType, ...prev]))
       setSupplierId(supplierWithType.id)
   }
 
 
-  // --- SIDEBAR OBSERVER (FIXED) ---
+  // --- SIDEBAR OBSERVER (FIXED + SAFE) ---
   useEffect(() => {
     const findSidebar = () => {
       return document.querySelector('aside') || 
@@ -397,7 +424,7 @@ export function TestResizableDialog() {
     }
     const updateWidth = (el: Element) => {
        const width = el.getBoundingClientRect().width
-       // Default small offset if collapsed to 0
+       // If sidebar is hidden/collapsed (width 0), set offset to 0
        if (width === 0) setDockOffset(0) 
        else setDockOffset(width)
     }
@@ -416,10 +443,10 @@ export function TestResizableDialog() {
         if (currentSidebar) {
             updateWidth(currentSidebar)
         } else {
-            // FALLBACK: If sidebar is gone, reset offset to 0
+            // FALLBACK: If sidebar DOM element is gone, reset offset to 0
             setDockOffset(0)
         }
-    }, 500) // Faster check (500ms)
+    }, 500)
     return () => {
         if (observer) observer.disconnect()
         clearInterval(interval)
@@ -556,6 +583,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
+          // Custom backdrop handler
           onInteractOutside={(e) => {
             e.preventDefault(); 
             if (isFormDirty()) {
@@ -572,12 +600,13 @@ export function TestResizableDialog() {
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
-                ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[200]" // Increased Z-Index
+                ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[200]" // Fix for sidebar overlap
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
           style={isMinimized ? { left: dockOffset + 16, transition: "left 0.3s ease-out" } : {}}
         >
-        <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          {/* We need a title for accessibility, but we can hide it visually */}
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -591,7 +620,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & BUZZER) --- */}
+            {/* --- CUSTOM ALERT OVERLAY (WITH SHAKE & DISSONANT BUZZER) --- */}
             {showCloseAlert && (
               <div 
                 className="absolute inset-0 z-[60] flex items-center justify-center rounded-lg p-4 bg-black/5"
@@ -604,6 +633,10 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
+                    {/* ALERT ICON */}
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
                     <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
