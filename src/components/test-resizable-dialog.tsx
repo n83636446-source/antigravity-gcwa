@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs } from "firebase/firestore"
-import { useFirestore } from "@/hooks/use-firestore" 
+import { useFirestore } from "@/firebase" 
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
@@ -558,13 +558,13 @@ export function TestResizableDialog() {
             // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
 
+            // Otherwise, block close and show warning if dirty
             if (isFormDirty()) {
                setShowCloseAlert(true);
                setIsShaking(true);
                setTimeout(() => setIsShaking(false), 400);
                playWarningSound();
             } 
-            // ELSE: DO NOTHING. We strictly block closing on backdrop click.
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -587,6 +587,11 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+            {/* --- ACCESSIBILITY TITLE --- */}
+            <div className="sr-only">
+               <DialogTitle>Créer un bon de réception</DialogTitle>
+            </div>
+            
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
