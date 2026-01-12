@@ -21,7 +21,6 @@ import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
 
 // --- TYPES ---
-// Updated to match your schemas more closely
 type Article = {
   id: string
   code: string
@@ -90,7 +89,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
         <button onClick={(e) => { e.preventDefault(); nextMonth() }} className="p-1 hover:bg-gray-100 rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <span key={`${d}-${i}`} className="text-gray-400 font-medium">{d}</span>)}
+        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => <span key={d} className="text-gray-400 font-medium">{d}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-1 text-sm mb-3">
         {daysInMonth().map((d, i) => {
@@ -455,11 +454,11 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: dockOffset + 16 } : {}}
         >
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+           <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
-              "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
+              "relative bg-white border rounded-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
               isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
             )}
@@ -495,7 +494,7 @@ export function TestResizableDialog() {
               className={cn(
                 "flex-none p-4 select-none flex items-center gap-2",
                 !isMinimized && "cursor-move",
-                isMinimized && "py-3 px-3 border-b-0"
+                isMinimized && "py-3 px-3"
               )}
             >
               {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
@@ -711,9 +710,9 @@ export function TestResizableDialog() {
 
             {!isMinimized && (
               <>
-                <div onMouseDown={handleResize('right')} className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-50 hover:bg-blue-400/50 transition-colors" />
-                <div onMouseDown={handleResize('bottom')} className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 hover:bg-blue-400/50 transition-colors" />
-                <div onMouseDown={handleResize('corner')} className="absolute bottom-0 right-0 h-6 w-6 cursor-nwse-resize z-50 bg-slate-200 hover:bg-blue-400 rounded-tl-md" />
+                <div onMouseDown={handleResize('right')} className="absolute -right-3 top-0 bottom-0 w-3 cursor-ew-resize z-50" />
+                <div onMouseDown={handleResize('bottom')} className="absolute -bottom-3 left-0 right-0 h-3 cursor-ns-resize z-50" />
+                <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-4 w-4 cursor-nwse-resize z-50" />
               </>
             )}
 
