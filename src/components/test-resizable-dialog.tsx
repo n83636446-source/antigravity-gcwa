@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useMemo } from "react"
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,7 +51,7 @@ type Representative = {
 }
 
 type InvoiceItem = {
-  id: string
+  id: string // Changed to string for safer UUID
   articleId: string
   qty: number
   price: number
@@ -588,11 +587,9 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            {/* --- ACCESSIBILITY TITLE --- */}
-            <div className="sr-only">
+             <div className="sr-only">
                <DialogTitle>Créer un bon de réception</DialogTitle>
-            </div>
-            
+             </div>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
