@@ -455,6 +455,9 @@ export function TestResizableDialog() {
                                 isMinimized && "py-3 px-3 border-b-0"
                             )}
                         >
+                            <DialogTitle className="pr-12 truncate font-semibold text-sm">
+                                {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+                            </DialogTitle>
                              <div className="absolute right-3 top-3 z-50 flex gap-1">
                                 {!isMinimized && (
                                     <button
@@ -474,9 +477,6 @@ export function TestResizableDialog() {
                                     <X className="h-3.5 w-3.5" />
                                 </button>
                             </div>
-                            <DialogTitle className="pr-12 truncate font-semibold text-sm">
-                                {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
-                            </DialogTitle>
                         </DialogHeader>
                         {!isMinimized && (
                          <DialogDescription className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">
@@ -603,7 +603,7 @@ export function TestResizableDialog() {
                                                                             <span>Créer un nouvel article</span>
                                                                         </div>
                                                                     </SelectItem>
-                                                                    <Separator />
+                                                                    
                                                                     {availableArticles.map(a => (
                                                                         <SelectItem key={a.id} value={a.id}>
                                                                             {a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span>
