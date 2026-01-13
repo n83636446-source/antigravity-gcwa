@@ -117,18 +117,6 @@ const ArticleSelector = ({
         setOpen(false)
     }
 
-    const handleBlur = () => {
-        setTimeout(() => {
-            const selected = articles.find(a => a.id === value)
-            if (selected) {
-                setInputValue(selected.name)
-            } else {
-                setInputValue("")
-            }
-            setOpen(false)
-        }, 200)
-    }
-
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
@@ -164,6 +152,12 @@ const ArticleSelector = ({
                 className="w-[600px] p-0" 
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
+                onPointerDownOutside={(e) => {
+                    // CRITICAL FIX: Don't close if clicking the input itself
+                    if (inputRef.current?.contains(e.target as Node)) {
+                        e.preventDefault();
+                    }
+                }}
             >
                 <Command shouldFilter={false}>
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
@@ -571,7 +565,7 @@ export function TestResizableDialog() {
         newItems.splice(index + 1, 0, newItem)
         return newItems
     })
-    setNewRowId(newId) 
+    setNewRowId(newId)
   }
 
   const removeItem = (id: string) => {
