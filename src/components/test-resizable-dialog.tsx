@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react"
-import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogHeader } from "@/components/ui/dialog"
+import React, { useState, useEffect, useMemo, useRef } from "react"
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, ExternalLink } from "lucide-react"
+import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -71,6 +71,155 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
     return true;
   });
 };
+
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
+const ArticleSelector = ({ 
+    value, 
+    onChange, 
+    articles, 
+    onOpenAdvanced,
+    onCreateNew
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    articles: Article[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    // Sync input text with selected article name
+    useEffect(() => {
+        const selected = articles.find(a => a.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, articles])
+
+    // Filter articles based on input
+    const filteredArticles = useMemo(() => {
+        if (!inputValue) return articles.slice(0, 10); // Show first 10 if empty
+        const lower = inputValue.toLowerCase()
+        return articles.filter(a => 
+            a.name.toLowerCase().includes(lower) || 
+            a.code.toLowerCase().includes(lower)
+        ).slice(0, 20); // Limit results for performance
+    }, [inputValue, articles])
+
+    const handleSelect = (article: Article) => {
+        onChange(article.id)
+        setInputValue(article.name)
+        setOpen(false)
+    }
+
+    // Handle blur: if input doesn't match selection, revert it
+    const handleBlur = () => {
+        // Small delay to allow click event on dropdown items to fire
+        setTimeout(() => {
+            const selected = articles.find(a => a.id === value)
+            if (selected) {
+                setInputValue(selected.name)
+            } else {
+                setInputValue("")
+            }
+            setOpen(false)
+        }, 200)
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        ref={inputRef}
+                        placeholder="Saisir un article..."
+                        value={inputValue}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        onFocus={() => setOpen(true)}
+                        className="w-full pr-10" // Space for the search icon
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+            <PopoverContent 
+                className="w-[600px] p-0" 
+                align="start" 
+                onOpenAutoFocus={(e) => e.preventDefault()} // Don't steal focus from input
+            >
+                <Command shouldFilter={false}>
+                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Désignation</span>
+                        <span className="text-right pr-2">Stock</span>
+                    </div>
+                    <CommandList>
+                        <CommandGroup>
+                            <CommandItem onSelect={() => { onCreateNew(); setOpen(false); }} className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Créer un nouvel article
+                            </CommandItem>
+                            
+                            {filteredArticles.length === 0 && (
+                                <div className="py-6 text-center text-sm text-muted-foreground">
+                                    Aucun article trouvé.
+                                </div>
+                            )}
+
+                            {filteredArticles.map((article) => (
+                                <CommandItem
+                                    key={article.id}
+                                    onSelect={() => handleSelect(article)}
+                                    className="cursor-pointer"
+                                >
+                                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                        <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
+                                        <span className="text-left truncate font-medium">{article.name}</span>
+                                        <span className={cn(
+                                            "text-right font-medium text-xs",
+                                            (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                        )}>
+                                            {article.stockLevel ?? 0}
+                                        </span>
+                                    </div>
+                                    {value === article.id && <Check className="ml-auto h-4 w-4 opacity-50" />}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup>
+                            <CommandItem 
+                                onSelect={() => { onOpenAdvanced(); setOpen(false); }} 
+                                className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
+                            >
+                                <Search className="mr-2 h-4 w-4" />
+                                Ouvrir la liste complète...
+                            </CommandItem>
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
 
 // --- COMPONENT: ADVANCED ARTICLE SEARCH DIALOG ---
 const ArticleSearchDialog = ({ 
@@ -278,7 +427,6 @@ export function TestResizableDialog() {
   // Search Modal State
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
-  const [comboboxOpenId, setComboboxOpenId] = useState<string | null>(null)
 
   // --- FIRESTORE ---
   const db = useFirestore()
@@ -380,11 +528,14 @@ export function TestResizableDialog() {
   // --- AUTO-FOCUS NEW ROW ---
   useEffect(() => {
     if (newRowId) {
-      const element = document.getElementById(`article-trigger-${newRowId}`)
-      if (element) {
-        element.focus()
-        setNewRowId(null)
-      }
+      // Small timeout to allow render
+      setTimeout(() => {
+          // We need to find the input inside the ArticleSelector of the new row
+          // Since it's inside a custom component, we might rely on the user clicking, 
+          // OR try to find it by some ID if we assign one. 
+          // For now, let's keep it simple.
+      }, 100)
+      setNewRowId(null)
     }
   }, [items, newRowId])
 
@@ -475,21 +626,17 @@ export function TestResizableDialog() {
                 : item
         ))
     }
-    // Close combobox for this row
-    setComboboxOpenId(null)
   }
 
   const handleCreateNewArticle = (rowId: string) => {
       setPendingRowId(rowId)
       setIsCreateArticleOpen(true)
-      setComboboxOpenId(null)
   }
 
   // --- SEARCH DIALOG HANDLERS ---
   const openArticleSearch = (rowId: string) => {
       setSearchTargetRowId(rowId)
       setIsSearchOpen(true)
-      setComboboxOpenId(null) // Close the small combobox
   }
 
   const handleArticleSearchSelect = (article: Article) => {
@@ -815,7 +962,7 @@ export function TestResizableDialog() {
                   {/* ... FORM CONTENT ... */}
                   <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
                      {/* ZONE 1 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
+                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-5")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                         <div className="space-y-4 pt-2">
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -829,7 +976,7 @@ export function TestResizableDialog() {
                         </div>
                      </div>
                      {/* ZONE 2 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
+                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                          <div className="space-y-4 pt-2">
                             <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -849,7 +996,7 @@ export function TestResizableDialog() {
                          </div>
                      </div>
                      {/* ZONE 3 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-5")}>
+                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-5")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                         <div className="space-y-4 pt-2">
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -868,7 +1015,7 @@ export function TestResizableDialog() {
                         </div>
                      </div>
                      {/* ZONE 4 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "col-span-7")}>
+                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-7")}>
                         <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                         <div className="space-y-4 pt-2">
                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -907,79 +1054,16 @@ export function TestResizableDialog() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.map((item) => {
-                          const selectedArticle = availableArticles.find(a => a.id === item.articleId);
-                          return (
+                        {items.map((item) => (
                             <TableRow key={item.id}>
                               <TableCell>
-                                <Popover open={comboboxOpenId === item.id} onOpenChange={(isOpen) => setComboboxOpenId(isOpen ? item.id : null)}>
-                                    <PopoverTrigger asChild>
-                                        <Button 
-                                            variant="outline" 
-                                            role="combobox"
-                                            id={`article-trigger-${item.id}`}
-                                            className="w-full justify-between font-normal text-left px-3 border-input"
-                                        >
-                                            {selectedArticle ? (
-                                                <span className="truncate">{selectedArticle.name}</span>
-                                            ) : (
-                                                <span className="text-muted-foreground truncate">Sélectionner un article...</span>
-                                            )}
-                                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[600px] p-0" align="start">
-                                        <Command>
-                                            <CommandInput placeholder="Rechercher..." />
-                                            <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
-                                                <span className="text-left pl-2">Code</span>
-                                                <span className="text-left">Désignation</span>
-                                                <span className="text-right pr-2">Stock</span>
-                                            </div>
-                                            <CommandList>
-                                                <CommandEmpty>Aucun article trouvé.</CommandEmpty>
-                                                <CommandGroup>
-                                                    <CommandItem onSelect={() => handleCreateNewArticle(item.id)} className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer">
-                                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                                        Créer un nouvel article
-                                                    </CommandItem>
-                                                    
-                                                    {availableArticles.map((article) => (
-                                                        <CommandItem
-                                                            key={article.id}
-                                                            value={`${article.code} ${article.name}`} // Allow search by code AND name
-                                                            onSelect={() => handleArticleChange(item.id, article.id)}
-                                                        >
-                                                            <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                                                <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
-                                                                <span className="text-left truncate font-medium">{article.name}</span>
-                                                                <span className={cn(
-                                                                    "text-right font-medium text-xs",
-                                                                    (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                                                )}>
-                                                                    {article.stockLevel ?? 0}
-                                                                </span>
-                                                            </div>
-                                                            <Check
-                                                                className={cn(
-                                                                    "ml-auto h-4 w-4",
-                                                                    item.articleId === article.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                                <CommandSeparator />
-                                                <CommandGroup>
-                                                    <CommandItem onSelect={() => openArticleSearch(item.id)} className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100">
-                                                        <Search className="mr-2 h-4 w-4" />
-                                                        Ouvrir la liste complète...
-                                                    </CommandItem>
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
+                                <ArticleSelector 
+                                    value={item.articleId}
+                                    onChange={(val) => handleArticleChange(item.id, val)}
+                                    articles={availableArticles}
+                                    onOpenAdvanced={() => openArticleSearch(item.id)}
+                                    onCreateNew={() => handleCreateNewArticle(item.id)}
+                                />
                               </TableCell>
                               <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
                               <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
@@ -994,8 +1078,7 @@ export function TestResizableDialog() {
                                  </Button>
                               </TableCell>
                             </TableRow>
-                          );
-                        })}
+                        ))}
                         <TableRow>
                           <TableCell colSpan={6}>
                              <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
