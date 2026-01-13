@@ -590,8 +590,10 @@ export function TestResizableDialog() {
             // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
 
-            // FIX: DO NOTHING if clicked outside when dirty. 
-            // Just block the close event. No warning, no shake.
+            if (isFormDirty()) {
+               setShowCloseAlert(true);
+            } 
+            // ELSE: DO NOTHING. We strictly block closing on backdrop click.
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -614,6 +616,8 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+            
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
