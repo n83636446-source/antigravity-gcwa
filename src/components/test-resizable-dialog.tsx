@@ -125,8 +125,11 @@ const ArticleSelector = ({
                         ref={inputRef}
                         placeholder="Saisir un article..."
                         value={inputValue}
+                        autoComplete="off" // Disable browser autocomplete
                         onFocus={() => setOpen(true)}
-                        onClick={() => setOpen(true)}
+                        onClick={() => {
+                            if (!open) setOpen(true) // Only open if not already open
+                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -153,7 +156,6 @@ const ArticleSelector = ({
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
-                    // CRITICAL FIX: Don't close if clicking the input itself
                     if (inputRef.current?.contains(e.target as Node)) {
                         e.preventDefault();
                     }
@@ -561,11 +563,12 @@ export function TestResizableDialog() {
         const index = prevItems.findIndex(item => item.id === currentId)
         if (index === -1) return prevItems
         
+        // Create new array with item inserted at index + 1
         const newItems = [...prevItems]
         newItems.splice(index + 1, 0, newItem)
         return newItems
     })
-    setNewRowId(newId)
+    setNewRowId(newId) // Trigger auto-focus
   }
 
   const removeItem = (id: string) => {
