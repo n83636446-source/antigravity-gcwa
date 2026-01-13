@@ -5,9 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+// Note: We removed Command imports for the dropdown to avoid focus/disabled conflicts
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { PopoverAnchor } from "@radix-ui/react-popover"
-import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
@@ -91,7 +90,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ON-MOUSE-DOWN FIX) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (DUMB LIST VERSION) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -144,7 +143,7 @@ const ArticleSelector = ({
                     value={inputValue}
                     autoComplete="off" 
                     onFocus={() => setOpen(true)}
-                    // onBlur removed -> handled by useClickOutside
+                    // We rely solely on useClickOutside for closing
                     onChange={(e) => {
                         setInputValue(e.target.value)
                         setOpen(true)
@@ -167,87 +166,83 @@ const ArticleSelector = ({
                 </Button>
             </div>
 
+            {/* MANUAL ABSOLUTE DROPDOWN */}
             {open && (
                 <div 
-                    className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden"
+                    className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
+                    // IMPORTANT: Prevent taking focus away from input when clicking dropdown
+                    onMouseDown={(e) => e.preventDefault()} 
                 >
-                    <Command className="border-none w-full">
-                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
-                            <span className="text-left pl-2">Code</span>
-                            <span className="text-left">Désignation</span>
-                            <span className="text-right pr-2">Stock</span>
-                        </div>
-                        <CommandList className="max-h-[300px] overflow-y-auto">
-                            <CommandGroup>
-                                {/* CREATE NEW ITEM */}
-                                <CommandItem 
-                                    value="create_new_article_option"
-                                    // FIX: Use onMouseDown to trigger immediately
-                                    onMouseDown={(e) => { 
-                                        e.preventDefault(); // Stop input blur
-                                        e.stopPropagation();
-                                        setOpen(false); 
-                                        onCreateNew(); 
-                                    }} 
-                                    className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer"
-                                >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Créer un nouvel article
-                                </CommandItem>
-                                
-                                {filteredArticles.length === 0 && (
-                                    <div className="py-6 text-center text-sm text-muted-foreground">
-                                        Aucun article trouvé.
-                                    </div>
-                                )}
+                    {/* Header Row */}
+                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Désignation</span>
+                        <span className="text-right pr-2">Stock</span>
+                    </div>
 
-                                {/* LIST ITEMS */}
-                                {filteredArticles.map((article) => (
-                                    <CommandItem
-                                        key={article.id}
-                                        value={article.id + article.name}
-                                        // FIX: Use onMouseDown here too
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleSelect(article);
-                                        }}
-                                        className="cursor-pointer"
-                                    >
-                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                            <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
-                                            <span className="text-left truncate font-medium">{article.name}</span>
-                                            <span className={cn(
-                                                "text-right font-medium text-xs",
-                                                (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                            )}>
-                                                {article.stockLevel ?? 0}
-                                            </span>
-                                        </div>
-                                        {value === article.id && <Check className="ml-auto h-4 w-4 opacity-50" />}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                            <CommandSeparator />
-                            <CommandGroup>
-                                {/* ADVANCED SEARCH ITEM */}
-                                <CommandItem 
-                                    value="open_advanced_search_option"
-                                    // FIX: Use onMouseDown
-                                    onMouseDown={(e) => { 
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setOpen(false); 
-                                        onOpenAdvanced();
-                                    }} 
-                                    className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
-                                >
-                                    <Search className="mr-2 h-4 w-4" />
-                                    Ouvrir la liste complète...
-                                </CommandItem>
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
+                    {/* Scrollable List */}
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        
+                        {/* Option: Create New */}
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onCreateNew(); 
+                            }} 
+                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <PlusCircle className="ml-2 h-4 w-4" />
+                            Créer un nouvel article
+                        </div>
+
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        {filteredArticles.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun article trouvé.
+                            </div>
+                        )}
+
+                        {/* Article Items */}
+                        {filteredArticles.map((article) => (
+                            <div
+                                key={article.id}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(article);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{article.code}</span>
+                                    <span className="text-left truncate font-medium">{article.name}</span>
+                                    <span className={cn(
+                                        "text-right font-medium text-xs pr-2",
+                                        (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                    )}>
+                                        {article.stockLevel ?? 0}
+                                    </span>
+                                </div>
+                                {value === article.id && <Check className="absolute right-2 h-4 w-4 opacity-50" />}
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        {/* Option: Advanced Search */}
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
