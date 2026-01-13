@@ -614,6 +614,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+             <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -798,7 +799,7 @@ export function TestResizableDialog() {
                                 </SelectTrigger>
                                 <SelectContent className="min-w-[550px]">
                                   <SelectGroup>
-                                    <SelectItem value="header" disabled className="font-semibold text-muted-foreground border-b mb-1 pb-2 opacity-100 cursor-default hover:bg-transparent rounded-none">
+                                    <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
                                         <div className="flex w-full items-center">
                                             <span className="w-[100px] shrink-0 text-left">Code</span>
                                             <span className="flex-1 text-left px-4">Désignation</span>
@@ -811,7 +812,7 @@ export function TestResizableDialog() {
                                     {availableArticles.map(a => (
                                       <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full py-2">
                                         <div className="flex w-full items-center">
-                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
+                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono">{a.code}</span>
                                            <span className="flex-1 px-4 text-left truncate font-medium">{a.name}</span>
                                            <span className={cn(
                                               "w-[80px] shrink-0 text-right text-xs",
