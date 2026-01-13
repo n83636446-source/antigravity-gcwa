@@ -799,7 +799,7 @@ export function TestResizableDialog() {
                                 <SelectContent className="min-w-[550px]">
                                   <SelectGroup>
                                     <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
-                                        <div className="grid grid-cols-[90px_1fr_80px] items-center gap-4 w-full">
+                                        <div className="grid grid-cols-[100px_1fr_80px] items-center gap-4 w-full">
                                             <span className="text-left">Code</span>
                                             <span className="text-left">Désignation</span>
                                             <span className="text-center">Stock</span>
@@ -810,11 +810,11 @@ export function TestResizableDialog() {
                                     </SelectItem>
                                     {availableArticles.map(a => (
                                       <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
-                                        <div className="grid grid-cols-[90px_1fr_80px] items-center gap-4 w-full">
-                                           <span className="text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
-                                           <span className="text-left truncate font-medium">{a.name}</span>
+                                        <div className="grid grid-cols-[100px_1fr_80px] items-center gap-4 w-full">
+                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
+                                           <span className="flex-1 text-left truncate font-medium">{a.name}</span>
                                            <span className={cn(
-                                              "text-center text-xs",
+                                              "w-[80px] shrink-0 text-center text-xs",
                                               (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
                                            )}>
                                               {a.stockLevel ?? 0}
@@ -878,11 +878,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-
-Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
-
-<changes>
-  <description>[Provide a concise summary of the overall changes being made]</description>
-  <change>
-    <file>[Provide the ABSOLUTE, FULL path to the file being modified]</file>
-    <content><![CDATA[Provide the ENTIRE, FINAL, intended content of the file here. Do NOT provide diffs or partial snippets. Ensure all code is properly escaped within the CDATA section.
