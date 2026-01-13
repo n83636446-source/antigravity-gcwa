@@ -585,14 +585,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => {
-            e.preventDefault(); 
-            // FIX: If minimized, do nothing (allow interaction with app)
-            if (isMinimized) return; 
-
-            // FIX: DO NOTHING if clicked outside when dirty. 
-            // Just block the close event. No warning, no shake.
-          }}
+          onInteractOutside={(e) => e.preventDefault()}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -601,8 +594,6 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-          {/* ACCESSIBILITY: Add a screen-reader only title */}
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -629,6 +620,9 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
                     <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
@@ -810,10 +804,10 @@ export function TestResizableDialog() {
                             <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
                             <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
                             <TableCell className="flex items-center justify-end gap-1">
-                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)}>
+                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
                                  <PlusCircle className="h-4 w-4" />
                                </Button>
-                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)}>
+                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
                                  <Trash2 className="h-4 w-4" />
                                </Button>
                             </TableCell>
