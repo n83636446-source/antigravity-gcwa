@@ -585,7 +585,9 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            e.preventDefault(); 
+          }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -594,6 +596,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
