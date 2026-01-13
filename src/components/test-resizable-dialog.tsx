@@ -73,7 +73,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (FOCUS-DRIVEN VERSION) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -89,8 +89,8 @@ const ArticleSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    
-    // Sync input text with selected article name
+    const CONTAINER_ID = "article-selector-" + useMemo(() => Math.random().toString(36).substr(2, 9), []);
+
     useEffect(() => {
         const selected = articles.find(a => a.id === value)
         if (selected) {
@@ -100,7 +100,6 @@ const ArticleSelector = ({
         }
     }, [value, articles])
 
-    // Filter articles based on input
     const filteredArticles = useMemo(() => {
         if (!inputValue) return articles.slice(0, 10); 
         const lower = inputValue.toLowerCase()
@@ -119,21 +118,13 @@ const ArticleSelector = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
-                <div className="relative w-full">
+                <div id={CONTAINER_ID} className="relative w-full">
                     <Input
                         placeholder="Saisir un article..."
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onClick={() => setOpen(true)}
-                        onBlur={() => {
-                            // FOCUS-DRIVEN LOGIC:
-                            // Delay closing to allow clicking an item in the list.
-                            // If we don't delay, the menu closes before the click registers.
-                            setTimeout(() => {
-                                setOpen(false);
-                            }, 200);
-                        }}
+                        onBlur={() => setTimeout(() => setOpen(false), 200)}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -146,10 +137,8 @@ const ArticleSelector = ({
                         variant="ghost"
                         className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
                         onClick={(e) => {
-                            e.preventDefault() // Prevent form submit
+                            e.preventDefault() 
                             e.stopPropagation() 
-                            // If input is focused, blur it to close, else focus it to open
-                            // For simplicity with this strategy, we just open advanced
                             onOpenAdvanced()
                         }}
                         title="Recherche avancée"
@@ -162,7 +151,6 @@ const ArticleSelector = ({
                 className="w-[600px] p-0" 
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
-                // We disable standard pointer events closing because we rely on Blur
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onInteractOutside={(e) => e.preventDefault()}
             >
@@ -174,7 +162,14 @@ const ArticleSelector = ({
                     </div>
                     <CommandList>
                         <CommandGroup>
-                            <CommandItem onSelect={() => { onCreateNew(); setOpen(false); }} className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer">
+                            <CommandItem 
+                                value="create_new_article_option"
+                                onSelect={() => { 
+                                    onCreateNew(); 
+                                    setOpen(false); 
+                                }} 
+                                className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer"
+                            >
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Créer un nouvel article
                             </CommandItem>
@@ -208,6 +203,7 @@ const ArticleSelector = ({
                         <CommandSeparator />
                         <CommandGroup>
                             <CommandItem 
+                                value="open_advanced_search_option"
                                 onSelect={() => { onOpenAdvanced(); setOpen(false); }} 
                                 className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
                             >
@@ -797,36 +793,6 @@ export function TestResizableDialog() {
         Open Test Dialog
       </Button>
 
-      <ArticleDialog 
-        isOpen={isCreateArticleOpen}
-        onOpenChange={setIsCreateArticleOpen}
-        onArticleCreated={handleArticleCreated}
-        lastArticleCodeNumber={lastArticleCodeNumber}
-        isChild={true} 
-      />
-
-      <RepresentativeDialog
-        isOpen={isCreateRepOpen}
-        onOpenChange={setIsCreateRepOpen}
-        onRepresentativeCreated={handleRepresentativeCreated}
-      />
-
-      <SupplierDialog
-        isOpen={isCreateSupplierOpen}
-        onOpenChange={setIsCreateSupplierOpen}
-        onSupplierCreated={handleSupplierCreated}
-        lastSupplierCodeNumber={lastSupplierCodeNumber}
-        suppliers={availableSuppliers}
-      />
-
-      <ArticleSearchDialog 
-        isOpen={isSearchOpen}
-        onOpenChange={setIsSearchOpen}
-        onSelect={handleArticleSearchSelect}
-        articles={availableArticles}
-      />
-
-
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
           onInteractOutside={(e) => {
@@ -935,7 +901,7 @@ export function TestResizableDialog() {
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
-                <form className="space-y-6">
+                <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
                   <div className="flex flex-col gap-6">
                      {/* ROW 1 */}
@@ -1098,6 +1064,36 @@ export function TestResizableDialog() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Z-INDEX FIX: Render child dialogs here, after the main one */}
+      <ArticleDialog 
+        isOpen={isCreateArticleOpen}
+        onOpenChange={setIsCreateArticleOpen}
+        onArticleCreated={handleArticleCreated}
+        lastArticleCodeNumber={lastArticleCodeNumber}
+        isChild={true} 
+      />
+
+      <RepresentativeDialog
+        isOpen={isCreateRepOpen}
+        onOpenChange={setIsCreateRepOpen}
+        onRepresentativeCreated={handleRepresentativeCreated}
+      />
+
+      <SupplierDialog
+        isOpen={isCreateSupplierOpen}
+        onOpenChange={setIsCreateSupplierOpen}
+        onSupplierCreated={handleSupplierCreated}
+        lastSupplierCodeNumber={lastSupplierCodeNumber}
+        suppliers={availableSuppliers}
+      />
+
+      <ArticleSearchDialog 
+        isOpen={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        onSelect={handleArticleSearchSelect}
+        articles={availableArticles}
+      />
     </>
   )
 }
