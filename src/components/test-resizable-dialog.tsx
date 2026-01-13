@@ -614,7 +614,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -693,6 +692,9 @@ export function TestResizableDialog() {
             )}
 
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
+              {/* ACCESSIBILITY FIX: Hidden Dialog Title */}
+              <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+              
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                 <form className="space-y-6">
                   {/* ... FORM CONTENT ... */}
@@ -790,57 +792,64 @@ export function TestResizableDialog() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <Select value={item.articleId} onValueChange={(val) => handleArticleChange(item.id, val)}>
-                                <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
-                                    <SelectValue placeholder="Sélectionner un article..." />
-                                </SelectTrigger>
-                                <SelectContent className="min-w-[600px]">
-                                  <SelectGroup>
-                                    <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
-                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                            <span className="text-left">Code</span>
-                                            <span className="text-left">Désignation</span>
-                                            <span className="text-right">Stock</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
-                                      <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
-                                    </SelectItem>
-                                    {availableArticles.map(a => (
-                                      <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
-                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                           <span className="text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
-                                           <span className="text-left truncate font-medium">{a.name}</span>
-                                           <span className={cn(
-                                              "text-right text-xs",
-                                              (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                           )}>
-                                              {a.stockLevel ?? 0}
-                                           </span>
-                                        </div>
+                        {items.map((item) => {
+                          const selectedArticle = availableArticles.find(a => a.id === item.articleId);
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <Select value={item.articleId} onValueChange={(val) => handleArticleChange(item.id, val)}>
+                                  <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
+                                      {selectedArticle ? (
+                                          <span className="truncate">{selectedArticle.name}</span>
+                                      ) : (
+                                          <SelectValue placeholder="Sélectionner un article..." />
+                                      )}
+                                  </SelectTrigger>
+                                  <SelectContent className="min-w-[600px]">
+                                    <SelectGroup>
+                                      <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
+                                          <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                              <span className="text-left">Code</span>
+                                              <span className="text-left">Désignation</span>
+                                              <span className="text-right">Stock</span>
+                                          </div>
                                       </SelectItem>
-                                    ))}
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
-                            <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
-                            <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
-                            <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
-                            <TableCell className="flex items-center justify-end gap-1">
-                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
-                                 <PlusCircle className="h-4 w-4" />
-                               </Button>
-                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
-                                 <Trash2 className="h-4 w-4" />
-                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                                      <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
+                                        <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
+                                      </SelectItem>
+                                      {availableArticles.map(a => (
+                                        <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
+                                          <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                             <span className="text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
+                                             <span className="text-left truncate font-medium">{a.name}</span>
+                                             <span className={cn(
+                                                "text-right text-xs",
+                                                (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                             )}>
+                                                {a.stockLevel ?? 0}
+                                             </span>
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
+                              <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
+                              <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
+                              <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
+                              <TableCell className="flex items-center justify-end gap-1">
+                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
+                                   <PlusCircle className="h-4 w-4" />
+                                 </Button>
+                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
+                                   <Trash2 className="h-4 w-4" />
+                                 </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                         <TableRow>
                           <TableCell colSpan={6}>
                              <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
