@@ -587,7 +587,11 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => {
             e.preventDefault(); 
+            // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
+
+            // FIX: DO NOTHING if clicked outside when dirty. 
+            // Just block the close event. No warning, no shake.
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -610,8 +614,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-             <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
-
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -794,23 +796,25 @@ export function TestResizableDialog() {
                                 <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
                                     <SelectValue placeholder="Sélectionner un article..." />
                                 </SelectTrigger>
-                                <SelectContent className="min-w-[400px]">
-                                  <div className="flex w-full items-center text-xs font-semibold text-muted-foreground px-2 pl-8 py-1.5 border-b sticky top-0 bg-white z-10">
-                                      <div className="w-[80px] shrink-0">Code</div>
-                                      <div className="flex-1 text-left px-2">Désignation</div>
-                                      <div className="w-[60px] shrink-0 text-right">Stock</div>
-                                  </div>
+                                <SelectContent className="min-w-[550px]">
                                   <SelectGroup>
+                                    <SelectItem value="header" disabled className="font-semibold text-muted-foreground border-b mb-1 pb-2 opacity-100 cursor-default hover:bg-transparent rounded-none">
+                                        <div className="flex w-full items-center">
+                                            <span className="w-[100px] shrink-0 text-left">Code</span>
+                                            <span className="flex-1 text-left px-4">Désignation</span>
+                                            <span className="w-[80px] shrink-0 text-right">Stock</span>
+                                        </div>
+                                    </SelectItem>
                                     <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
                                       <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
                                     </SelectItem>
                                     {availableArticles.map(a => (
                                       <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full py-2">
-                                        <div className="flex items-center w-full">
-                                           <span className="w-[80px] shrink-0 text-xs text-muted-foreground font-mono truncate">{a.code}</span>
-                                           <span className="flex-1 px-2 truncate font-medium text-left">{a.name}</span>
+                                        <div className="flex w-full items-center">
+                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
+                                           <span className="flex-1 px-4 text-left truncate font-medium">{a.name}</span>
                                            <span className={cn(
-                                              "w-[60px] shrink-0 text-right text-xs",
+                                              "w-[80px] shrink-0 text-right text-xs",
                                               (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
                                            )}>
                                               {a.stockLevel ?? 0}
