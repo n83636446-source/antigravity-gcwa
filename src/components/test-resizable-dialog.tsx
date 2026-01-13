@@ -89,7 +89,8 @@ const ArticleSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    const inputRef = useRef<HTMLInputElement>(null)
+    // We use a wrapper ref to detect clicks inside the entire input container (input + button)
+    const wrapperRef = useRef<HTMLDivElement>(null)
 
     // Sync input text with selected article name
     useEffect(() => {
@@ -120,16 +121,13 @@ const ArticleSelector = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
-                <div className="relative w-full">
+                <div ref={wrapperRef} className="relative w-full">
                     <Input
-                        ref={inputRef}
                         placeholder="Saisir un article..."
                         value={inputValue}
-                        autoComplete="off" // Disable browser autocomplete
+                        autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onClick={() => {
-                            if (!open) setOpen(true) // Only open if not already open
-                        }}
+                        onClick={() => setOpen(true)}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -156,7 +154,9 @@ const ArticleSelector = ({
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
-                    if (inputRef.current?.contains(e.target as Node)) {
+                    // CRITICAL FIX: If the click target is inside our wrapper (Input or Button), 
+                    // prevent the Popover from closing.
+                    if (wrapperRef.current && wrapperRef.current.contains(e.target as Node)) {
                         e.preventDefault();
                     }
                 }}
