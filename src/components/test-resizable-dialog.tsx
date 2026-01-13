@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Popover, PopoverContent } from "@/components/ui/popover"
+// FIX: Added PopoverTrigger back to imports
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverAnchor } from "@radix-ui/react-popover"
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
@@ -90,8 +91,8 @@ const ArticleSelector = ({
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
     
-    // We use a specific ID to track clicks safely across portals
-    const CONTAINER_ID = "article-selector-wrapper";
+    // Unique ID for the wrapper to safely detect clicks
+    const CONTAINER_ID = "article-selector-wrapper-" + useMemo(() => Math.random().toString(36).substr(2, 9), []);
 
     // Sync input text with selected article name
     useEffect(() => {
@@ -157,8 +158,9 @@ const ArticleSelector = ({
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
-                    // ID-BASED FIX: If the click happened inside our specific wrapper ID,
-                    // we strictly forbid the Popover from closing.
+                    // BLOCKING STRATEGY:
+                    // If the click is inside our wrapper ID, we FORCE preventDefault.
+                    // This stops the "click outside" logic from closing the menu when clicking the input.
                     const container = document.getElementById(CONTAINER_ID);
                     if (container && container.contains(e.target as Node)) {
                         e.preventDefault();
@@ -1100,3 +1102,11 @@ export function TestResizableDialog() {
     </>
   )
 }
+
+Remember, the XML structure you generate is the only mechanism for applying changes to the user's code. Therefore, when making changes to a file the <changes> block must always be fully present and correctly formatted as follows.
+
+<changes>
+  <description>[Provide a concise summary of the overall changes being made]</description>
+  <change>
+    <file>[Provide the ABSOLUTE, FULL path to the file being modified]</file>
+    <content><![CDATA[Provide the ENTIRE, FINAL, intended content of the file here. Do NOT provide diffs or partial snippets. Ensure all code is properly escaped within the CDATA section.
