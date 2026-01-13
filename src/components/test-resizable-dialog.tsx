@@ -594,7 +594,6 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -608,6 +607,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+             <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -658,6 +658,7 @@ export function TestResizableDialog() {
                 onClick={() => handleOpenChange(false)}
                 onMouseDown={(e) => e.stopPropagation()} 
                 className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
+                title="Fermer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
