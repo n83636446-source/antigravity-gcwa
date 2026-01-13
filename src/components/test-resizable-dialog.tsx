@@ -116,9 +116,7 @@ const ArticleSelector = ({
         setOpen(false)
     }
 
-    // Handle blur: if input doesn't match selection, revert it
     const handleBlur = () => {
-        // Small delay to allow click event on dropdown items to fire
         setTimeout(() => {
             const selected = articles.find(a => a.id === value)
             if (selected) {
@@ -143,7 +141,7 @@ const ArticleSelector = ({
                             setOpen(true)
                         }}
                         onFocus={() => setOpen(true)}
-                        className="w-full pr-10" // Space for the search icon
+                        className="w-full pr-10" 
                     />
                     <Button 
                         type="button"
@@ -163,7 +161,7 @@ const ArticleSelector = ({
             <PopoverContent 
                 className="w-[600px] p-0" 
                 align="start" 
-                onOpenAutoFocus={(e) => e.preventDefault()} // Don't steal focus from input
+                onOpenAutoFocus={(e) => e.preventDefault()} 
             >
                 <Command shouldFilter={false}>
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
@@ -399,7 +397,7 @@ export function TestResizableDialog() {
   const [isDragging, setIsDragging] = useState(false)
   const [size, setSize] = useState({ width: 1000, height: 800 })
   const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [dockOffset, setDockOffset] = useState(0) // Default to 0 to be safe
+  const [dockOffset, setDockOffset] = useState(0) 
   
   // --- ALERT STATE ---
   const [showCloseAlert, setShowCloseAlert] = useState(false)
@@ -423,8 +421,6 @@ export function TestResizableDialog() {
 
   // --- FOCUS & MODAL STATE ---
   const [newRowId, setNewRowId] = useState<string | null>(null)
-  
-  // Search Modal State
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
 
@@ -435,7 +431,6 @@ export function TestResizableDialog() {
   const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
   const [isCreateRepOpen, setIsCreateRepOpen] = useState(false)
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
-  
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
   // --- RESET FUNCTION ---
@@ -462,7 +457,7 @@ export function TestResizableDialog() {
     return false;
   }
 
-  // --- CALCULATE LAST CODES ---
+  // --- CALCULATIONS ---
   const lastArticleCodeNumber = useMemo(() => {
     return availableArticles.reduce((max, article) => {
       const match = article.code.match(/ART(\d+)/);
@@ -485,7 +480,6 @@ export function TestResizableDialog() {
     }, 0);
   }, [availableSuppliers]);
 
-  // --- CALCULATE TOTALS ---
   const { totalHT, totalTVA, totalTTC } = items.reduce(
     (acc, item) => {
       const lineHT = item.price * item.qty;
@@ -524,20 +518,6 @@ export function TestResizableDialog() {
     }
     if (open && db) fetchData()
   }, [open, db])
-
-  // --- AUTO-FOCUS NEW ROW ---
-  useEffect(() => {
-    if (newRowId) {
-      // Small timeout to allow render
-      setTimeout(() => {
-          // We need to find the input inside the ArticleSelector of the new row
-          // Since it's inside a custom component, we might rely on the user clicking, 
-          // OR try to find it by some ID if we assign one. 
-          // For now, let's keep it simple.
-      }, 100)
-      setNewRowId(null)
-    }
-  }, [items, newRowId])
 
   // --- SOUND EFFECT (DISSONANT BUZZER) ---
   const playWarningSound = () => {
@@ -585,12 +565,11 @@ export function TestResizableDialog() {
         const index = prevItems.findIndex(item => item.id === currentId)
         if (index === -1) return prevItems
         
-        // Create new array with item inserted at index + 1
         const newItems = [...prevItems]
         newItems.splice(index + 1, 0, newItem)
         return newItems
     })
-    setNewRowId(newId) // Trigger auto-focus
+    setNewRowId(newId) 
   }
 
   const removeItem = (id: string) => {
@@ -814,7 +793,6 @@ export function TestResizableDialog() {
         Open Test Dialog
       </Button>
 
-      {/* --- MODALS --- */}
       <ArticleDialog 
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
@@ -849,14 +827,10 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => {
             e.preventDefault(); 
-            // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
-
-            // FIX: DO NOTHING if clicked outside when dirty. 
-            // Just block the close event. No warning, no shake.
           }}
           className={cn(
-              "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
+              "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
@@ -954,89 +928,95 @@ export function TestResizableDialog() {
             )}
 
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
-              {/* ACCESSIBILITY FIX: Hidden Dialog Title */}
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
                 <form className="space-y-6">
-                  {/* ... FORM CONTENT ... */}
-                  <div className={cn("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-12")}>
-                     {/* ZONE 1 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-5")}>
-                        <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
-                        <div className="space-y-4 pt-2">
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
-                              <Input value="BR-0001" className="w-full min-w-0" readOnly />
-                           </div>
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
-                              <DatePickerField selected={date} onSelect={setDate} placeholder="Sélectionner une date" />
-                           </div>
-                        </div>
-                     </div>
-                     {/* ZONE 2 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-7")}>
-                        <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
-                         <div className="space-y-4 pt-2">
-                            <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                               <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                               <Select value={supplierId} onValueChange={handleSupplierChange}>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                    <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="create_new_supplier" className="text-blue-600 font-semibold bg-blue-50">
-                                       <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau fournisseur</span></div>
-                                    </SelectItem>
-                                     {availableSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                                  </SelectContent>
-                               </Select>
+                  {/* --- TOP ZONES LAYOUT --- */}
+                  <div className="flex flex-col gap-6">
+                     {/* ROW 1 */}
+                     <div className={cn("flex w-full gap-6", isMobile && "flex-col")}>
+                         {/* ZONE 1: Information */}
+                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[40%]")}>
+                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
+                            <div className="space-y-4 pt-2">
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
+                                  <Input value="BR-0001" className="w-full min-w-0" readOnly />
+                               </div>
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
+                                  <DatePickerField selected={date} onSelect={setDate} placeholder="Sélectionner une date" />
+                               </div>
                             </div>
                          </div>
+                         {/* ZONE 2: Fournisseur */}
+                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
+                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
+                             <div className="space-y-4 pt-2">
+                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                   <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
+                                   <Select value={supplierId} onValueChange={handleSupplierChange}>
+                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="create_new_supplier" className="text-blue-600 font-semibold bg-blue-50">
+                                           <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau fournisseur</span></div>
+                                        </SelectItem>
+                                         {availableSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                      </SelectContent>
+                                   </Select>
+                                </div>
+                             </div>
+                         </div>
                      </div>
-                     {/* ZONE 3 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-5")}>
-                        <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
-                        <div className="space-y-4 pt-2">
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
-                              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                    <SelectValue placeholder="Espèces" />
-                                  </SelectTrigger>
-                                  <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
-                               </Select>
-                           </div>
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
-                              <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Date d'échéance" />
-                           </div>
-                        </div>
-                     </div>
-                     {/* ZONE 4 */}
-                     <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "col-span-1" : "grid-cols-7")}>
-                        <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
-                        <div className="space-y-4 pt-2">
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                              <Select value={representativeId} onValueChange={handleRepresentativeChange}>
-                                  <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                    <SelectValue placeholder="Sélectionnez un représentant" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="create_new_rep" className="text-blue-600 font-semibold bg-blue-50">
-                                       <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau représentant</span></div>
-                                    </SelectItem>
-                                     {availableRepresentatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                                  </SelectContent>
-                               </Select>
-                           </div>
-                           <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                              <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
-                              <Input placeholder="Référence" className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
-                           </div>
-                        </div>
+
+                     {/* ROW 2 */}
+                     <div className={cn("flex w-full gap-6", isMobile && "flex-col")}>
+                         {/* ZONE 3: Règlement */}
+                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[40%]")}>
+                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
+                            <div className="space-y-4 pt-2">
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
+                                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                        <SelectValue placeholder="Espèces" />
+                                      </SelectTrigger>
+                                      <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
+                                   </Select>
+                               </div>
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
+                                  <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Date d'échéance" />
+                               </div>
+                            </div>
+                         </div>
+                         {/* ZONE 4: Détails */}
+                         <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
+                            <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
+                            <div className="space-y-4 pt-2">
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
+                                  <Select value={representativeId} onValueChange={handleRepresentativeChange}>
+                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                        <SelectValue placeholder="Sélectionnez un représentant" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="create_new_rep" className="text-blue-600 font-semibold bg-blue-50">
+                                           <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau représentant</span></div>
+                                        </SelectItem>
+                                         {availableRepresentatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                      </SelectContent>
+                                   </Select>
+                               </div>
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
+                                  <Input placeholder="Référence" className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
+                               </div>
+                            </div>
+                         </div>
                      </div>
                   </div>
 
