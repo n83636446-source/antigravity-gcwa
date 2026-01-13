@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle } from "lucide-react"
@@ -601,7 +601,6 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -615,6 +614,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -799,17 +799,19 @@ export function TestResizableDialog() {
                                 </SelectTrigger>
                                 <SelectContent className="min-w-[400px]">
                                   <SelectGroup>
-                                    <SelectLabel className="grid grid-cols-[80px_1fr_60px] gap-4 px-2 pl-8 py-2 text-xs font-semibold text-muted-foreground border-b mb-1">
-                                      <span>Code</span>
-                                      <span>Désignation</span>
-                                      <span className="text-right">Stock</span>
-                                    </SelectLabel>
+                                    <div className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none">
+                                        <div className="grid grid-cols-[80px_1fr_80px] gap-4 w-full text-xs font-semibold text-muted-foreground border-b pb-1 mb-1">
+                                            <span>Code</span>
+                                            <span>Désignation</span>
+                                            <span className="text-right">Stock</span>
+                                        </div>
+                                    </div>
                                     <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
                                       <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
                                     </SelectItem>
                                     {availableArticles.map(a => (
                                       <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
-                                        <div className="grid grid-cols-[80px_1fr_60px] gap-4 w-full items-center">
+                                        <div className="grid grid-cols-[80px_1fr_80px] gap-4 w-full items-center">
                                            <span className="text-xs text-muted-foreground font-mono">{a.code}</span>
                                            <span className="truncate font-medium">{a.name}</span>
                                            <span className={cn(
