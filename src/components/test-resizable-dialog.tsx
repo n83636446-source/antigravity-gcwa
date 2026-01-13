@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+// Keep Popover imports for DatePicker, but we won't use them for ArticleSelector
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { PopoverAnchor } from "@radix-ui/react-popover"
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
@@ -73,7 +73,25 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (HIGH Z-INDEX FIX) ---
+// --- HOOK: CLICK OUTSIDE ---
+function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
+    useEffect(() => {
+        const listener = (event: MouseEvent | TouchEvent) => {
+            if (!ref.current || ref.current.contains(event.target as Node)) {
+                return;
+            }
+            handler(event);
+        };
+        document.addEventListener("mousedown", listener);
+        document.addEventListener("touchstart", listener);
+        return () => {
+            document.removeEventListener("mousedown", listener);
+            document.removeEventListener("touchstart", listener);
+        };
+    }, [ref, handler]);
+}
+
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (MANUAL ABSOLUTE DIV) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -89,8 +107,11 @@ const ArticleSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    
-    // Sync input text with selected article name
+    const wrapperRef = useRef<HTMLDivElement>(null)
+
+    // Close when clicking strictly outside the component
+    useClickOutside(wrapperRef, () => setOpen(false));
+
     useEffect(() => {
         const selected = articles.find(a => a.id === value)
         if (selected) {
@@ -100,7 +121,6 @@ const ArticleSelector = ({
         }
     }, [value, articles])
 
-    // Filter articles based on input
     const filteredArticles = useMemo(() => {
         if (!inputValue) return articles.slice(0, 10); 
         const lower = inputValue.toLowerCase()
@@ -117,109 +137,110 @@ const ArticleSelector = ({
     }
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverAnchor asChild>
-                <div className="relative w-full">
-                    <Input
-                        placeholder="Saisir un article..."
-                        value={inputValue}
-                        autoComplete="off" 
-                        onFocus={() => setOpen(true)}
-                        onChange={(e) => {
-                            setInputValue(e.target.value)
-                            setOpen(true)
-                        }}
-                        className="w-full pr-10" 
-                    />
-                    <Button 
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
-                        onClick={(e) => {
-                            e.preventDefault() 
-                            e.stopPropagation() 
-                            onOpenAdvanced()
-                        }}
-                        title="Recherche avancée"
-                    >
-                        <Search className="h-4 w-4" />
-                    </Button>
-                </div>
-            </PopoverAnchor>
-            <PopoverContent 
-                className="w-[600px] p-0 z-[99999]" // CRITICAL FIX: High Z-Index to stay on top
-                align="start" 
-                onOpenAutoFocus={(e) => e.preventDefault()} 
-                // CRITICAL FIX: Prevent blur on mouse down so click events can fire
-                onMouseDown={(e) => e.preventDefault()}
-            >
-                <Command shouldFilter={false}>
-                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
-                        <span className="text-left pl-2">Code</span>
-                        <span className="text-left">Désignation</span>
-                        <span className="text-right pr-2">Stock</span>
-                    </div>
-                    <CommandList>
-                        <CommandGroup>
-                            <CommandItem 
-                                value="create_new_article_option"
-                                onSelect={() => { 
-                                    setOpen(false); 
-                                    // Use Timeout to ensure Popover clears before Dialog opens
-                                    setTimeout(onCreateNew, 50); 
-                                }} 
-                                className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer"
-                            >
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Créer un nouvel article
-                            </CommandItem>
-                            
-                            {filteredArticles.length === 0 && (
-                                <div className="py-6 text-center text-sm text-muted-foreground">
-                                    Aucun article trouvé.
-                                </div>
-                            )}
+        <div ref={wrapperRef} className="relative w-full">
+            <div className="relative">
+                <Input
+                    placeholder="Saisir un article..."
+                    value={inputValue}
+                    autoComplete="off" 
+                    onFocus={() => setOpen(true)}
+                    // We REMOVED onBlur here. We rely solely on useClickOutside.
+                    // This prevents the menu from closing before the click registers.
+                    onChange={(e) => {
+                        setInputValue(e.target.value)
+                        setOpen(true)
+                    }}
+                    className="w-full pr-10" 
+                />
+                <Button 
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                    onClick={(e) => {
+                        e.preventDefault() 
+                        e.stopPropagation() 
+                        onOpenAdvanced()
+                    }}
+                    title="Recherche avancée"
+                >
+                    <Search className="h-4 w-4" />
+                </Button>
+            </div>
 
-                            {filteredArticles.map((article) => (
-                                <CommandItem
-                                    key={article.id}
-                                    value={article.id + article.name} // Ensure unique value for search
-                                    onSelect={() => handleSelect(article)}
-                                    className="cursor-pointer"
+            {/* MANUAL ABSOLUTE DROPDOWN */}
+            {open && (
+                <div 
+                    className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden"
+                    // IMPORTANT: Prevent taking focus away from input when clicking dropdown
+                    onMouseDown={(e) => e.preventDefault()} 
+                >
+                    <Command className="border-none w-full">
+                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
+                            <span className="text-left pl-2">Code</span>
+                            <span className="text-left">Désignation</span>
+                            <span className="text-right pr-2">Stock</span>
+                        </div>
+                        <CommandList className="max-h-[300px] overflow-y-auto">
+                            <CommandGroup>
+                                <CommandItem 
+                                    value="create_new_article_option"
+                                    onSelect={() => { 
+                                        setOpen(false); 
+                                        onCreateNew(); 
+                                    }} 
+                                    className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer"
                                 >
-                                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                        <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
-                                        <span className="text-left truncate font-medium">{article.name}</span>
-                                        <span className={cn(
-                                            "text-right font-medium text-xs",
-                                            (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                        )}>
-                                            {article.stockLevel ?? 0}
-                                        </span>
-                                    </div>
-                                    {value === article.id && <Check className="ml-auto h-4 w-4 opacity-50" />}
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Créer un nouvel article
                                 </CommandItem>
-                            ))}
-                        </CommandGroup>
-                        <CommandSeparator />
-                        <CommandGroup>
-                            <CommandItem 
-                                value="open_advanced_search_option"
-                                onSelect={() => { 
-                                    setOpen(false); 
-                                    setTimeout(onOpenAdvanced, 50);
-                                }} 
-                                className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
-                            >
-                                <Search className="mr-2 h-4 w-4" />
-                                Ouvrir la liste complète...
-                            </CommandItem>
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
+                                
+                                {filteredArticles.length === 0 && (
+                                    <div className="py-6 text-center text-sm text-muted-foreground">
+                                        Aucun article trouvé.
+                                    </div>
+                                )}
+
+                                {filteredArticles.map((article) => (
+                                    <CommandItem
+                                        key={article.id}
+                                        value={article.id + article.name}
+                                        onSelect={() => handleSelect(article)}
+                                        className="cursor-pointer"
+                                    >
+                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                            <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
+                                            <span className="text-left truncate font-medium">{article.name}</span>
+                                            <span className={cn(
+                                                "text-right font-medium text-xs",
+                                                (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                            )}>
+                                                {article.stockLevel ?? 0}
+                                            </span>
+                                        </div>
+                                        {value === article.id && <Check className="ml-auto h-4 w-4 opacity-50" />}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                            <CommandSeparator />
+                            <CommandGroup>
+                                <CommandItem 
+                                    value="open_advanced_search_option"
+                                    onSelect={() => { 
+                                        setOpen(false); 
+                                        onOpenAdvanced();
+                                    }} 
+                                    className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
+                                >
+                                    <Search className="mr-2 h-4 w-4" />
+                                    Ouvrir la liste complète...
+                                </CommandItem>
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -997,53 +1018,50 @@ export function TestResizableDialog() {
 
                   {/* ITEMS TABLE */}
                   <div className="border border-blue-800 rounded-md">
-                    {/* CRITICAL FIX: The overflow-hidden must be on a child div, not the table's direct parent */}
-                    <div className="overflow-x-auto">
-                        <Table>
-                        <TableHeader className="bg-gray-50">
-                            <TableRow>
-                            <TableHead className="w-[40%] min-w-[200px]">Article</TableHead>
-                            <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
-                            <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
-                            <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
-                            <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
-                            <TableHead className="w-[90px]"></TableHead>
+                    <Table>
+                      <TableHeader className="bg-gray-50">
+                        <TableRow>
+                          <TableHead className="w-[40%] min-w-[200px]">Article</TableHead>
+                          <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
+                          <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
+                          <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
+                          <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
+                          <TableHead className="w-[90px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <ArticleSelector 
+                                    value={item.articleId}
+                                    onChange={(val) => handleArticleChange(item.id, val)}
+                                    articles={availableArticles}
+                                    onOpenAdvanced={() => openArticleSearch(item.id)}
+                                    onCreateNew={() => handleCreateNewArticle(item.id)}
+                                />
+                              </TableCell>
+                              <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
+                              <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
+                              <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
+                              <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
+                              <TableCell className="flex items-center justify-end gap-1">
+                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
+                                   <PlusCircle className="h-4 w-4" />
+                                 </Button>
+                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
+                                   <Trash2 className="h-4 w-4" />
+                                 </Button>
+                              </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {items.map((item) => (
-                                <TableRow key={item.id}>
-                                <TableCell>
-                                    <ArticleSelector 
-                                        value={item.articleId}
-                                        onChange={(val) => handleArticleChange(item.id, val)}
-                                        articles={availableArticles}
-                                        onOpenAdvanced={() => openArticleSearch(item.id)}
-                                        onCreateNew={() => handleCreateNewArticle(item.id)}
-                                    />
-                                </TableCell>
-                                <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
-                                <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
-                                <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
-                                <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
-                                <TableCell className="flex items-center justify-end gap-1">
-                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
-                                    <PlusCircle className="h-4 w-4" />
-                                    </Button>
-                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
-                                    <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                                </TableRow>
-                            ))}
-                            <TableRow>
-                            <TableCell colSpan={6}>
-                                <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
-                            </TableCell>
-                            </TableRow>
-                        </TableBody>
-                        </Table>
-                    </div>
+                        ))}
+                        <TableRow>
+                          <TableCell colSpan={6}>
+                             <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
                   </div>
                 </form>
               </div>
