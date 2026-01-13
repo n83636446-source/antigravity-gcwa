@@ -614,6 +614,7 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
+            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
