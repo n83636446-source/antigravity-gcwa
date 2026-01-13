@@ -585,9 +585,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => {
-            e.preventDefault(); 
-          }}
+          onInteractOutside={(e) => e.preventDefault()}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -623,9 +621,6 @@ export function TestResizableDialog() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mb-4">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                    </div>
                     <h3 className="font-semibold text-lg mb-2">Attention</h3>
                     <p className="text-sm text-muted-foreground mb-6">
                         Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
