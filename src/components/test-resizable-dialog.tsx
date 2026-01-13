@@ -73,7 +73,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (FLICKER-FREE) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -89,8 +89,10 @@ const ArticleSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    // We use a wrapper ref to detect clicks inside the entire input container (input + button)
+    
+    // WRAPPER REF: This is the key to fixing the flicker
     const wrapperRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
 
     // Sync input text with selected article name
     useEffect(() => {
@@ -121,16 +123,22 @@ const ArticleSelector = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
-                <div ref={wrapperRef} className="relative w-full">
+                <div 
+                    ref={wrapperRef} 
+                    className="relative w-full"
+                >
                     <Input
+                        ref={inputRef}
                         placeholder="Saisir un article..."
                         value={inputValue}
                         autoComplete="off" 
-                        onFocus={() => setOpen(true)}
-                        onClick={() => setOpen(true)}
+                        onFocus={() => setOpen(true)} // Open on focus
+                        onClick={() => {
+                            if (!open) setOpen(true) // Only open if currently closed
+                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
-                            setOpen(true)
+                            setOpen(true) // Ensure open when typing
                         }}
                         className="w-full pr-10" 
                     />
@@ -140,7 +148,7 @@ const ArticleSelector = ({
                         variant="ghost"
                         className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
                         onClick={(e) => {
-                            e.stopPropagation()
+                            e.stopPropagation() 
                             onOpenAdvanced()
                         }}
                         title="Recherche avancée"
@@ -152,10 +160,10 @@ const ArticleSelector = ({
             <PopoverContent 
                 className="w-[600px] p-0" 
                 align="start" 
-                onOpenAutoFocus={(e) => e.preventDefault()} 
+                onOpenAutoFocus={(e) => e.preventDefault()} // Don't steal focus from input
                 onPointerDownOutside={(e) => {
-                    // CRITICAL FIX: If the click target is inside our wrapper (Input or Button), 
-                    // prevent the Popover from closing.
+                    // CRITICAL FIX: If clicking inside our wrapper (input or button),
+                    // prevent the popover from closing.
                     if (wrapperRef.current && wrapperRef.current.contains(e.target as Node)) {
                         e.preventDefault();
                     }
