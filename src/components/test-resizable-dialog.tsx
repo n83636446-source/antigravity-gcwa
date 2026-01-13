@@ -996,51 +996,54 @@ export function TestResizableDialog() {
                   </div>
 
                   {/* ITEMS TABLE */}
-                  <div className="border border-blue-800 rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-gray-50">
-                        <TableRow>
-                          <TableHead className="w-[40%] min-w-[200px]">Article</TableHead>
-                          <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
-                          <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
-                          <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
-                          <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
-                          <TableHead className="w-[90px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                <ArticleSelector 
-                                    value={item.articleId}
-                                    onChange={(val) => handleArticleChange(item.id, val)}
-                                    articles={availableArticles}
-                                    onOpenAdvanced={() => openArticleSearch(item.id)}
-                                    onCreateNew={() => handleCreateNewArticle(item.id)}
-                                />
-                              </TableCell>
-                              <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
-                              <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
-                              <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
-                              <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
-                              <TableCell className="flex items-center justify-end gap-1">
-                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
-                                   <PlusCircle className="h-4 w-4" />
-                                 </Button>
-                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
-                                   <Trash2 className="h-4 w-4" />
-                                 </Button>
-                              </TableCell>
+                  <div className="border border-blue-800 rounded-md">
+                    {/* CRITICAL FIX: The overflow-hidden must be on a child div, not the table's direct parent */}
+                    <div className="overflow-x-auto">
+                        <Table>
+                        <TableHeader className="bg-gray-50">
+                            <TableRow>
+                            <TableHead className="w-[40%] min-w-[200px]">Article</TableHead>
+                            <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
+                            <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
+                            <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
+                            <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
+                            <TableHead className="w-[90px]"></TableHead>
                             </TableRow>
-                        ))}
-                        <TableRow>
-                          <TableCell colSpan={6}>
-                             <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {items.map((item) => (
+                                <TableRow key={item.id}>
+                                <TableCell>
+                                    <ArticleSelector 
+                                        value={item.articleId}
+                                        onChange={(val) => handleArticleChange(item.id, val)}
+                                        articles={availableArticles}
+                                        onOpenAdvanced={() => openArticleSearch(item.id)}
+                                        onCreateNew={() => handleCreateNewArticle(item.id)}
+                                    />
+                                </TableCell>
+                                <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
+                                <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
+                                <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
+                                <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
+                                <TableCell className="flex items-center justify-end gap-1">
+                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
+                                    <PlusCircle className="h-4 w-4" />
+                                    </Button>
+                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
+                                    <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            <TableRow>
+                            <TableCell colSpan={6}>
+                                <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
+                            </TableCell>
+                            </TableRow>
+                        </TableBody>
+                        </Table>
+                    </div>
                   </div>
                 </form>
               </div>
