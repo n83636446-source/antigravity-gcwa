@@ -3,10 +3,10 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, AlertTriangle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -601,7 +601,6 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -797,21 +796,31 @@ export function TestResizableDialog() {
                                 <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
                                     <SelectValue placeholder="Sélectionner un article..." />
                                 </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
-                                    <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
-                                  </SelectItem>
-                                  {availableArticles.map(a => (
-                                    <SelectItem key={a.id} value={a.id}>
-                                        {a.name} 
-                                        <span className={cn(
-                                            "ml-2 text-xs",
-                                            (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-500 font-medium" : "text-muted-foreground"
-                                        )}>
-                                            ({a.code} • Stock: {a.stockLevel ?? 0})
-                                        </span>
+                                <SelectContent className="min-w-[400px]">
+                                  <SelectGroup>
+                                    <SelectLabel className="grid grid-cols-[80px_1fr_80px] gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b mb-1">
+                                      <span>Code</span>
+                                      <span>Désignation</span>
+                                      <span className="text-right">Stock</span>
+                                    </SelectLabel>
+                                    <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
+                                      <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
                                     </SelectItem>
-                                  ))}
+                                    {availableArticles.map(a => (
+                                      <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
+                                        <div className="grid grid-cols-[80px_1fr_80px] gap-4 w-full items-center">
+                                           <span className="text-xs text-muted-foreground font-mono">{a.code}</span>
+                                           <span className="truncate font-medium">{a.name}</span>
+                                           <span className={cn(
+                                              "text-xs text-right",
+                                              (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                           )}>
+                                              {a.stockLevel ?? 0}
+                                           </span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
                                 </SelectContent>
                               </Select>
                             </TableCell>
