@@ -90,7 +90,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ON-MOUSE-DOWN FIX) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ROBUST & STABLE) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -143,7 +143,7 @@ const ArticleSelector = ({
                     value={inputValue}
                     autoComplete="off" 
                     onFocus={() => setOpen(true)}
-                    // onBlur removed -> handled by useClickOutside
+                    // No onBlur here - we use useClickOutside exclusively
                     onChange={(e) => {
                         setInputValue(e.target.value)
                         setOpen(true)
@@ -157,7 +157,7 @@ const ArticleSelector = ({
                     className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
                     onClick={(e) => {
                         e.preventDefault() 
-                        // e.stopPropagation() // Removed to allow natural event flow
+                        e.stopPropagation() 
                         onOpenAdvanced()
                     }}
                     title="Recherche avancée"
@@ -166,76 +166,82 @@ const ArticleSelector = ({
                 </Button>
             </div>
 
+            {/* MANUAL ABSOLUTE DROPDOWN - PURE HTML */}
             {open && (
                 <div 
-                    className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden"
+                    className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
                 >
-                    <div className="border-none w-full">
-                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
-                            <span className="text-left pl-2">Code</span>
-                            <span className="text-left">Désignation</span>
-                            <span className="text-right pr-2">Stock</span>
+                    {/* Header */}
+                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Désignation</span>
+                        <span className="text-right pr-2">Stock</span>
+                    </div>
+
+                    {/* Scrollable List */}
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        
+                        {/* Option: Create New */}
+                        <div 
+                            onMouseDown={(e) => { 
+                                // CRITICAL: Prevent Default keeps the input focused
+                                e.preventDefault(); 
+                                setOpen(false); 
+                                onCreateNew(); 
+                            }} 
+                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <PlusCircle className="ml-2 h-4 w-4" />
+                            Créer un nouvel article
                         </div>
-                        <div className="max-h-[300px] overflow-y-auto p-1">
-                            {/* CREATE NEW ITEM */}
-                            <div 
-                                onMouseDown={(e) => { 
-                                    e.preventDefault(); // Stop input blur
-                                    setOpen(false); 
-                                    onCreateNew(); 
-                                }} 
-                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100"
-                            >
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Créer un nouvel article
+
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        {filteredArticles.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun article trouvé.
                             </div>
+                        )}
 
-                            <div className="h-px bg-slate-100 my-1" />
-                            
-                            {filteredArticles.length === 0 && (
-                                <div className="py-6 text-center text-sm text-muted-foreground">
-                                    Aucun article trouvé.
-                                </div>
-                            )}
-
-                            {/* LIST ITEMS */}
-                            {filteredArticles.map((article) => (
-                                <div
-                                    key={article.id}
-                                    onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        handleSelect(article);
-                                    }}
-                                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-slate-100"
-                                >
-                                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                        <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
-                                        <span className="text-left truncate font-medium">{article.name}</span>
-                                        <span className={cn(
-                                            "text-right font-medium text-xs",
-                                            (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                        )}>
-                                            {article.stockLevel ?? 0}
-                                        </span>
-                                    </div>
-                                    {value === article.id && <Check className="absolute right-2 h-4 w-4 opacity-50" />}
-                                </div>
-                            ))}
-
-                            <div className="h-px bg-slate-100 my-1" />
-
-                            {/* ADVANCED SEARCH ITEM */}
-                            <div 
-                                onMouseDown={(e) => { 
+                        {/* Article Items */}
+                        {filteredArticles.map((article) => (
+                            <div
+                                key={article.id}
+                                onMouseDown={(e) => {
+                                    // CRITICAL: Prevent Default keeps the input focused
                                     e.preventDefault();
-                                    setOpen(false); 
-                                    onOpenAdvanced();
-                                }} 
-                                className="relative flex cursor-pointer select-none items-center justify-center rounded-sm px-2 py-1.5 text-sm outline-none font-semibold text-blue-600 hover:bg-slate-100"
+                                    handleSelect(article);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
                             >
-                                <Search className="mr-2 h-4 w-4" />
-                                Ouvrir la liste complète...
+                                <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{article.code}</span>
+                                    <span className="text-left truncate font-medium">{article.name}</span>
+                                    <span className={cn(
+                                        "text-right font-medium text-xs pr-2",
+                                        (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                    )}>
+                                        {article.stockLevel ?? 0}
+                                    </span>
+                                </div>
+                                {value === article.id && <Check className="absolute right-2 h-4 w-4 opacity-50" />}
                             </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        {/* Option: Advanced Search */}
+                        <div 
+                            onMouseDown={(e) => { 
+                                // CRITICAL: Prevent Default keeps the input focused
+                                e.preventDefault();
+                                setOpen(false); 
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
                         </div>
                     </div>
                 </div>
@@ -926,7 +932,8 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10">
+              {/* FIX: Added pb-40 to allow scrolling space at bottom */}
+              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
                   <div className="flex flex-col gap-6">
@@ -1016,8 +1023,8 @@ export function TestResizableDialog() {
                      </div>
                   </div>
 
-                  {/* ITEMS TABLE */}
-                  <div className="border border-blue-800 rounded-md">
+                  {/* ITEMS TABLE - FIX: Added min-h-[300px] */}
+                  <div className="border border-blue-800 rounded-md min-h-[300px]">
                     <Table>
                       <TableHeader className="bg-gray-50">
                         <TableRow>
