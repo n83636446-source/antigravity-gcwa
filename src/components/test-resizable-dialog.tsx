@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent } from "@/components/ui/popover"
 import { PopoverAnchor } from "@radix-ui/react-popover"
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
@@ -73,7 +73,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (FLICKER-FREE) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ID-BASED STABILITY) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -90,8 +90,8 @@ const ArticleSelector = ({
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
     
-    // WRAPPER REF: This is the key to fixing the flicker
-    const wrapperRef = useRef<HTMLDivElement>(null)
+    // We use a specific ID to track clicks safely across portals
+    const CONTAINER_ID = "article-selector-wrapper";
 
     // Sync input text with selected article name
     useEffect(() => {
@@ -123,7 +123,7 @@ const ArticleSelector = ({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
                 <div 
-                    ref={wrapperRef} 
+                    id={CONTAINER_ID}
                     className="relative w-full"
                 >
                     <Input
@@ -131,9 +131,6 @@ const ArticleSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onClick={() => {
-                            if (!open) setOpen(true)
-                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -160,7 +157,10 @@ const ArticleSelector = ({
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
-                    if (wrapperRef.current && wrapperRef.current.contains(e.target as Node)) {
+                    // ID-BASED FIX: If the click happened inside our specific wrapper ID,
+                    // we strictly forbid the Popover from closing.
+                    const container = document.getElementById(CONTAINER_ID);
+                    if (container && container.contains(e.target as Node)) {
                         e.preventDefault();
                     }
                 }}
