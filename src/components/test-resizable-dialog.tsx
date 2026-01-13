@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogHeader } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, ExternalLink } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -71,7 +72,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: ADVANCED ARTICLE SEARCH ---
+// --- COMPONENT: ADVANCED ARTICLE SEARCH DIALOG ---
 const ArticleSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
@@ -94,7 +95,6 @@ const ArticleSearchDialog = ({
     );
   }, [searchTerm, articles]);
 
-  // Reset search when opened
   useEffect(() => {
     if (isOpen) setSearchTerm("")
   }, [isOpen])
@@ -103,14 +103,12 @@ const ArticleSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0">
         <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
-        
-        {/* Header */}
         <div className="p-4 border-b">
             <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
             <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher par code ou désignation..."
+                  placeholder="Filtrer par code ou désignation..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -118,8 +116,6 @@ const ArticleSearchDialog = ({
                 />
             </div>
         </div>
-
-        {/* List */}
         <div className="flex-1 overflow-auto p-0">
             <Table>
                 <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
@@ -134,9 +130,7 @@ const ArticleSearchDialog = ({
                 <TableBody>
                     {filteredArticles.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                Aucun article trouvé.
-                            </TableCell>
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun article trouvé.</TableCell>
                         </TableRow>
                     ) : (
                         filteredArticles.map(article => (
@@ -147,19 +141,13 @@ const ArticleSearchDialog = ({
                                 <TableCell className={cn("text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>
                                     {article.stockLevel ?? 0}
                                 </TableCell>
-                                <TableCell className="text-right">
-                                    <Button size="sm" variant="secondary" className="h-7 text-xs">
-                                        Choisir
-                                    </Button>
-                                </TableCell>
+                                <TableCell className="text-right"><Button size="sm" variant="secondary" className="h-7 text-xs">Choisir</Button></TableCell>
                             </TableRow>
                         ))
                     )}
                 </TableBody>
             </Table>
         </div>
-
-        {/* Footer */}
         <div className="p-4 border-t bg-slate-50 flex justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
         </div>
@@ -290,6 +278,7 @@ export function TestResizableDialog() {
   // Search Modal State
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
+  const [comboboxOpenId, setComboboxOpenId] = useState<string | null>(null)
 
   // --- FIRESTORE ---
   const db = useFirestore()
@@ -478,11 +467,6 @@ export function TestResizableDialog() {
   }
 
   const handleArticleChange = (rowId: string, value: string) => {
-    if (value === "create_new") {
-        setPendingRowId(rowId)
-        setIsCreateArticleOpen(true)
-        return
-    }
     const selectedArticle = availableArticles.find(a => a.id === value)
     if (selectedArticle) {
         setItems(items.map(item => 
@@ -491,12 +475,21 @@ export function TestResizableDialog() {
                 : item
         ))
     }
+    // Close combobox for this row
+    setComboboxOpenId(null)
+  }
+
+  const handleCreateNewArticle = (rowId: string) => {
+      setPendingRowId(rowId)
+      setIsCreateArticleOpen(true)
+      setComboboxOpenId(null)
   }
 
   // --- SEARCH DIALOG HANDLERS ---
   const openArticleSearch = (rowId: string) => {
       setSearchTargetRowId(rowId)
       setIsSearchOpen(true)
+      setComboboxOpenId(null) // Close the small combobox
   }
 
   const handleArticleSearchSelect = (article: Article) => {
@@ -919,55 +912,74 @@ export function TestResizableDialog() {
                           return (
                             <TableRow key={item.id}>
                               <TableCell>
-                                <div className="flex items-center gap-2">
-                                    <Select value={item.articleId} onValueChange={(val) => handleArticleChange(item.id, val)}>
-                                      <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
-                                          {selectedArticle ? (
-                                              <span className="truncate">{selectedArticle.name}</span>
-                                          ) : (
-                                              <SelectValue placeholder="Sélectionner un article..." />
-                                          )}
-                                      </SelectTrigger>
-                                      <SelectContent className="min-w-[600px]">
-                                        <SelectGroup>
-                                          <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
-                                              <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                                  <span className="text-left">Code</span>
-                                                  <span className="text-left">Désignation</span>
-                                                  <span className="text-right">Stock</span>
-                                              </div>
-                                          </SelectItem>
-                                          <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
-                                            <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
-                                          </SelectItem>
-                                          {availableArticles.map(a => (
-                                            <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
-                                              <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                                 <span className="text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
-                                                 <span className="text-left truncate font-medium">{a.name}</span>
-                                                 <span className={cn(
-                                                    "text-right text-xs",
-                                                    (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                                 )}>
-                                                    {a.stockLevel ?? 0}
-                                                 </span>
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectGroup>
-                                      </SelectContent>
-                                    </Select>
-                                    <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 text-muted-foreground hover:text-blue-600 shrink-0" 
-                                        onClick={() => openArticleSearch(item.id)}
-                                        title="Recherche avancée"
-                                    >
-                                        <Search className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                                <Popover open={comboboxOpenId === item.id} onOpenChange={(isOpen) => setComboboxOpenId(isOpen ? item.id : null)}>
+                                    <PopoverTrigger asChild>
+                                        <Button 
+                                            variant="outline" 
+                                            role="combobox"
+                                            id={`article-trigger-${item.id}`}
+                                            className="w-full justify-between font-normal text-left px-3 border-input"
+                                        >
+                                            {selectedArticle ? (
+                                                <span className="truncate">{selectedArticle.name}</span>
+                                            ) : (
+                                                <span className="text-muted-foreground truncate">Sélectionner un article...</span>
+                                            )}
+                                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[600px] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Rechercher..." />
+                                            <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
+                                                <span className="text-left pl-2">Code</span>
+                                                <span className="text-left">Désignation</span>
+                                                <span className="text-right pr-2">Stock</span>
+                                            </div>
+                                            <CommandList>
+                                                <CommandEmpty>Aucun article trouvé.</CommandEmpty>
+                                                <CommandGroup>
+                                                    <CommandItem onSelect={() => handleCreateNewArticle(item.id)} className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer">
+                                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                                        Créer un nouvel article
+                                                    </CommandItem>
+                                                    
+                                                    {availableArticles.map((article) => (
+                                                        <CommandItem
+                                                            key={article.id}
+                                                            value={`${article.code} ${article.name}`} // Allow search by code AND name
+                                                            onSelect={() => handleArticleChange(item.id, article.id)}
+                                                        >
+                                                            <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                                                <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
+                                                                <span className="text-left truncate font-medium">{article.name}</span>
+                                                                <span className={cn(
+                                                                    "text-right font-medium text-xs",
+                                                                    (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                                                )}>
+                                                                    {article.stockLevel ?? 0}
+                                                                </span>
+                                                            </div>
+                                                            <Check
+                                                                className={cn(
+                                                                    "ml-auto h-4 w-4",
+                                                                    item.articleId === article.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                                <CommandSeparator />
+                                                <CommandGroup>
+                                                    <CommandItem onSelect={() => openArticleSearch(item.id)} className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100">
+                                                        <Search className="mr-2 h-4 w-4" />
+                                                        Ouvrir la liste complète...
+                                                    </CommandItem>
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                               </TableCell>
                               <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
                               <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
