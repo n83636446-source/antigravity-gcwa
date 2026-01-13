@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, AlertTriangle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -590,10 +590,8 @@ export function TestResizableDialog() {
             // FIX: If minimized, do nothing (allow interaction with app)
             if (isMinimized) return; 
 
-            if (isFormDirty()) {
-               setShowCloseAlert(true);
-            } 
-            // ELSE: DO NOTHING. We strictly block closing on backdrop click.
+            // FIX: DO NOTHING if clicked outside when dirty. 
+            // Just block the close event. No warning, no shake.
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -616,8 +614,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
-            
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -802,7 +798,7 @@ export function TestResizableDialog() {
                                 </SelectTrigger>
                                 <SelectContent className="min-w-[400px]">
                                   <SelectGroup>
-                                    <SelectLabel className="grid grid-cols-[80px_1fr_80px] gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b mb-1">
+                                    <SelectLabel className="grid grid-cols-[80px_1fr_80px] gap-4 px-2 pl-8 py-2 text-xs font-semibold text-muted-foreground border-b mb-1">
                                       <span>Code</span>
                                       <span>Désignation</span>
                                       <span className="text-right">Stock</span>
@@ -880,3 +876,4 @@ export function TestResizableDialog() {
     </>
   )
 }
+
