@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
@@ -91,7 +90,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (SOLID FIX) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ON-MOUSE-DOWN FIX) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -158,7 +157,7 @@ const ArticleSelector = ({
                     className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
                     onClick={(e) => {
                         e.preventDefault() 
-                        e.stopPropagation() 
+                        // e.stopPropagation() // Removed to allow natural event flow
                         onOpenAdvanced()
                     }}
                     title="Recherche avancée"
@@ -167,76 +166,78 @@ const ArticleSelector = ({
                 </Button>
             </div>
 
-            {/* MANUAL ABSOLUTE DROPDOWN */}
             {open && (
                 <div 
                     className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden"
-                    // IMPORTANT: Prevent taking focus away from input when clicking dropdown
-                    onMouseDown={(e) => e.preventDefault()} 
                 >
-                    <Command className="border-none w-full">
+                    <div className="border-none w-full">
                         <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
                             <span className="text-left pl-2">Code</span>
                             <span className="text-left">Désignation</span>
                             <span className="text-right pr-2">Stock</span>
                         </div>
-                        <CommandList className="max-h-[300px] overflow-y-auto">
-                            <CommandGroup>
-                                <CommandItem 
-                                    value="create_new_article_option"
-                                    onSelect={() => { 
-                                        setOpen(false); 
-                                        onCreateNew(); 
-                                    }} 
-                                    className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer"
-                                >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Créer un nouvel article
-                                </CommandItem>
-                                
-                                {filteredArticles.length === 0 && (
-                                    <div className="py-6 text-center text-sm text-muted-foreground">
-                                        Aucun article trouvé.
-                                    </div>
-                                )}
+                        <div className="max-h-[300px] overflow-y-auto p-1">
+                            {/* CREATE NEW ITEM */}
+                            <div 
+                                onMouseDown={(e) => { 
+                                    e.preventDefault(); // Stop input blur
+                                    setOpen(false); 
+                                    onCreateNew(); 
+                                }} 
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100"
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Créer un nouvel article
+                            </div>
 
-                                {filteredArticles.map((article) => (
-                                    <CommandItem
-                                        key={article.id}
-                                        value={article.id + article.name}
-                                        onSelect={() => handleSelect(article)}
-                                        className="cursor-pointer"
-                                    >
-                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                            <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
-                                            <span className="text-left truncate font-medium">{article.name}</span>
-                                            <span className={cn(
-                                                "text-right font-medium text-xs",
-                                                (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                            )}>
-                                                {article.stockLevel ?? 0}
-                                            </span>
-                                        </div>
-                                        {value === article.id && <Check className="ml-auto h-4 w-4 opacity-50" />}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                            <CommandSeparator />
-                            <CommandGroup>
-                                <CommandItem 
-                                    value="open_advanced_search_option"
-                                    onSelect={() => { 
-                                        setOpen(false); 
-                                        onOpenAdvanced();
-                                    }} 
-                                    className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
+                            <div className="h-px bg-slate-100 my-1" />
+                            
+                            {filteredArticles.length === 0 && (
+                                <div className="py-6 text-center text-sm text-muted-foreground">
+                                    Aucun article trouvé.
+                                </div>
+                            )}
+
+                            {/* LIST ITEMS */}
+                            {filteredArticles.map((article) => (
+                                <div
+                                    key={article.id}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handleSelect(article);
+                                    }}
+                                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-slate-100"
                                 >
-                                    <Search className="mr-2 h-4 w-4" />
-                                    Ouvrir la liste complète...
-                                </CommandItem>
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
+                                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                        <span className="text-left font-mono text-xs text-muted-foreground">{article.code}</span>
+                                        <span className="text-left truncate font-medium">{article.name}</span>
+                                        <span className={cn(
+                                            "text-right font-medium text-xs",
+                                            (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                        )}>
+                                            {article.stockLevel ?? 0}
+                                        </span>
+                                    </div>
+                                    {value === article.id && <Check className="absolute right-2 h-4 w-4 opacity-50" />}
+                                </div>
+                            ))}
+
+                            <div className="h-px bg-slate-100 my-1" />
+
+                            {/* ADVANCED SEARCH ITEM */}
+                            <div 
+                                onMouseDown={(e) => { 
+                                    e.preventDefault();
+                                    setOpen(false); 
+                                    onOpenAdvanced();
+                                }} 
+                                className="relative flex cursor-pointer select-none items-center justify-center rounded-sm px-2 py-1.5 text-sm outline-none font-semibold text-blue-600 hover:bg-slate-100"
+                            >
+                                <Search className="mr-2 h-4 w-4" />
+                                Ouvrir la liste complète...
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -1020,7 +1021,7 @@ export function TestResizableDialog() {
                     <Table>
                       <TableHeader className="bg-gray-50">
                         <TableRow>
-                          {/* VISUAL FIX: Added rounded corners to header */}
+                          {/* ROUNDED CORNERS FIX */}
                           <TableHead className="w-[40%] min-w-[200px] rounded-tl-md">Article</TableHead>
                           <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
                           <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
