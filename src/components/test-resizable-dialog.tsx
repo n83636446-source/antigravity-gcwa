@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs } from "firebase/firestore"
-import { useFirestore } from "@/firebase" 
+import { useFirestore } from "@/hooks/use-firestore" 
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
@@ -585,7 +585,14 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            e.preventDefault(); 
+            // FIX: If minimized, do nothing (allow interaction with app)
+            if (isMinimized) return; 
+
+            // FIX: DO NOTHING if clicked outside when dirty. 
+            // Just block the close event. No warning, no shake.
+          }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none sm:max-w-[none] w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
@@ -594,6 +601,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
+          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -607,7 +615,6 @@ export function TestResizableDialog() {
               transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
             }}
           >
-             <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
               <div 
@@ -794,7 +801,17 @@ export function TestResizableDialog() {
                                   <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
                                     <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouvel article</span></div>
                                   </SelectItem>
-                                  {availableArticles.map(a => <SelectItem key={a.id} value={a.id}>{a.name} <span className="text-muted-foreground ml-2 text-xs">({a.code})</span></SelectItem>)}
+                                  {availableArticles.map(a => (
+                                    <SelectItem key={a.id} value={a.id}>
+                                        {a.name} 
+                                        <span className={cn(
+                                            "ml-2 text-xs",
+                                            (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-500 font-medium" : "text-muted-foreground"
+                                        )}>
+                                            ({a.code} • Stock: {a.stockLevel ?? 0})
+                                        </span>
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </TableCell>
