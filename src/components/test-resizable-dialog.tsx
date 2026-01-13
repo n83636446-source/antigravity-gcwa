@@ -601,6 +601,7 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
+            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -799,10 +800,10 @@ export function TestResizableDialog() {
                                 <SelectContent className="min-w-[550px]">
                                   <SelectGroup>
                                     <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
-                                        <div className="grid grid-cols-[100px_1fr_80px] items-center gap-4 w-full">
-                                            <span className="text-left">Code</span>
-                                            <span className="text-left">Désignation</span>
-                                            <span className="text-center">Stock</span>
+                                        <div className="flex w-full items-center">
+                                            <span className="w-[100px] shrink-0 text-left">Code</span>
+                                            <span className="flex-1 text-left px-4">Désignation</span>
+                                            <span className="w-[80px] shrink-0 text-right">Stock</span>
                                         </div>
                                     </SelectItem>
                                     <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
@@ -810,11 +811,11 @@ export function TestResizableDialog() {
                                     </SelectItem>
                                     {availableArticles.map(a => (
                                       <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
-                                        <div className="grid grid-cols-[100px_1fr_80px] items-center gap-4 w-full">
-                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
-                                           <span className="flex-1 text-left truncate font-medium">{a.name}</span>
+                                        <div className="flex w-full items-center">
+                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono">{a.code}</span>
+                                           <span className="flex-1 px-4 text-left truncate font-medium">{a.name}</span>
                                            <span className={cn(
-                                              "w-[80px] shrink-0 text-center text-xs",
+                                              "w-[80px] shrink-0 text-right text-xs",
                                               (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
                                            )}>
                                               {a.stockLevel ?? 0}
