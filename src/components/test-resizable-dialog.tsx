@@ -601,7 +601,6 @@ export function TestResizableDialog() {
           )}
           style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
         >
-            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
             className={cn(
@@ -797,13 +796,13 @@ export function TestResizableDialog() {
                                 <SelectTrigger id={`article-trigger-${item.id}`} className="w-full truncate flex items-center justify-between [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0">
                                     <SelectValue placeholder="Sélectionner un article..." />
                                 </SelectTrigger>
-                                <SelectContent className="min-w-[550px]">
+                                <SelectContent className="min-w-[600px]">
                                   <SelectGroup>
                                     <SelectItem value="header_row" disabled className="opacity-100 cursor-default hover:bg-transparent font-semibold text-muted-foreground border-b rounded-none mb-1 pb-2">
-                                        <div className="flex w-full items-center">
-                                            <span className="w-[100px] shrink-0 text-left">Code</span>
-                                            <span className="flex-1 text-left px-4">Désignation</span>
-                                            <span className="w-[80px] shrink-0 text-right">Stock</span>
+                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                            <span className="text-left">Code</span>
+                                            <span className="text-left">Désignation</span>
+                                            <span className="text-right">Stock</span>
                                         </div>
                                     </SelectItem>
                                     <SelectItem value="create_new" className="text-blue-600 font-semibold bg-blue-50">
@@ -811,11 +810,11 @@ export function TestResizableDialog() {
                                     </SelectItem>
                                     {availableArticles.map(a => (
                                       <SelectItem key={a.id} value={a.id} textValue={a.name} className="w-full">
-                                        <div className="flex w-full items-center">
-                                           <span className="w-[100px] shrink-0 text-left text-xs text-muted-foreground font-mono">{a.code}</span>
-                                           <span className="flex-1 px-4 text-left truncate font-medium">{a.name}</span>
+                                        <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                           <span className="text-left text-xs text-muted-foreground font-mono truncate">{a.code}</span>
+                                           <span className="text-left truncate font-medium">{a.name}</span>
                                            <span className={cn(
-                                              "w-[80px] shrink-0 text-right text-xs",
+                                              "text-right text-xs",
                                               (a.stockLevel || 0) <= (a.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
                                            )}>
                                               {a.stockLevel ?? 0}
