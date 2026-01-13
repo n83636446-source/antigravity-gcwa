@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PopoverAnchor } from "@radix-ui/react-popover"
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
@@ -102,12 +103,12 @@ const ArticleSelector = ({
 
     // Filter articles based on input
     const filteredArticles = useMemo(() => {
-        if (!inputValue) return articles.slice(0, 10); // Show first 10 if empty
+        if (!inputValue) return articles.slice(0, 10); 
         const lower = inputValue.toLowerCase()
         return articles.filter(a => 
             a.name.toLowerCase().includes(lower) || 
             a.code.toLowerCase().includes(lower)
-        ).slice(0, 20); // Limit results for performance
+        ).slice(0, 20); 
     }, [inputValue, articles])
 
     const handleSelect = (article: Article) => {
@@ -130,17 +131,18 @@ const ArticleSelector = ({
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+            <PopoverAnchor asChild>
                 <div className="relative w-full">
                     <Input
                         ref={inputRef}
                         placeholder="Saisir un article..."
                         value={inputValue}
+                        onFocus={() => setOpen(true)}
+                        onClick={() => setOpen(true)}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
                         }}
-                        onFocus={() => setOpen(true)}
                         className="w-full pr-10" 
                     />
                     <Button 
@@ -157,7 +159,7 @@ const ArticleSelector = ({
                         <Search className="h-4 w-4" />
                     </Button>
                 </div>
-            </PopoverTrigger>
+            </PopoverAnchor>
             <PopoverContent 
                 className="w-[600px] p-0" 
                 align="start" 
