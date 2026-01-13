@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-// Keep Popover imports for DatePicker, but we won't use them for ArticleSelector
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PopoverAnchor } from "@radix-ui/react-popover"
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
@@ -91,7 +91,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (MANUAL ABSOLUTE DIV) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ON-MOUSE-DOWN FIX) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -144,8 +144,7 @@ const ArticleSelector = ({
                     value={inputValue}
                     autoComplete="off" 
                     onFocus={() => setOpen(true)}
-                    // We REMOVED onBlur here. We rely solely on useClickOutside.
-                    // This prevents the menu from closing before the click registers.
+                    // onBlur removed -> handled by useClickOutside
                     onChange={(e) => {
                         setInputValue(e.target.value)
                         setOpen(true)
@@ -168,12 +167,9 @@ const ArticleSelector = ({
                 </Button>
             </div>
 
-            {/* MANUAL ABSOLUTE DROPDOWN */}
             {open && (
                 <div 
                     className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden"
-                    // IMPORTANT: Prevent taking focus away from input when clicking dropdown
-                    onMouseDown={(e) => e.preventDefault()} 
                 >
                     <Command className="border-none w-full">
                         <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
@@ -183,9 +179,13 @@ const ArticleSelector = ({
                         </div>
                         <CommandList className="max-h-[300px] overflow-y-auto">
                             <CommandGroup>
+                                {/* CREATE NEW ITEM */}
                                 <CommandItem 
                                     value="create_new_article_option"
-                                    onSelect={() => { 
+                                    // FIX: Use onMouseDown to trigger immediately
+                                    onMouseDown={(e) => { 
+                                        e.preventDefault(); // Stop input blur
+                                        e.stopPropagation();
                                         setOpen(false); 
                                         onCreateNew(); 
                                     }} 
@@ -201,11 +201,17 @@ const ArticleSelector = ({
                                     </div>
                                 )}
 
+                                {/* LIST ITEMS */}
                                 {filteredArticles.map((article) => (
                                     <CommandItem
                                         key={article.id}
                                         value={article.id + article.name}
-                                        onSelect={() => handleSelect(article)}
+                                        // FIX: Use onMouseDown here too
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleSelect(article);
+                                        }}
                                         className="cursor-pointer"
                                     >
                                         <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
@@ -224,9 +230,13 @@ const ArticleSelector = ({
                             </CommandGroup>
                             <CommandSeparator />
                             <CommandGroup>
+                                {/* ADVANCED SEARCH ITEM */}
                                 <CommandItem 
                                     value="open_advanced_search_option"
-                                    onSelect={() => { 
+                                    // FIX: Use onMouseDown
+                                    onMouseDown={(e) => { 
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         setOpen(false); 
                                         onOpenAdvanced();
                                     }} 
