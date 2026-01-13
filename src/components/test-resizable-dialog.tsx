@@ -73,7 +73,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (HIGH Z-INDEX FIX) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -89,8 +89,8 @@ const ArticleSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    const CONTAINER_ID = "article-selector-" + useMemo(() => Math.random().toString(36).substr(2, 9), []);
-
+    
+    // Sync input text with selected article name
     useEffect(() => {
         const selected = articles.find(a => a.id === value)
         if (selected) {
@@ -100,6 +100,7 @@ const ArticleSelector = ({
         }
     }, [value, articles])
 
+    // Filter articles based on input
     const filteredArticles = useMemo(() => {
         if (!inputValue) return articles.slice(0, 10); 
         const lower = inputValue.toLowerCase()
@@ -118,13 +119,12 @@ const ArticleSelector = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
-                <div id={CONTAINER_ID} className="relative w-full">
+                <div className="relative w-full">
                     <Input
                         placeholder="Saisir un article..."
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onBlur={() => setTimeout(() => setOpen(false), 200)}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -148,11 +148,11 @@ const ArticleSelector = ({
                 </div>
             </PopoverAnchor>
             <PopoverContent 
-                className="w-[600px] p-0" 
+                className="w-[600px] p-0 z-[99999]" // CRITICAL FIX: High Z-Index to stay on top
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
-                onPointerDownOutside={(e) => e.preventDefault()}
-                onInteractOutside={(e) => e.preventDefault()}
+                // CRITICAL FIX: Prevent blur on mouse down so click events can fire
+                onMouseDown={(e) => e.preventDefault()}
             >
                 <Command shouldFilter={false}>
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
@@ -165,8 +165,9 @@ const ArticleSelector = ({
                             <CommandItem 
                                 value="create_new_article_option"
                                 onSelect={() => { 
-                                    onCreateNew(); 
                                     setOpen(false); 
+                                    // Use Timeout to ensure Popover clears before Dialog opens
+                                    setTimeout(onCreateNew, 50); 
                                 }} 
                                 className="text-blue-600 font-semibold bg-blue-50/50 cursor-pointer"
                             >
@@ -183,6 +184,7 @@ const ArticleSelector = ({
                             {filteredArticles.map((article) => (
                                 <CommandItem
                                     key={article.id}
+                                    value={article.id + article.name} // Ensure unique value for search
                                     onSelect={() => handleSelect(article)}
                                     className="cursor-pointer"
                                 >
@@ -204,7 +206,10 @@ const ArticleSelector = ({
                         <CommandGroup>
                             <CommandItem 
                                 value="open_advanced_search_option"
-                                onSelect={() => { onOpenAdvanced(); setOpen(false); }} 
+                                onSelect={() => { 
+                                    setOpen(false); 
+                                    setTimeout(onOpenAdvanced, 50);
+                                }} 
                                 className="font-semibold text-blue-600 justify-center text-center cursor-pointer py-3 hover:bg-slate-100"
                             >
                                 <Search className="mr-2 h-4 w-4" />
@@ -247,7 +252,7 @@ const ArticleSearchDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
         <div className="p-4 border-b">
             <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
@@ -1064,8 +1069,8 @@ export function TestResizableDialog() {
           </div>
         </DialogContent>
       </Dialog>
-      
-      {/* Z-INDEX FIX: Render child dialogs here, after the main one */}
+
+      {/* RENDER THESE AFTER THE MAIN DIALOG TO FIX Z-INDEX STACKING */}
       <ArticleDialog 
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
