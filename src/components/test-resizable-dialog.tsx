@@ -92,7 +92,6 @@ const ArticleSelector = ({
     
     // WRAPPER REF: This is the key to fixing the flicker
     const wrapperRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
 
     // Sync input text with selected article name
     useEffect(() => {
@@ -128,17 +127,16 @@ const ArticleSelector = ({
                     className="relative w-full"
                 >
                     <Input
-                        ref={inputRef}
                         placeholder="Saisir un article..."
                         value={inputValue}
                         autoComplete="off" 
-                        onFocus={() => setOpen(true)} // Open on focus
+                        onFocus={() => setOpen(true)}
                         onClick={() => {
-                            if (!open) setOpen(true) // Only open if currently closed
+                            if (!open) setOpen(true)
                         }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
-                            setOpen(true) // Ensure open when typing
+                            setOpen(true)
                         }}
                         className="w-full pr-10" 
                     />
@@ -160,10 +158,8 @@ const ArticleSelector = ({
             <PopoverContent 
                 className="w-[600px] p-0" 
                 align="start" 
-                onOpenAutoFocus={(e) => e.preventDefault()} // Don't steal focus from input
+                onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
-                    // CRITICAL FIX: If clicking inside our wrapper (input or button),
-                    // prevent the popover from closing.
                     if (wrapperRef.current && wrapperRef.current.contains(e.target as Node)) {
                         e.preventDefault();
                     }
