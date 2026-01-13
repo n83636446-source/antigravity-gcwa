@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-// FIX: Added PopoverTrigger back to imports
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverAnchor } from "@radix-ui/react-popover"
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
@@ -74,7 +73,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ROBUST ID VERSION) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (FOCUS-DRIVEN VERSION) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -91,10 +90,6 @@ const ArticleSelector = ({
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
     
-    // Unique ID for the wrapper to safely detect clicks
-    // We use a constant ID prefix plus a random string to ensure uniqueness if multiple rows exist
-    const CONTAINER_ID = "article-selector-" + useMemo(() => Math.random().toString(36).substr(2, 9), []);
-
     // Sync input text with selected article name
     useEffect(() => {
         const selected = articles.find(a => a.id === value)
@@ -124,15 +119,21 @@ const ArticleSelector = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverAnchor asChild>
-                <div 
-                    id={CONTAINER_ID}
-                    className="relative w-full"
-                >
+                <div className="relative w-full">
                     <Input
                         placeholder="Saisir un article..."
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
+                        onClick={() => setOpen(true)}
+                        onBlur={() => {
+                            // FOCUS-DRIVEN LOGIC:
+                            // Delay closing to allow clicking an item in the list.
+                            // If we don't delay, the menu closes before the click registers.
+                            setTimeout(() => {
+                                setOpen(false);
+                            }, 200);
+                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -145,7 +146,10 @@ const ArticleSelector = ({
                         variant="ghost"
                         className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
                         onClick={(e) => {
+                            e.preventDefault() // Prevent form submit
                             e.stopPropagation() 
+                            // If input is focused, blur it to close, else focus it to open
+                            // For simplicity with this strategy, we just open advanced
                             onOpenAdvanced()
                         }}
                         title="Recherche avancée"
@@ -158,15 +162,9 @@ const ArticleSelector = ({
                 className="w-[600px] p-0" 
                 align="start" 
                 onOpenAutoFocus={(e) => e.preventDefault()} 
-                onPointerDownOutside={(e) => {
-                    // BLOCKING STRATEGY:
-                    // If the click is inside our wrapper ID, we FORCE preventDefault.
-                    // This stops the "click outside" logic from closing the menu when clicking the input.
-                    const container = document.getElementById(CONTAINER_ID);
-                    if (container && container.contains(e.target as Node)) {
-                        e.preventDefault();
-                    }
-                }}
+                // We disable standard pointer events closing because we rely on Blur
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
             >
                 <Command shouldFilter={false}>
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-2 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50">
