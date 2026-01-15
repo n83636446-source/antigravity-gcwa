@@ -46,7 +46,7 @@ type RepresentativeDialogProps = {
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
   onRepresentativeCreated?: (rep: Representative) => void;
-  lastCodeNumber?: number; // Made optional for safety
+  lastCodeNumber?: number; // Optional prop
 };
 
 export function RepresentativeDialog({
@@ -54,7 +54,7 @@ export function RepresentativeDialog({
   onOpenChange,
   representative,
   onRepresentativeCreated,
-  lastCodeNumber = 0, // Default to 0 if undefined
+  lastCodeNumber = 0, // Safety default
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -79,10 +79,9 @@ export function RepresentativeDialog({
             email: representative.email
         });
       } else {
-        // Create mode: Auto-generate Code with SAFETY CHECK
-        // If lastCodeNumber is missing/undefined, default to 0.
-        const safeLastNumber = lastCodeNumber || 0;
-        const nextNumber = safeLastNumber + 1;
+        // Create mode: Auto-generate Code
+        // Safe calculation: (undefined || 0) + 1 = 1.
+        const nextNumber = (lastCodeNumber || 0) + 1;
         const autoCode = `REP${nextNumber.toString().padStart(3, '0')}`;
         
         form.reset({
@@ -134,7 +133,7 @@ export function RepresentativeDialog({
               </DialogDescription>
             </DialogHeader>
 
-            {/* Read-Only Code Field */}
+            {/* EDITABLE CODE FIELD */}
             <FormField
               control={form.control}
               name="code"
@@ -142,7 +141,8 @@ export function RepresentativeDialog({
                 <FormItem>
                   <FormLabel>Code</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled className="bg-slate-100 font-mono" />
+                    {/* Removed 'disabled' and background color so it is editable */}
+                    <Input {...field} placeholder="REP000" className="font-mono" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
