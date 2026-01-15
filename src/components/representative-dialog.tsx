@@ -46,7 +46,7 @@ type RepresentativeDialogProps = {
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
   onRepresentativeCreated?: (rep: Representative) => void;
-  lastCodeNumber: number; // NEW PROP
+  lastCodeNumber?: number; // Made optional for safety
 };
 
 export function RepresentativeDialog({
@@ -54,7 +54,7 @@ export function RepresentativeDialog({
   onOpenChange,
   representative,
   onRepresentativeCreated,
-  lastCodeNumber,
+  lastCodeNumber = 0, // Default to 0 if undefined
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -74,13 +74,15 @@ export function RepresentativeDialog({
       if (isEditMode && representative) {
         // Edit mode: Load existing data
         form.reset({
-            code: representative.code || '', // Handle legacy data without codes
+            code: representative.code || '',
             name: representative.name,
             email: representative.email
         });
       } else {
-        // Create mode: Auto-generate Code
-        const nextNumber = lastCodeNumber + 1;
+        // Create mode: Auto-generate Code with SAFETY CHECK
+        // If lastCodeNumber is missing/undefined, default to 0.
+        const safeLastNumber = lastCodeNumber || 0;
+        const nextNumber = safeLastNumber + 1;
         const autoCode = `REP${nextNumber.toString().padStart(3, '0')}`;
         
         form.reset({
@@ -132,7 +134,7 @@ export function RepresentativeDialog({
               </DialogDescription>
             </DialogHeader>
 
-            {/* NEW CODE FIELD */}
+            {/* Read-Only Code Field */}
             <FormField
               control={form.control}
               name="code"
