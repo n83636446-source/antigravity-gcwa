@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -277,7 +277,7 @@ const SupplierSearchDialog = ({
         </div>
         <div className="flex-1 overflow-auto p-0">
             <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 [&_tr]:border-b">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
@@ -1054,14 +1054,13 @@ export function TestResizableDialog() {
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
           onInteractOutside={(e) => {
+            e.preventDefault(); 
             // ALERT FIX: Shake if the alert is showing and user clicks backdrop
             if (showCloseAlert) {
                 handleOverlayClick();
-                e.preventDefault();
                 return;
             }
             if (isMinimized) return; 
-            // Default preventDefault is not needed if alert is not showing
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -1164,7 +1163,6 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              {/* FIX: Increased pb-40 to allow scrolling space at bottom */}
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
@@ -1185,19 +1183,23 @@ export function TestResizableDialog() {
                                </div>
                             </div>
                          </div>
-                         {/* ZONE 2: Fournisseur - NEW MANUAL DROPDOWN */}
+                         {/* ZONE 2: Fournisseur */}
                          <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                              <div className="space-y-4 pt-2">
                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                    <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                   <SupplierSelector 
-                                      value={supplierId}
-                                      onChange={handleSupplierChange}
-                                      suppliers={availableSuppliers}
-                                      onOpenAdvanced={() => setIsSupplierSearchOpen(true)}
-                                      onCreateNew={() => setIsCreateSupplierOpen(true)}
-                                   />
+                                   <Select value={supplierId} onValueChange={handleSupplierChange}>
+                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
+                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="create_new_supplier" className="text-blue-600 font-semibold bg-blue-50">
+                                           <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau fournisseur</span></div>
+                                        </SelectItem>
+                                         {availableSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                      </SelectContent>
+                                   </Select>
                                 </div>
                              </div>
                          </div>
