@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // Removed Table imports to avoid clipping issues
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
+import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -90,14 +91,238 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (MANUAL & STABLE) ---
+// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR ---
+const SupplierSelector = ({ 
+    value, 
+    onChange, 
+    suppliers, 
+    onOpenAdvanced,
+    onCreateNew
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    suppliers: Supplier[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const wrapperRef = useRef<HTMLDivElement>(null)
+
+    useClickOutside(wrapperRef, () => setOpen(false));
+
+    useEffect(() => {
+        const selected = suppliers.find(s => s.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, suppliers])
+
+    const filteredSuppliers = useMemo(() => {
+        if (!inputValue) return suppliers.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return suppliers.filter(s => 
+            s.name.toLowerCase().includes(lower) || 
+            s.code.toLowerCase().includes(lower)
+        ).slice(0, 20); 
+    }, [inputValue, suppliers])
+
+    const handleSelect = (supplier: Supplier) => {
+        onChange(supplier.id)
+        setInputValue(supplier.name)
+        setOpen(false)
+    }
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <div className="relative">
+                <Input
+                    placeholder="Sélectionnez un fournisseur..."
+                    value={inputValue}
+                    autoComplete="off" 
+                    onFocus={() => setOpen(true)}
+                    onChange={(e) => {
+                        setInputValue(e.target.value)
+                        setOpen(true)
+                    }}
+                    className="w-full pr-10" 
+                />
+                <Button 
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                    onClick={(e) => {
+                        e.preventDefault() 
+                        e.stopPropagation() 
+                        onOpenAdvanced()
+                    }}
+                    title="Recherche avancée"
+                >
+                    <Search className="h-4 w-4" />
+                </Button>
+            </div>
+
+            {open && (
+                <div 
+                    className="absolute top-full left-0 mt-1 w-[500px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
+                    onMouseDown={(e) => e.preventDefault()} 
+                >
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Nom</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onCreateNew(); 
+                            }} 
+                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <PlusCircle className="ml-2 h-4 w-4" />
+                            Créer un nouveau fournisseur
+                        </div>
+
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        {filteredSuppliers.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun fournisseur trouvé.
+                            </div>
+                        )}
+
+                        {filteredSuppliers.map((supplier) => (
+                            <div
+                                key={supplier.id}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(supplier);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_1fr] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{supplier.code}</span>
+                                    <span className="text-left truncate font-medium">{supplier.name}</span>
+                                </div>
+                                {value === supplier.id && <Check className="absolute right-2 h-4 w-4 opacity-50" />}
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// --- COMPONENT: ADVANCED SUPPLIER SEARCH DIALOG ---
+const SupplierSearchDialog = ({ 
+  isOpen, 
+  onOpenChange, 
+  onSelect, 
+  suppliers 
+}: { 
+  isOpen: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  onSelect: (supplier: Supplier) => void;
+  suppliers: Supplier[];
+}) => {
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const filteredSuppliers = useMemo(() => {
+    if (!searchTerm) return suppliers;
+    const lowerTerm = searchTerm.toLowerCase();
+    return suppliers.filter(s => 
+      s.name.toLowerCase().includes(lowerTerm) || 
+      s.code.toLowerCase().includes(lowerTerm)
+    );
+  }, [searchTerm, suppliers]);
+
+  useEffect(() => {
+    if (isOpen) setSearchTerm("")
+  }, [isOpen])
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+        <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un fournisseur</h2>
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filtrer par code, nom..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+            </div>
+        </div>
+        <div className="flex-1 overflow-auto p-0">
+            <table className="w-full caption-bottom text-sm">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Contact</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px]"></th>
+                    </tr>
+                </thead>
+                <tbody className="[&_tr:last-child]:border-0">
+                    {filteredSuppliers.length === 0 ? (
+                        <tr className="border-b transition-colors">
+                            <td colSpan={5} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun fournisseur trouvé.</td>
+                        </tr>
+                    ) : (
+                        filteredSuppliers.map(supplier => (
+                            <tr key={supplier.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(supplier)}>
+                                <td className="p-4 align-middle font-mono text-xs">{supplier.code}</td>
+                                <td className="p-4 align-middle font-medium">{supplier.name}</td>
+                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactName || "-"}</td>
+                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactEmail || "-"}</td>
+                                <td className="p-4 align-middle text-right"><Button size="sm" variant="secondary" className="h-7 text-xs">Choisir</Button></td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+        <div className="p-4 border-t bg-slate-50 flex justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
     articles, 
     onOpenAdvanced,
     onCreateNew,
-    autoFocus = false 
+    autoFocus = false
 }: { 
     value: string, 
     onChange: (id: string) => void, 
@@ -113,7 +338,6 @@ const ArticleSelector = ({
 
     useClickOutside(wrapperRef, () => setOpen(false));
 
-    // Auto-focus logic for new lines
     useEffect(() => {
         if (autoFocus && inputRef.current) {
             setTimeout(() => {
@@ -168,7 +392,7 @@ const ArticleSelector = ({
                     className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
                     onClick={(e) => {
                         e.preventDefault() 
-                        // e.stopPropagation() // Removed to allow events to bubble naturally
+                        e.stopPropagation() 
                         onOpenAdvanced()
                     }}
                     title="Recherche avancée"
@@ -177,10 +401,10 @@ const ArticleSelector = ({
                 </Button>
             </div>
 
-            {/* MANUAL DROPDOWN */}
             {open && (
                 <div 
                     className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
+                    onMouseDown={(e) => e.preventDefault()} 
                 >
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
@@ -191,8 +415,7 @@ const ArticleSelector = ({
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         <div 
                             onMouseDown={(e) => { 
-                                // CRITICAL: Prevent Default keeps the input focused
-                                e.preventDefault(); 
+                                e.stopPropagation();
                                 setOpen(false); 
                                 onCreateNew(); 
                             }} 
@@ -214,8 +437,7 @@ const ArticleSelector = ({
                             <div
                                 key={article.id}
                                 onMouseDown={(e) => {
-                                    // CRITICAL: Prevent Default keeps the input focused
-                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleSelect(article);
                                 }}
                                 className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
@@ -238,8 +460,7 @@ const ArticleSelector = ({
 
                         <div 
                             onMouseDown={(e) => { 
-                                // CRITICAL: Prevent Default keeps the input focused
-                                e.preventDefault();
+                                e.stopPropagation();
                                 setOpen(false); 
                                 onOpenAdvanced();
                             }} 
@@ -300,7 +521,6 @@ const ArticleSearchDialog = ({
             </div>
         </div>
         <div className="flex-1 overflow-auto p-0">
-            {/* HTML Table here too for consistency */}
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -459,6 +679,7 @@ export function TestResizableDialog() {
   // --- FOCUS & MODAL STATE ---
   const [newRowId, setNewRowId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) // NEW
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
 
   // --- FIRESTORE ---
@@ -691,12 +912,14 @@ export function TestResizableDialog() {
       setRepresentativeId(repWithType.id)
   }
 
+  // Updated Supplier Handler to just set ID
   const handleSupplierChange = (value: string) => {
-      if (value === "create_new_supplier") {
-          setIsCreateSupplierOpen(true)
-          return
-      }
       setSupplierId(value)
+  }
+
+  const handleSupplierSearchSelect = (supplier: Supplier) => {
+      setSupplierId(supplier.id)
+      setIsSupplierSearchOpen(false)
   }
 
   const handleSupplierCreated = (newSupplier: any) => {
@@ -834,12 +1057,12 @@ export function TestResizableDialog() {
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
           onInteractOutside={(e) => {
-            e.preventDefault(); 
-            // ALERT FIX: Shake if the alert is showing and user clicks backdrop
+            // FIX: Shake if the alert is showing and user clicks backdrop
             if (showCloseAlert) {
                 handleOverlayClick();
                 return;
             }
+            e.preventDefault(); 
             if (isMinimized) return; 
           }}
           className={cn(
@@ -964,23 +1187,19 @@ export function TestResizableDialog() {
                                </div>
                             </div>
                          </div>
-                         {/* ZONE 2: Fournisseur */}
+                         {/* ZONE 2: Fournisseur - NEW MANUAL DROPDOWN */}
                          <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                              <div className="space-y-4 pt-2">
                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                    <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                   <Select value={supplierId} onValueChange={handleSupplierChange}>
-                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="create_new_supplier" className="text-blue-600 font-semibold bg-blue-50">
-                                           <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau fournisseur</span></div>
-                                        </SelectItem>
-                                         {availableSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                                      </SelectContent>
-                                   </Select>
+                                   <SupplierSelector 
+                                      value={supplierId}
+                                      onChange={handleSupplierChange}
+                                      suppliers={availableSuppliers}
+                                      onOpenAdvanced={() => setIsSupplierSearchOpen(true)}
+                                      onCreateNew={() => setIsCreateSupplierOpen(true)}
+                                   />
                                 </div>
                              </div>
                          </div>
@@ -1034,12 +1253,12 @@ export function TestResizableDialog() {
                      </div>
                   </div>
 
-                  {/* ITEMS TABLE */}
+                  {/* ITEMS TABLE - FIX: Replaced Shadcn Table with HTML Table to remove Overflow Clipping */}
+                  {/* FIX: Increased min-height to 500px for better spacing */}
                   <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
                     <table className="w-full caption-bottom text-sm">
                       <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                         <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                          {/* ROUNDED CORNERS FIX */}
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[40%] min-w-[200px] rounded-tl-md">Article</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Qté</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Prix UHT</th>
@@ -1132,6 +1351,13 @@ export function TestResizableDialog() {
         onOpenChange={setIsCreateSupplierOpen}
         onSupplierCreated={handleSupplierCreated}
         lastSupplierCodeNumber={lastSupplierCodeNumber}
+        suppliers={availableSuppliers}
+      />
+
+      <SupplierSearchDialog 
+        isOpen={isSupplierSearchOpen}
+        onOpenChange={setIsSupplierSearchOpen}
+        onSelect={handleSupplierSearchSelect}
         suppliers={availableSuppliers}
       />
 
