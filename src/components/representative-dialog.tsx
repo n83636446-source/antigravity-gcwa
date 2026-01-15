@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -46,7 +46,7 @@ type RepresentativeDialogProps = {
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
   onRepresentativeCreated?: (rep: Representative) => void;
-  suggestedCode?: string; // CHANGED: Now accepts the full string (e.g. "REP002")
+  representatives: Representative[]; // Pass the list so Dialog can calculate
 };
 
 export function RepresentativeDialog({
@@ -54,7 +54,7 @@ export function RepresentativeDialog({
   onOpenChange,
   representative,
   onRepresentativeCreated,
-  suggestedCode = '',
+  representatives = [],
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -69,24 +69,42 @@ export function RepresentativeDialog({
     },
   });
 
+  // INTERNAL CALCULATION: Find the next code
+  const nextCode = useMemo(() => {
+    if (!representatives || representatives.length === 0) return "REP001";
+
+    const maxId = representatives.reduce((max, rep) => {
+      if (!rep.code) return max;
+      const match = rep.code.match(/REP(\d+)/i); 
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        return !isNaN(num) && num > max ? num : max;
+      }
+      return max;
+    }, 0);
+
+    return `REP${(maxId + 1).toString().padStart(3, '0')}`;
+  }, [representatives]);
+
+  // RESET FORM ON OPEN
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && representative) {
         form.reset({
             code: representative.code || '',
             name: representative.name,
-            email: representative.email
+            email: representative.email || '',
         });
       } else {
-        // Create mode: Use the suggested code passed from the parent
+        // Use the internally calculated code
         form.reset({
-          code: suggestedCode,
+          code: nextCode,
           name: '',
           email: '',
         });
       }
     }
-  }, [representative, isEditMode, isOpen, form, suggestedCode]);
+  }, [isOpen, isEditMode, representative, nextCode, form]);
 
   const onSubmit = async (data: RepresentativeFormValues) => {
     if (!firestore) return;

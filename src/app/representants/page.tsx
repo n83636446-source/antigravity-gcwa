@@ -1,10 +1,10 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { RepresentativeDialog } from '@/components/representative-dialog';
 import { RepresentativesTable } from '@/components/representatives-table';
 import type { Representative } from '@/lib/types';
-import { useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,6 +85,7 @@ export default function RepresentantsPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         representative={editingRepresentative}
+        representatives={representatives || []}
       />
     </div>
   );
