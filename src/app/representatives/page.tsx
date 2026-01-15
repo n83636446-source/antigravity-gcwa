@@ -1,106 +1,95 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { PageHeader } from '@/components/page-header';
-import { RepresentativeDialog } from '@/components/representative-dialog';
-import { RepresentativesTable } from '@/components/representatives-table';
-import type { Representative } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Plus } from 'lucide-react';
+import { RepresentativesTable } from '@/components/representatives-table';
+import { RepresentativeDialog } from '@/components/representative-dialog';
+import { useFirestore } from '@/firebase';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import type { Representative } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function RepresentantsPage() {
+export default function RepresentativesPage() {
+  const [representatives, setRepresentatives] = useState<Representative[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
+  const [representativeToEdit, setRepresentativeToEdit] = useState<Representative | undefined>(undefined);
+  
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingRepresentative, setEditingRepresentative] = useState<
-    Representative | undefined
-  >();
-  const [selectedRepresentative, setSelectedRepresentative] =
-    useState<Representative | null>(null);
 
-  const representativesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'representatives') : null),
-    [firestore]
-  );
-  const { data: representatives, isLoading } =
-    useCollection<Representative>(representativesRef);
+  useEffect(() => {
+    if (!firestore) return;
 
-  const lastCodeNumber = useMemo(() => {
-    if (!representatives) return 0;
-    return representatives.reduce((max, rep) => {
-      if (!rep.code) return max;
-      const match = rep.code.match(/REP(\d+)/i); // Case insensitive match
-      if (match && match[1]) {
-        const num = parseInt(match[1], 10);
-        return num > max ? num : max;
-      }
-      return max;
-    }, 0);
-  }, [representatives]);
+    const q = query(collection(firestore, 'representatives'), orderBy('name'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reps = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Representative[];
+      setRepresentatives(reps);
+    });
 
+    return () => unsubscribe();
+  }, [firestore]);
 
-  const handleAdd = () => {
-    setEditingRepresentative(undefined);
-    setDialogOpen(true);
+  const handleCreate = () => {
+    setRepresentativeToEdit(undefined);
+    setIsDialogOpen(true);
   };
 
   const handleEdit = (representative: Representative) => {
-    setEditingRepresentative(representative);
-    setDialogOpen(true);
+    setRepresentativeToEdit(representative);
+    setIsDialogOpen(true);
   };
 
-  const handleDelete = (representative: Representative) => {
+  const handleDelete = async (representative: Representative) => {
     if (!firestore) return;
-    const representativeDocRef = doc(firestore, 'representatives', representative.id);
-    deleteDocumentNonBlocking(representativeDocRef);
-    toast({
-      title: 'Représentant supprimé',
-      description: `Le représentant "${representative.name}" a été supprimé.`,
-    });
-    setSelectedRepresentative(null);
+    try {
+      await deleteDoc(doc(firestore, 'representatives', representative.id));
+      toast({
+        title: 'Représentant supprimé',
+        description: `Le représentant ${representative.name} a été supprimé.`,
+      });
+      setSelectedRepresentative(null);
+    } catch (error) {
+      console.error("Error deleting representative:", error);
+      toast({
+        title: 'Erreur',
+        description: "Une erreur est survenue lors de la suppression.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6">
-      <PageHeader
-        title="Représentants"
-        description="Gérez votre liste de représentants."
-      >
-        <Button onClick={handleAdd}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Ajouter un représentant
+    <div className="container mx-auto py-10 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Représentants</h1>
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nouveau représentant
         </Button>
-      </PageHeader>
-      {isLoading ? (
-         <Card>
-          <CardHeader><CardTitle>Tous les représentants</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </CardContent>
-        </Card>
-      ) : (
-        <RepresentativesTable
-          representatives={representatives || []}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          selectedRepresentative={selectedRepresentative}
-          onSetSelectedRepresentative={setSelectedRepresentative}
+      </div>
+
+      <RepresentativesTable
+        representatives={representatives}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        selectedRepresentative={selectedRepresentative}
+        onSetSelectedRepresentative={setSelectedRepresentative}
+      />
+
+      {isDialogOpen && (
+        <RepresentativeDialog
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          representative={representativeToEdit}
+          representatives={representatives} // Pass the list to the dialog
         />
       )}
-      <RepresentativeDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setDialogOpen}
-        representative={editingRepresentative}
-        lastCodeNumber={lastCodeNumber}
-      />
     </div>
   );
 }
