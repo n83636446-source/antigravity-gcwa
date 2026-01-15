@@ -4,11 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-// Removed Table imports to avoid clipping issues
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -279,7 +277,7 @@ const SupplierSearchDialog = ({
         </div>
         <div className="flex-1 overflow-auto p-0">
             <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                <thead className="bg-slate-50 [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
@@ -415,7 +413,7 @@ const ArticleSelector = ({
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         <div 
                             onMouseDown={(e) => { 
-                                e.stopPropagation();
+                                e.preventDefault(); 
                                 setOpen(false); 
                                 onCreateNew(); 
                             }} 
@@ -437,7 +435,7 @@ const ArticleSelector = ({
                             <div
                                 key={article.id}
                                 onMouseDown={(e) => {
-                                    e.stopPropagation();
+                                    e.preventDefault();
                                     handleSelect(article);
                                 }}
                                 className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
@@ -460,7 +458,7 @@ const ArticleSelector = ({
 
                         <div 
                             onMouseDown={(e) => { 
-                                e.stopPropagation();
+                                e.preventDefault();
                                 setOpen(false); 
                                 onOpenAdvanced();
                             }} 
@@ -679,7 +677,7 @@ export function TestResizableDialog() {
   // --- FOCUS & MODAL STATE ---
   const [newRowId, setNewRowId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) // NEW
+  const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) 
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
 
   // --- FIRESTORE ---
@@ -912,7 +910,6 @@ export function TestResizableDialog() {
       setRepresentativeId(repWithType.id)
   }
 
-  // Updated Supplier Handler to just set ID
   const handleSupplierChange = (value: string) => {
       setSupplierId(value)
   }
@@ -1057,13 +1054,14 @@ export function TestResizableDialog() {
       <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
         <DialogContent 
           onInteractOutside={(e) => {
-            // FIX: Shake if the alert is showing and user clicks backdrop
+            // ALERT FIX: Shake if the alert is showing and user clicks backdrop
             if (showCloseAlert) {
                 handleOverlayClick();
+                e.preventDefault();
                 return;
             }
-            e.preventDefault(); 
             if (isMinimized) return; 
+            // Default preventDefault is not needed if alert is not showing
           }}
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
@@ -1257,8 +1255,8 @@ export function TestResizableDialog() {
                   {/* FIX: Increased min-height to 500px for better spacing */}
                   <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
                     <table className="w-full caption-bottom text-sm">
-                      <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                        <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                      <thead className="bg-slate-50 [&_tr]:border-b">
+                        <tr className="border-b border-blue-800 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[40%] min-w-[200px] rounded-tl-md">Article</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Qté</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Prix UHT</th>
