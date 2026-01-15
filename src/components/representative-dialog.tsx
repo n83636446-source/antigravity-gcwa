@@ -32,6 +32,7 @@ import {
 } from '@/firebase/non-blocking-updates';
 
 const representativeSchema = z.object({
+  code: z.string().min(1, "Le code est requis"),
   name: z
     .string()
     .min(2, 'Le nom du représentant doit contenir au moins 2 caractères.'),
@@ -45,6 +46,7 @@ type RepresentativeDialogProps = {
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
   onRepresentativeCreated?: (rep: Representative) => void;
+  lastCodeNumber: number; // NEW PROP
 };
 
 export function RepresentativeDialog({
@@ -52,6 +54,7 @@ export function RepresentativeDialog({
   onOpenChange,
   representative,
   onRepresentativeCreated,
+  lastCodeNumber,
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -60,6 +63,7 @@ export function RepresentativeDialog({
   const form = useForm<RepresentativeFormValues>({
     resolver: zodResolver(representativeSchema),
     defaultValues: {
+      code: '',
       name: '',
       email: '',
     },
@@ -68,15 +72,25 @@ export function RepresentativeDialog({
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && representative) {
-        form.reset(representative);
-      } else {
+        // Edit mode: Load existing data
         form.reset({
+            code: representative.code || '', // Handle legacy data without codes
+            name: representative.name,
+            email: representative.email
+        });
+      } else {
+        // Create mode: Auto-generate Code
+        const nextNumber = lastCodeNumber + 1;
+        const autoCode = `REP${nextNumber.toString().padStart(3, '0')}`;
+        
+        form.reset({
+          code: autoCode,
           name: '',
           email: '',
         });
       }
     }
-  }, [representative, isEditMode, isOpen, form]);
+  }, [representative, isEditMode, isOpen, form, lastCodeNumber]);
 
   const onSubmit = async (data: RepresentativeFormValues) => {
     if (!firestore) return;
@@ -90,15 +104,13 @@ export function RepresentativeDialog({
       });
     } else {
       const representativesRef = collection(firestore, 'representatives');
-      // We wait for the ID here to pass it back
       const docRef = await addDocumentNonBlocking(representativesRef, data);
       
       if (docRef) {
         toast({
             title: 'Représentant ajouté',
-            description: `Le représentant "${data.name}" a été ajouté avec succès.`,
+            description: `Le représentant "${data.name}" (${data.code}) a été ajouté avec succès.`,
         });
-        // Call the callback with the new ID
         onRepresentativeCreated?.({ ...data, id: docRef.id });
       }
     }
@@ -119,6 +131,21 @@ export function RepresentativeDialog({
                 Remplissez les détails du représentant.
               </DialogDescription>
             </DialogHeader>
+
+            {/* NEW CODE FIELD */}
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Code</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled className="bg-slate-100 font-mono" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
