@@ -207,7 +207,6 @@ const SupplierSelector = ({
                                     <span className="text-left font-mono text-xs text-muted-foreground pl-2">{supplier.code}</span>
                                     <span className="text-left truncate font-medium">{supplier.name}</span>
                                 </div>
-                                {value === supplier.id && <Check className="absolute right-2 h-4 w-4 opacity-50" />}
                             </div>
                         ))}
 
@@ -283,13 +282,12 @@ const SupplierSearchDialog = ({
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Contact</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px]"></th>
                     </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-0">
                     {filteredSuppliers.length === 0 ? (
                         <tr className="border-b transition-colors">
-                            <td colSpan={5} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun fournisseur trouvé.</td>
+                            <td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun fournisseur trouvé.</td>
                         </tr>
                     ) : (
                         filteredSuppliers.map(supplier => (
@@ -298,7 +296,6 @@ const SupplierSearchDialog = ({
                                 <td className="p-4 align-middle font-medium">{supplier.name}</td>
                                 <td className="p-4 align-middle text-muted-foreground">{supplier.contactName || "-"}</td>
                                 <td className="p-4 align-middle text-muted-foreground">{supplier.contactEmail || "-"}</td>
-                                <td className="p-4 align-middle text-right"><Button size="sm" variant="secondary" className="h-7 text-xs">Choisir</Button></td>
                             </tr>
                         ))
                     )}
@@ -526,13 +523,12 @@ const ArticleSearchDialog = ({
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Désignation</th>
                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[100px] text-right">Prix</th>
                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px] text-right">Stock</th>
-                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px]"></th>
                     </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-0">
                     {filteredArticles.length === 0 ? (
                         <tr className="border-b transition-colors">
-                            <td colSpan={5} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun article trouvé.</td>
+                            <td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun article trouvé.</td>
                         </tr>
                     ) : (
                         filteredArticles.map(article => (
@@ -543,7 +539,6 @@ const ArticleSearchDialog = ({
                                 <td className={cn("p-4 align-middle text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>
                                     {article.stockLevel ?? 0}
                                 </td>
-                                <td className="p-4 align-middle text-right"><Button size="sm" variant="secondary" className="h-7 text-xs">Choisir</Button></td>
                             </tr>
                         ))
                     )}
@@ -1183,23 +1178,19 @@ export function TestResizableDialog() {
                                </div>
                             </div>
                          </div>
-                         {/* ZONE 2: Fournisseur */}
+                         {/* ZONE 2: Fournisseur - NEW MANUAL DROPDOWN */}
                          <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                              <div className="space-y-4 pt-2">
                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                    <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                   <Select value={supplierId} onValueChange={handleSupplierChange}>
-                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                        <SelectValue placeholder="Sélectionnez un fournisseur" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="create_new_supplier" className="text-blue-600 font-semibold bg-blue-50">
-                                           <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau fournisseur</span></div>
-                                        </SelectItem>
-                                         {availableSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                                      </SelectContent>
-                                   </Select>
+                                   <SupplierSelector 
+                                      value={supplierId}
+                                      onChange={handleSupplierChange}
+                                      suppliers={availableSuppliers}
+                                      onOpenAdvanced={() => setIsSupplierSearchOpen(true)}
+                                      onCreateNew={() => setIsCreateSupplierOpen(true)}
+                                   />
                                 </div>
                              </div>
                          </div>
@@ -1253,8 +1244,7 @@ export function TestResizableDialog() {
                      </div>
                   </div>
 
-                  {/* ITEMS TABLE - FIX: Replaced Shadcn Table with HTML Table to remove Overflow Clipping */}
-                  {/* FIX: Increased min-height to 500px for better spacing */}
+                  {/* ITEMS TABLE */}
                   <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
                     <table className="w-full caption-bottom text-sm">
                       <thead className="bg-slate-50 [&_tr]:border-b">
@@ -1277,7 +1267,6 @@ export function TestResizableDialog() {
                                     articles={availableArticles}
                                     onOpenAdvanced={() => openArticleSearch(item.id)}
                                     onCreateNew={() => handleCreateNewArticle(item.id)}
-                                    // Add autoFocus prop to fix the "Auto Highlight" regression
                                     autoFocus={item.id === newRowId}
                                 />
                               </td>
