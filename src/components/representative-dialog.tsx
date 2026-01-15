@@ -46,7 +46,7 @@ type RepresentativeDialogProps = {
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
   onRepresentativeCreated?: (rep: Representative) => void;
-  lastCodeNumber?: number; // Optional prop
+  suggestedCode?: string; // CHANGED: Now accepts the full string (e.g. "REP002")
 };
 
 export function RepresentativeDialog({
@@ -54,7 +54,7 @@ export function RepresentativeDialog({
   onOpenChange,
   representative,
   onRepresentativeCreated,
-  lastCodeNumber = 0, // Safety default
+  suggestedCode = '',
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -72,26 +72,21 @@ export function RepresentativeDialog({
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && representative) {
-        // Edit mode: Load existing data
         form.reset({
             code: representative.code || '',
             name: representative.name,
             email: representative.email
         });
       } else {
-        // Create mode: Auto-generate Code
-        // Safe calculation: (undefined || 0) + 1 = 1.
-        const nextNumber = (lastCodeNumber || 0) + 1;
-        const autoCode = `REP${nextNumber.toString().padStart(3, '0')}`;
-        
+        // Create mode: Use the suggested code passed from the parent
         form.reset({
-          code: autoCode,
+          code: suggestedCode,
           name: '',
           email: '',
         });
       }
     }
-  }, [representative, isEditMode, isOpen, form, lastCodeNumber]);
+  }, [representative, isEditMode, isOpen, form, suggestedCode]);
 
   const onSubmit = async (data: RepresentativeFormValues) => {
     if (!firestore) return;
@@ -133,7 +128,6 @@ export function RepresentativeDialog({
               </DialogDescription>
             </DialogHeader>
 
-            {/* EDITABLE CODE FIELD */}
             <FormField
               control={form.control}
               name="code"
@@ -141,8 +135,7 @@ export function RepresentativeDialog({
                 <FormItem>
                   <FormLabel>Code</FormLabel>
                   <FormControl>
-                    {/* Removed 'disabled' and background color so it is editable */}
-                    <Input {...field} placeholder="REP000" className="font-mono" />
+                    <Input {...field} className="font-mono" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
