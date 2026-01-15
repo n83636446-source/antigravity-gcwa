@@ -22,7 +22,8 @@ export default function RepresentativesPage() {
   useEffect(() => {
     if (!firestore) return;
 
-    const q = query(collection(firestore, 'representatives'), orderBy('name'));
+    // CHANGED: Sort by 'code' in ascending order so new items (higher codes) appear at the bottom
+    const q = query(collection(firestore, 'representatives'), orderBy('code', 'asc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reps = snapshot.docs.map((doc) => ({
@@ -87,7 +88,7 @@ export default function RepresentativesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           representative={representativeToEdit}
-          representatives={representatives} // Pass the list to the dialog
+          representatives={representatives}
         />
       )}
     </div>
