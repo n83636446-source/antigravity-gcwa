@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Building2, User, Phone, Mail } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -46,6 +46,7 @@ type Supplier = {
 
 type Representative = {
   id: string
+  code?: string // ADDED CODE FIELD
   name: string
   email?: string
 }
@@ -87,6 +88,223 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
             document.removeEventListener("touchstart", listener);
         };
     }, [ref, handler]);
+}
+
+// --- COMPONENT: AUTOCOMPLETE REPRESENTATIVE SELECTOR (NO CODE FIELD IN LIST) ---
+const RepresentativeSelector = ({ 
+    value, 
+    onChange, 
+    representatives, 
+    onOpenAdvanced,
+    onCreateNew
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    representatives: Representative[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const wrapperRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    useClickOutside(wrapperRef, () => setOpen(false));
+
+    useEffect(() => {
+        const selected = representatives.find(r => r.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, representatives])
+
+    const filteredReps = useMemo(() => {
+        if (!inputValue) return representatives.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return representatives.filter(r => 
+            r.name.toLowerCase().includes(lower)
+        ).slice(0, 20); 
+    }, [inputValue, representatives])
+
+    const handleSelect = (rep: Representative) => {
+        onChange(rep.id)
+        setInputValue(rep.name)
+        setOpen(false)
+    }
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <div className="relative">
+                <Input
+                    ref={inputRef}
+                    placeholder="Sélectionnez un représentant..."
+                    value={inputValue}
+                    autoComplete="off" 
+                    onFocus={() => setOpen(true)}
+                    onChange={(e) => {
+                        setInputValue(e.target.value)
+                        setOpen(true)
+                    }}
+                    className="w-full pr-10" 
+                />
+                <Button 
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                    onClick={(e) => {
+                        e.preventDefault() 
+                        e.stopPropagation() 
+                        onOpenAdvanced()
+                    }}
+                    title="Recherche avancée"
+                >
+                    <Search className="h-4 w-4" />
+                </Button>
+            </div>
+
+            {open && (
+                <div 
+                    className="absolute top-full left-0 mt-1 w-[500px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
+                    onMouseDown={(e) => e.preventDefault()} 
+                >
+                    <div className="grid grid-cols-[1fr_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Nom</span>
+                        <span className="text-left">Email</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onCreateNew(); 
+                            }} 
+                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <PlusCircle className="ml-2 h-4 w-4" />
+                            Créer un nouveau représentant
+                        </div>
+
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        {filteredReps.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun représentant trouvé.
+                            </div>
+                        )}
+
+                        {filteredReps.map((rep) => (
+                            <div
+                                key={rep.id}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(rep);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[1fr_1fr] items-center gap-4 w-full">
+                                    <span className="text-left font-medium pl-2">{rep.name}</span>
+                                    <span className="text-left text-muted-foreground truncate">{rep.email || "-"}</span>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// --- COMPONENT: ADVANCED REPRESENTATIVE SEARCH DIALOG ---
+const RepresentativeSearchDialog = ({ 
+  isOpen, 
+  onOpenChange, 
+  onSelect, 
+  representatives 
+}: { 
+  isOpen: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  onSelect: (rep: Representative) => void;
+  representatives: Representative[];
+}) => {
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const filteredReps = useMemo(() => {
+    if (!searchTerm) return representatives;
+    const lowerTerm = searchTerm.toLowerCase();
+    return representatives.filter(r => 
+      r.name.toLowerCase().includes(lowerTerm)
+    );
+  }, [searchTerm, representatives]);
+
+  useEffect(() => {
+    if (isOpen) setSearchTerm("")
+  }, [isOpen])
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+        <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filtrer par nom..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+            </div>
+        </div>
+        <div className="flex-1 overflow-auto p-0">
+            <table className="w-full caption-bottom text-sm">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                    </tr>
+                </thead>
+                <tbody className="[&_tr:last-child]:border-0">
+                    {filteredReps.length === 0 ? (
+                        <tr className="border-b transition-colors">
+                            <td colSpan={2} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun représentant trouvé.</td>
+                        </tr>
+                    ) : (
+                        filteredReps.map(rep => (
+                            <tr key={rep.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
+                                <td className="p-4 align-middle font-medium">{rep.name}</td>
+                                <td className="p-4 align-middle text-muted-foreground">{rep.email || "-"}</td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+        <div className="p-4 border-t bg-slate-50 flex justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 // --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR ---
@@ -672,6 +890,7 @@ export function TestResizableDialog() {
   const [newRowId, setNewRowId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) 
+  const [isRepresentativeSearchOpen, setIsRepresentativeSearchOpen] = useState(false)
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
 
   // --- FIRESTORE ---
@@ -729,6 +948,21 @@ export function TestResizableDialog() {
       return max;
     }, 0);
   }, [availableSuppliers]);
+
+  // NEW: Calculate Last Representative Code
+  const lastRepCodeNumber = useMemo(() => {
+    return availableRepresentatives.reduce((max, rep) => {
+      // Handle legacy data without codes
+      if (!rep.code || typeof rep.code !== 'string') return max;
+      
+      const match = rep.code.match(/REP(\d+)/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+  }, [availableRepresentatives]);
 
   const { totalHT, totalTVA, totalTTC } = items.reduce(
     (acc, item) => {
@@ -891,11 +1125,12 @@ export function TestResizableDialog() {
   }
 
   const handleRepresentativeChange = (value: string) => {
-      if (value === "create_new_rep") {
-          setIsCreateRepOpen(true)
-          return
-      }
       setRepresentativeId(value)
+  }
+
+  const handleRepresentativeSearchSelect = (rep: Representative) => {
+      setRepresentativeId(rep.id)
+      setIsRepresentativeSearchOpen(false)
   }
 
   const handleRepresentativeCreated = (newRep: any) => {
@@ -1157,6 +1392,7 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
+              {/* FIX: Increased pb-40 to allow scrolling space at bottom */}
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
@@ -1216,23 +1452,19 @@ export function TestResizableDialog() {
                                </div>
                             </div>
                          </div>
-                         {/* ZONE 4: Détails */}
+                         {/* ZONE 4: Détails - NEW MANUAL DROPDOWN FOR REP */}
                          <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                             <div className="space-y-4 pt-2">
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                   <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
-                                  <Select value={representativeId} onValueChange={handleRepresentativeChange}>
-                                      <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
-                                        <SelectValue placeholder="Sélectionnez un représentant" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="create_new_rep" className="text-blue-600 font-semibold bg-blue-50">
-                                           <div className="flex items-center gap-2"><PlusCircle className="h-4 w-4" /><span>Créer un nouveau représentant</span></div>
-                                        </SelectItem>
-                                         {availableRepresentatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                                      </SelectContent>
-                                   </Select>
+                                  <RepresentativeSelector 
+                                      value={representativeId}
+                                      onChange={handleRepresentativeChange}
+                                      representatives={availableRepresentatives}
+                                      onOpenAdvanced={() => setIsRepresentativeSearchOpen(true)}
+                                      onCreateNew={() => setIsCreateRepOpen(true)}
+                                  />
                                </div>
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                   <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
@@ -1332,6 +1564,7 @@ export function TestResizableDialog() {
         isOpen={isCreateRepOpen}
         onOpenChange={setIsCreateRepOpen}
         onRepresentativeCreated={handleRepresentativeCreated}
+        lastCodeNumber={lastRepCodeNumber} 
       />
 
       <SupplierDialog
@@ -1347,6 +1580,13 @@ export function TestResizableDialog() {
         onOpenChange={setIsSupplierSearchOpen}
         onSelect={handleSupplierSearchSelect}
         suppliers={availableSuppliers}
+      />
+
+      <RepresentativeSearchDialog 
+        isOpen={isRepresentativeSearchOpen}
+        onOpenChange={setIsRepresentativeSearchOpen}
+        onSelect={handleRepresentativeSearchSelect}
+        representatives={availableRepresentatives}
       />
 
       <ArticleSearchDialog 
