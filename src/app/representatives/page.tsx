@@ -22,7 +22,7 @@ export default function RepresentativesPage() {
   useEffect(() => {
     if (!firestore) return;
 
-    // We fetch all items and sort them Client-Side to be safe
+    // Fetch unordered data
     const q = query(collection(firestore, 'representatives'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -31,13 +31,21 @@ export default function RepresentativesPage() {
         ...doc.data(),
       })) as Representative[];
 
-      // FIX: Robust Natural Sort
+      // FIX: Force Robust Numeric Sort
       reps.sort((a, b) => {
-        const codeA = a.code || "zzzz"; // Push missing codes to bottom
-        const codeB = b.code || "zzzz"; // Push missing codes to bottom
-        
-        // This handles "REP1", "REP2", "REP10" correctly
-        return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+        // Extract digits only (e.g. "REP005" -> 5)
+        // If code is missing/invalid, treat as Infinity so it goes to the bottom
+        const getNumber = (code?: string) => {
+            if (!code) return Infinity;
+            const match = code.match(/(\d+)/);
+            return match ? parseInt(match[0], 10) : Infinity;
+        };
+
+        const numA = getNumber(a.code);
+        const numB = getNumber(b.code);
+
+        // Sort ascending (1, 2, 3...)
+        return numA - numB;
       });
 
       setRepresentatives(reps);
