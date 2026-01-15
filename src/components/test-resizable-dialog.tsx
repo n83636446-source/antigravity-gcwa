@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+// Removed Table imports to avoid clipping issues
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
@@ -90,7 +90,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (ROBUST & STABLE) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (FINAL ROBUST FIX) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -143,7 +143,7 @@ const ArticleSelector = ({
                     value={inputValue}
                     autoComplete="off" 
                     onFocus={() => setOpen(true)}
-                    // No onBlur here - we use useClickOutside exclusively
+                    // We rely solely on useClickOutside for closing
                     onChange={(e) => {
                         setInputValue(e.target.value)
                         setOpen(true)
@@ -295,36 +295,37 @@ const ArticleSearchDialog = ({
             </div>
         </div>
         <div className="flex-1 overflow-auto p-0">
-            <Table>
-                <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                    <TableRow>
-                        <TableHead className="w-[100px]">Code</TableHead>
-                        <TableHead>Désignation</TableHead>
-                        <TableHead className="w-[100px] text-right">Prix</TableHead>
-                        <TableHead className="w-[80px] text-right">Stock</TableHead>
-                        <TableHead className="w-[80px]"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
+             {/* HTML Table here for consistency and to avoid clipping */}
+            <table className="w-full caption-bottom text-sm">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Désignation</th>
+                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[100px] text-right">Prix</th>
+                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px] text-right">Stock</th>
+                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px]"></th>
+                    </tr>
+                </thead>
+                <tbody className="[&_tr:last-child]:border-0">
                     {filteredArticles.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucun article trouvé.</TableCell>
-                        </TableRow>
+                        <tr className="border-b transition-colors">
+                            <td colSpan={5} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun article trouvé.</td>
+                        </tr>
                     ) : (
                         filteredArticles.map(article => (
-                            <TableRow key={article.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(article)}>
-                                <TableCell className="font-mono text-xs">{article.code}</TableCell>
-                                <TableCell className="font-medium">{article.name}</TableCell>
-                                <TableCell className="text-right">{article.price.toFixed(2)} €</TableCell>
-                                <TableCell className={cn("text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>
+                            <tr key={article.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(article)}>
+                                <td className="p-4 align-middle font-mono text-xs">{article.code}</td>
+                                <td className="p-4 align-middle font-medium">{article.name}</td>
+                                <td className="p-4 align-middle text-right">{article.price.toFixed(2)} €</td>
+                                <td className={cn("p-4 align-middle text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>
                                     {article.stockLevel ?? 0}
-                                </TableCell>
-                                <TableCell className="text-right"><Button size="sm" variant="secondary" className="h-7 text-xs">Choisir</Button></TableCell>
-                            </TableRow>
+                                </td>
+                                <td className="p-4 align-middle text-right"><Button size="sm" variant="secondary" className="h-7 text-xs">Choisir</Button></td>
+                            </tr>
                         ))
                     )}
-                </TableBody>
-            </Table>
+                </tbody>
+            </table>
         </div>
         <div className="p-4 border-t bg-slate-50 flex justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
@@ -932,7 +933,7 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              {/* FIX: Added pb-40 to allow scrolling space at bottom */}
+              {/* FIX: Increased pb-40 to allow scrolling space at bottom */}
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
@@ -1023,24 +1024,23 @@ export function TestResizableDialog() {
                      </div>
                   </div>
 
-                  {/* ITEMS TABLE - FIX: Added min-h-[300px] */}
-                  <div className="border border-blue-800 rounded-md min-h-[300px]">
-                    <Table>
-                      <TableHeader className="bg-gray-50">
-                        <TableRow>
-                          {/* ROUNDED CORNERS FIX */}
-                          <TableHead className="w-[40%] min-w-[200px] rounded-tl-md">Article</TableHead>
-                          <TableHead className="w-[15%] min-w-[80px]">Qté</TableHead>
-                          <TableHead className="w-[15%] min-w-[80px]">Prix UHT</TableHead>
-                          <TableHead className="w-[15%] min-w-[80px]">TVA (%)</TableHead>
-                          <TableHead className="w-[15%] text-right min-w-[80px]">Total HT</TableHead>
-                          <TableHead className="w-[90px] rounded-tr-md"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                  {/* ITEMS TABLE */}
+                  <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
+                    <table className="w-full caption-bottom text-sm">
+                      <thead className="bg-gray-50">
+                        <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[40%] min-w-[200px] rounded-tl-md">Article</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Qté</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Prix UHT</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">TVA (%)</th>
+                          <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[15%] text-right min-w-[80px]">Total HT</th>
+                          <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[90px] rounded-tr-md"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="[&_tr:last-child]:border-0">
                         {items.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
+                            <tr key={item.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                              <td className="p-4 align-middle">
                                 <ArticleSelector 
                                     value={item.articleId}
                                     onChange={(val) => handleArticleChange(item.id, val)}
@@ -1048,28 +1048,28 @@ export function TestResizableDialog() {
                                     onOpenAdvanced={() => openArticleSearch(item.id)}
                                     onCreateNew={() => handleCreateNewArticle(item.id)}
                                 />
-                              </TableCell>
-                              <TableCell><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></TableCell>
-                              <TableCell><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></TableCell>
-                              <TableCell><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></TableCell>
-                              <TableCell className="text-right font-medium">{(item.price * item.qty).toFixed(2)} €</TableCell>
-                              <TableCell className="flex items-center justify-end gap-1">
+                              </td>
+                              <td className="p-4 align-middle"><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></td>
+                              <td className="p-4 align-middle"><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></td>
+                              <td className="p-4 align-middle"><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></td>
+                              <td className="p-4 align-middle text-right font-medium">{(item.price * item.qty).toFixed(2)} €</td>
+                              <td className="p-4 align-middle flex items-center justify-end gap-1">
                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
                                    <PlusCircle className="h-4 w-4" />
                                  </Button>
                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
                                    <Trash2 className="h-4 w-4" />
                                  </Button>
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                            </tr>
                         ))}
-                        <TableRow>
-                          <TableCell colSpan={6}>
+                        <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                          <td colSpan={6} className="p-4 align-middle">
                              <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </form>
               </div>
