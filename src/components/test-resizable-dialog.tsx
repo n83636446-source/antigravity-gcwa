@@ -46,7 +46,7 @@ type Supplier = {
 
 type Representative = {
   id: string
-  code?: string // ADDED CODE FIELD
+  code?: string // Code is now available
   name: string
   email?: string
 }
@@ -90,7 +90,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE REPRESENTATIVE SELECTOR (NO CODE FIELD IN LIST) ---
+// --- COMPONENT: AUTOCOMPLETE REPRESENTATIVE SELECTOR ---
 const RepresentativeSelector = ({ 
     value, 
     onChange, 
@@ -124,7 +124,8 @@ const RepresentativeSelector = ({
         if (!inputValue) return representatives.slice(0, 10); 
         const lower = inputValue.toLowerCase()
         return representatives.filter(r => 
-            r.name.toLowerCase().includes(lower)
+            r.name.toLowerCase().includes(lower) || 
+            (r.code && r.code.toLowerCase().includes(lower))
         ).slice(0, 20); 
     }, [inputValue, representatives])
 
@@ -170,9 +171,9 @@ const RepresentativeSelector = ({
                     className="absolute top-full left-0 mt-1 w-[500px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
                     onMouseDown={(e) => e.preventDefault()} 
                 >
-                    <div className="grid grid-cols-[1fr_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
-                        <span className="text-left pl-2">Nom</span>
-                        <span className="text-left">Email</span>
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Nom</span>
                     </div>
 
                     <div className="max-h-[300px] overflow-y-auto p-1">
@@ -205,9 +206,9 @@ const RepresentativeSelector = ({
                                 }}
                                 className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
                             >
-                                <div className="grid grid-cols-[1fr_1fr] items-center gap-4 w-full">
-                                    <span className="text-left font-medium pl-2">{rep.name}</span>
-                                    <span className="text-left text-muted-foreground truncate">{rep.email || "-"}</span>
+                                <div className="grid grid-cols-[100px_1fr] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{rep.code || "-"}</span>
+                                    <span className="text-left truncate font-medium">{rep.name}</span>
                                 </div>
                             </div>
                         ))}
@@ -250,7 +251,8 @@ const RepresentativeSearchDialog = ({
     if (!searchTerm) return representatives;
     const lowerTerm = searchTerm.toLowerCase();
     return representatives.filter(r => 
-      r.name.toLowerCase().includes(lowerTerm)
+      r.name.toLowerCase().includes(lowerTerm) || 
+      (r.code && r.code.toLowerCase().includes(lowerTerm))
     );
   }, [searchTerm, representatives]);
 
@@ -260,14 +262,14 @@ const RepresentativeSearchDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
         <div className="p-4 border-b">
             <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
             <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Filtrer par nom..."
+                  placeholder="Filtrer par code, nom..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -279,6 +281,7 @@ const RepresentativeSearchDialog = ({
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
                     </tr>
@@ -286,11 +289,12 @@ const RepresentativeSearchDialog = ({
                 <tbody className="[&_tr:last-child]:border-0">
                     {filteredReps.length === 0 ? (
                         <tr className="border-b transition-colors">
-                            <td colSpan={2} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun représentant trouvé.</td>
+                            <td colSpan={3} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun représentant trouvé.</td>
                         </tr>
                     ) : (
                         filteredReps.map(rep => (
                             <tr key={rep.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
+                                <td className="p-4 align-middle font-mono text-xs">{rep.code || "-"}</td>
                                 <td className="p-4 align-middle font-medium">{rep.name}</td>
                                 <td className="p-4 align-middle text-muted-foreground">{rep.email || "-"}</td>
                             </tr>
@@ -890,7 +894,7 @@ export function TestResizableDialog() {
   const [newRowId, setNewRowId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) 
-  const [isRepresentativeSearchOpen, setIsRepresentativeSearchOpen] = useState(false)
+  const [isRepresentativeSearchOpen, setIsRepresentativeSearchOpen] = useState(false) // NEW
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
 
   // --- FIRESTORE ---
@@ -994,6 +998,7 @@ export function TestResizableDialog() {
 
         setAvailableArticles(deduplicate(articles));
         setAvailableSuppliers(deduplicate(suppliers));
+        // Force refresh of representatives to catch new "REP001"
         setAvailableRepresentatives(deduplicate(reps));
 
       } catch (error) {
@@ -1134,8 +1139,13 @@ export function TestResizableDialog() {
   }
 
   const handleRepresentativeCreated = (newRep: any) => {
+      // 1. Cast the new rep
       const repWithType = newRep as Representative
+      
+      // 2. Add to available list so `lastRepCodeNumber` updates immediately
       setAvailableRepresentatives(prev => deduplicate([repWithType, ...prev]))
+      
+      // 3. Auto-select the new representative
       setRepresentativeId(repWithType.id)
   }
 
@@ -1392,7 +1402,6 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              {/* FIX: Increased pb-40 to allow scrolling space at bottom */}
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
@@ -1465,7 +1474,7 @@ export function TestResizableDialog() {
                                       onOpenAdvanced={() => setIsRepresentativeSearchOpen(true)}
                                       onCreateNew={() => setIsCreateRepOpen(true)}
                                   />
-                               </div>
+                                </div>
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                   <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
                                   <Input placeholder="Référence" className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
