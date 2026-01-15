@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { RepresentativesTable } from '@/components/representatives-table';
 import { RepresentativeDialog } from '@/components/representative-dialog';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, deleteDoc, doc } from 'firebase/firestore';
 import type { Representative } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,14 +22,23 @@ export default function RepresentativesPage() {
   useEffect(() => {
     if (!firestore) return;
 
-    // CHANGED: Sort by 'code' in ascending order so new items (higher codes) appear at the bottom
-    const q = query(collection(firestore, 'representatives'), orderBy('code', 'asc'));
+    // Remove orderBy here to rely on robust client-side sorting
+    const q = query(collection(firestore, 'representatives'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reps = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
+
+      // FORCE SORT: Numeric Ascending (REP001, REP002, REP003...)
+      reps.sort((a, b) => {
+        // Extract numbers, treat missing codes as 0
+        const numA = parseInt((a.code || "").replace(/\D/g, "") || "0", 10);
+        const numB = parseInt((b.code || "").replace(/\D/g, "") || "0", 10);
+        return numA - numB;
+      });
+
       setRepresentatives(reps);
     });
 
