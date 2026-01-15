@@ -101,6 +101,7 @@ export function RepresentativesTable({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[100px]">Code</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead>Email</TableHead>
                 </TableRow>
@@ -116,6 +117,9 @@ export function RepresentativesTable({
                       selectedRepresentative?.id === representative.id && 'bg-muted/50'
                     )}
                   >
+                    <TableCell className="font-mono text-muted-foreground">
+                        {representative.code || "-"}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {representative.name}
                     </TableCell>
