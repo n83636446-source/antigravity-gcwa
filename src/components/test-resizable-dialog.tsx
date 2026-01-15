@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-// Removed Table imports to avoid clipping issues
 // Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check } from "lucide-react"
@@ -90,26 +89,39 @@ function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: Mou
     }, [ref, handler]);
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (FINAL ROBUST FIX) ---
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR (WITH AUTO-FOCUS) ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
     articles, 
     onOpenAdvanced,
-    onCreateNew
+    onCreateNew,
+    autoFocus = false // NEW PROP
 }: { 
     value: string, 
     onChange: (id: string) => void, 
     articles: Article[],
     onOpenAdvanced: () => void,
-    onCreateNew: () => void
+    onCreateNew: () => void,
+    autoFocus?: boolean
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
     const wrapperRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null) // NEW REF for direct focus
 
     // Close when clicking strictly outside the component
     useClickOutside(wrapperRef, () => setOpen(false));
+
+    // AUTO-FOCUS LOGIC
+    useEffect(() => {
+        if (autoFocus && inputRef.current) {
+            // Small timeout ensures the element is fully mounted and ready
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+        }
+    }, [autoFocus]);
 
     useEffect(() => {
         const selected = articles.find(a => a.id === value)
@@ -139,11 +151,11 @@ const ArticleSelector = ({
         <div ref={wrapperRef} className="relative w-full">
             <div className="relative">
                 <Input
+                    ref={inputRef} // ATTACH REF
                     placeholder="Saisir un article..."
                     value={inputValue}
                     autoComplete="off" 
                     onFocus={() => setOpen(true)}
-                    // We rely solely on useClickOutside for closing
                     onChange={(e) => {
                         setInputValue(e.target.value)
                         setOpen(true)
@@ -166,26 +178,23 @@ const ArticleSelector = ({
                 </Button>
             </div>
 
-            {/* MANUAL ABSOLUTE DROPDOWN - PURE HTML */}
+            {/* MANUAL ABSOLUTE DROPDOWN */}
             {open && (
                 <div 
                     className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
+                    onMouseDown={(e) => e.preventDefault()} 
                 >
-                    {/* Header */}
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Désignation</span>
                         <span className="text-right pr-2">Stock</span>
                     </div>
 
-                    {/* Scrollable List */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         
-                        {/* Option: Create New */}
                         <div 
                             onMouseDown={(e) => { 
-                                // CRITICAL: Prevent Default keeps the input focused
-                                e.preventDefault(); 
+                                e.stopPropagation();
                                 setOpen(false); 
                                 onCreateNew(); 
                             }} 
@@ -203,13 +212,11 @@ const ArticleSelector = ({
                             </div>
                         )}
 
-                        {/* Article Items */}
                         {filteredArticles.map((article) => (
                             <div
                                 key={article.id}
                                 onMouseDown={(e) => {
-                                    // CRITICAL: Prevent Default keeps the input focused
-                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleSelect(article);
                                 }}
                                 className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
@@ -230,11 +237,9 @@ const ArticleSelector = ({
 
                         <div className="h-px bg-slate-100 my-1" />
 
-                        {/* Option: Advanced Search */}
                         <div 
                             onMouseDown={(e) => { 
-                                // CRITICAL: Prevent Default keeps the input focused
-                                e.preventDefault();
+                                e.stopPropagation();
                                 setOpen(false); 
                                 onOpenAdvanced();
                             }} 
@@ -295,7 +300,7 @@ const ArticleSearchDialog = ({
             </div>
         </div>
         <div className="flex-1 overflow-auto p-0">
-             {/* HTML Table here for consistency and to avoid clipping */}
+            {/* HTML Table here too for consistency */}
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -1025,10 +1030,11 @@ export function TestResizableDialog() {
                   </div>
 
                   {/* ITEMS TABLE */}
-                  <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
+                  <div className="border border-blue-800 rounded-md">
                     <table className="w-full caption-bottom text-sm">
                       <thead className="bg-gray-50">
                         <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                          {/* ROUNDED CORNERS FIX */}
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[40%] min-w-[200px] rounded-tl-md">Article</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Qté</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[15%] min-w-[80px]">Prix UHT</th>
@@ -1047,6 +1053,8 @@ export function TestResizableDialog() {
                                     articles={availableArticles}
                                     onOpenAdvanced={() => openArticleSearch(item.id)}
                                     onCreateNew={() => handleCreateNewArticle(item.id)}
+                                    // Add autoFocus prop to fix the "Auto Highlight" regression
+                                    autoFocus={item.id === newRowId}
                                 />
                               </td>
                               <td className="p-4 align-middle"><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></td>
