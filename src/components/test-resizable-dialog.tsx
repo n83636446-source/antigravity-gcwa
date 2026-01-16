@@ -151,25 +151,27 @@ const RepresentativeSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
+                    {/* 1. FIXED CREATE BUTTON AT TOP */}
+                    <div 
+                        onMouseDown={(e) => { 
+                            e.stopPropagation();
+                            setOpen(false); 
+                            onCreateNew(); 
+                        }} 
+                        className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+                    >
+                        <PlusCircle className="ml-1 h-4 w-4" />
+                        Créer un nouveau représentant
+                    </div>
+
+                    {/* 2. FIXED HEADERS */}
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Nom</span>
                     </div>
 
+                    {/* 3. SCROLLABLE LIST */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.stopPropagation();
-                                setOpen(false); 
-                                onCreateNew(); 
-                            }} 
-                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            Créer un nouveau représentant
-                        </div>
-
-                        <div className="h-px bg-slate-100 my-1" />
                         
                         {filteredReps.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -293,25 +295,27 @@ const SupplierSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
+                    {/* 1. FIXED CREATE BUTTON */}
+                    <div 
+                        onMouseDown={(e) => { 
+                            e.stopPropagation();
+                            setOpen(false); 
+                            onCreateNew(); 
+                        }} 
+                        className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+                    >
+                        <PlusCircle className="ml-1 h-4 w-4" />
+                        Créer un nouveau fournisseur
+                    </div>
+
+                    {/* 2. FIXED HEADERS */}
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Nom</span>
                     </div>
 
+                    {/* 3. SCROLLABLE LIST */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.stopPropagation();
-                                setOpen(false); 
-                                onCreateNew(); 
-                            }} 
-                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            Créer un nouveau fournisseur
-                        </div>
-
-                        <div className="h-px bg-slate-100 my-1" />
                         
                         {filteredSuppliers.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -447,26 +451,28 @@ const ArticleSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
+                    {/* 1. FIXED CREATE BUTTON */}
+                    <div 
+                        onMouseDown={(e) => { 
+                            e.preventDefault(); 
+                            setOpen(false); 
+                            onCreateNew(); 
+                        }} 
+                        className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+                    >
+                        <PlusCircle className="ml-1 h-4 w-4" />
+                        Créer un nouvel article
+                    </div>
+
+                    {/* 2. FIXED HEADERS */}
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Désignation</span>
                         <span className="text-right pr-2">Stock</span>
                     </div>
 
+                    {/* 3. SCROLLABLE LIST */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.preventDefault(); 
-                                setOpen(false); 
-                                onCreateNew(); 
-                            }} 
-                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            Créer un nouvel article
-                        </div>
-
-                        <div className="h-px bg-slate-100 my-1" />
                         
                         {filteredArticles.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -564,15 +570,17 @@ const RepresentativeSearchDialog = ({
                 />
             </div>
         </div>
+        
+        {/* NEW TOP ROW (Fixed above table) */}
+        <div 
+            onClick={onCreateNew}
+            className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+        >
+            <PlusCircle className="h-4 w-4" />
+            Créer un nouveau représentant
+        </div>
+
         <div className="flex-1 overflow-auto p-0">
-             {/* NEW TOP ROW */}
-            <div 
-                onClick={onCreateNew}
-                className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
-            >
-                <PlusCircle className="h-4 w-4" />
-                Créer un nouveau représentant
-            </div>
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -652,15 +660,17 @@ const SupplierSearchDialog = ({
                 />
             </div>
         </div>
+
+        {/* NEW TOP ROW */}
+        <div 
+            onClick={onCreateNew}
+            className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+        >
+            <PlusCircle className="h-4 w-4" />
+            Créer un nouveau fournisseur
+        </div>
+
         <div className="flex-1 overflow-auto p-0">
-            {/* NEW TOP ROW */}
-            <div 
-                onClick={onCreateNew}
-                className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
-            >
-                <PlusCircle className="h-4 w-4" />
-                Créer un nouveau fournisseur
-            </div>
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -742,15 +752,17 @@ const ArticleSearchDialog = ({
                 />
             </div>
         </div>
+
+        {/* NEW TOP ROW */}
+        <div 
+            onClick={onCreateNew}
+            className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+        >
+            <PlusCircle className="h-4 w-4" />
+            Créer un nouvel article
+        </div>
+
         <div className="flex-1 overflow-auto p-0">
-            {/* NEW TOP ROW */}
-            <div 
-                onClick={onCreateNew}
-                className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
-            >
-                <PlusCircle className="h-4 w-4" />
-                Créer un nouvel article
-            </div>
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
