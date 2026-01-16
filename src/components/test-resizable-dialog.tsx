@@ -890,6 +890,7 @@ export function TestResizableDialog() {
   
   const [showCloseAlert, setShowCloseAlert] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
+  const [flashingRowId, setFlashingRowId] = useState<string | null>(null) // NEW STATE
 
   const [date, setDate] = useState<Date>(new Date())
   const [dueDate, setDueDate] = useState<Date>(new Date())
@@ -1053,6 +1054,7 @@ export function TestResizableDialog() {
     }))
   }
 
+  // --- MERGE LOGIC ---
   const handleMerge = (originalId: string, duplicateId: string) => {
     const duplicateItem = items.find(i => i.id === duplicateId);
     if (!duplicateItem) return;
@@ -1066,6 +1068,10 @@ export function TestResizableDialog() {
         });
         return updatedItems.filter(item => item.id !== duplicateId);
     });
+
+    // FLASH ANIMATION TRIGGER
+    setFlashingRowId(originalId);
+    setTimeout(() => setFlashingRowId(null), 1000);
   }
 
   const handleArticleChange = (rowId: string, value: string) => {
@@ -1483,7 +1489,7 @@ export function TestResizableDialog() {
                             const originalItem = item.articleId ? items.find((i, iIndex) => i.articleId === item.articleId && iIndex < index) : null;
 
                             return (
-                                <tr key={item.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                <tr key={item.id} className={cn("border-b transition-all duration-1000 ease-out", flashingRowId === item.id ? "bg-green-100/80" : "hover:bg-muted/50 data-[state=selected]:bg-muted")}>
                                   <td className="p-4 align-middle">
                                     <ArticleSelector 
                                         value={item.articleId}
