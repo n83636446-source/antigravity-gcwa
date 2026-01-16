@@ -551,8 +551,9 @@ const RepresentativeSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
-        <div className="p-4 border-b flex justify-between items-center gap-4">
-            <div className="relative flex-1">
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
+            <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Filtrer par code, nom..."
@@ -562,12 +563,16 @@ const RepresentativeSearchDialog = ({
                   autoFocus
                 />
             </div>
-            {/* NEW BUTTON */}
-            <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                <Plus className="mr-2 h-4 w-4" /> Créer nouveau
-            </Button>
         </div>
         <div className="flex-1 overflow-auto p-0">
+             {/* NEW TOP ROW */}
+            <div 
+                onClick={onCreateNew}
+                className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+            >
+                <PlusCircle className="h-4 w-4" />
+                Créer un nouveau représentant
+            </div>
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -634,8 +639,9 @@ const SupplierSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
-        <div className="p-4 border-b flex justify-between items-center gap-4">
-            <div className="relative flex-1">
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un fournisseur</h2>
+            <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Filtrer par code, nom..."
@@ -645,12 +651,16 @@ const SupplierSearchDialog = ({
                   autoFocus
                 />
             </div>
-            {/* NEW BUTTON */}
-            <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                <Plus className="mr-2 h-4 w-4" /> Créer nouveau
-            </Button>
         </div>
         <div className="flex-1 overflow-auto p-0">
+            {/* NEW TOP ROW */}
+            <div 
+                onClick={onCreateNew}
+                className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+            >
+                <PlusCircle className="h-4 w-4" />
+                Créer un nouveau fournisseur
+            </div>
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -719,8 +729,9 @@ const ArticleSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
-        <div className="p-4 border-b flex justify-between items-center gap-4">
-            <div className="relative flex-1">
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
+            <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Filtrer par code ou désignation..."
@@ -730,12 +741,16 @@ const ArticleSearchDialog = ({
                   autoFocus
                 />
             </div>
-            {/* NEW BUTTON */}
-            <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                <Plus className="mr-2 h-4 w-4" /> Créer nouveau
-            </Button>
         </div>
         <div className="flex-1 overflow-auto p-0">
+            {/* NEW TOP ROW */}
+            <div 
+                onClick={onCreateNew}
+                className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+            >
+                <PlusCircle className="h-4 w-4" />
+                Créer un nouvel article
+            </div>
             <table className="w-full caption-bottom text-sm">
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
