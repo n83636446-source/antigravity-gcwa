@@ -930,7 +930,8 @@ export function TestResizableDialog() {
     return false;
   }
 
-  // --- CALCULATIONS ---
+  // --- NO CALCULATIONS HERE ANYMORE ---
+  // The dialogs calculate their own codes now.
 
   const { totalHT, totalTVA, totalTTC } = items.reduce(
     (acc, item) => {
@@ -1094,7 +1095,11 @@ export function TestResizableDialog() {
   }
 
   const handleRepresentativeChange = (value: string) => {
-    setRepresentativeId(value)
+      if (value === "create_new_rep") {
+          setIsCreateRepOpen(true)
+          return
+      }
+      setRepresentativeId(value)
   }
 
   const handleRepresentativeSearchSelect = (rep: Representative) => {
@@ -1103,18 +1108,17 @@ export function TestResizableDialog() {
   }
 
   const handleRepresentativeCreated = (newRep: any) => {
-      // 1. Cast the new rep
       const repWithType = newRep as Representative
-      
-      // 2. Add to available list so it's available for selection
       setAvailableRepresentatives(prev => deduplicate([repWithType, ...prev]))
-      
-      // 3. Auto-select the new representative
       setRepresentativeId(repWithType.id)
   }
 
   const handleSupplierChange = (value: string) => {
-    setSupplierId(value)
+      if (value === "create_new_supplier") {
+          setIsCreateSupplierOpen(true)
+          return
+      }
+      setSupplierId(value)
   }
 
   const handleSupplierSearchSelect = (supplier: Supplier) => {
@@ -1531,7 +1535,7 @@ export function TestResizableDialog() {
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
-        articles={availableArticles}
+        articles={availableArticles} // Changed: Pass full list, not number
         isChild={true} 
       />
 
@@ -1539,14 +1543,14 @@ export function TestResizableDialog() {
         isOpen={isCreateRepOpen}
         onOpenChange={setIsCreateRepOpen}
         onRepresentativeCreated={handleRepresentativeCreated}
-        representatives={availableRepresentatives}
+        representatives={availableRepresentatives} // Changed: Pass full list, not number
       />
 
       <SupplierDialog
         isOpen={isCreateSupplierOpen}
         onOpenChange={setIsCreateSupplierOpen}
         onSupplierCreated={handleSupplierCreated}
-        suppliers={availableSuppliers}
+        suppliers={availableSuppliers} // Changed: Pass full list, not number
       />
 
       <SupplierSearchDialog 
