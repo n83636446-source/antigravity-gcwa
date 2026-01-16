@@ -122,7 +122,7 @@ export default function SuppliersPage() {
     [firestore]
   );
   const { data: purchaseOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
-  
+    
   const purchaseReceiptsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
     [firestore]
@@ -135,15 +135,18 @@ export default function SuppliersPage() {
   );
   const { data: purchaseInvoices } = useCollection<PurchaseInvoice>(purchaseInvoicesRef);
 
-
-  const lastSupplierCodeNumber = useMemo(() => {
-    if (!suppliers || suppliers.length === 0) {
-      return 0;
-    }
-    return suppliers.reduce((max, s) => {
-      const codeNumber = parseInt((s.code || 'FOU0').replace('FOU', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
+  // --- SORTING LOGIC ---
+  const sortedSuppliers = useMemo(() => {
+    if (!suppliers) return [];
+    return [...suppliers].sort((a, b) => {
+      // Helper to extract numeric part of FOU001
+      const getVal = (code?: string) => {
+        if (!code) return 999999;
+        const digits = code.replace(/\D/g, '');
+        return digits ? parseInt(digits, 10) : 999999;
+      };
+      return getVal(a.code) - getVal(b.code);
+    });
   }, [suppliers]);
 
   const handleAdd = () => {
@@ -268,7 +271,7 @@ export default function SuppliersPage() {
             >
               <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
                 <SuppliersTable
-                  suppliers={suppliers || []}
+                  suppliers={sortedSuppliers} // Changed: Pass sorted list
                   onRowClick={handleSelectSupplier}
                   onRowDoubleClick={handleEdit}
                   selectedSupplierId={selectedSupplier?.id}
@@ -285,7 +288,7 @@ export default function SuppliersPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         supplier={editingSupplier}
-        lastSupplierCodeNumber={lastSupplierCodeNumber}
+        // Removed: lastSupplierCodeNumber={lastSupplierCodeNumber}
         suppliers={suppliers || []}
       />
 
