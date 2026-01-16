@@ -5,24 +5,23 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2 } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2, Eraser } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, doc } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates"
-import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" // Importing your types
-import { useToast } from "@/hooks/use-toast" // Assuming you have this hook
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates" // Added delete helper
+import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
+import { useToast } from "@/hooks/use-toast" 
 
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
 
-// --- LOCAL TYPES (For Form State) ---
-// These mirror your FirestoreEntity types but are used for local state management
+// --- TYPES ---
 type Article = {
   id: string
   code: string
@@ -899,8 +898,7 @@ export function TestResizableDialog() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([])
   
-  // --- NEW STATE: Receipt Number ---
-  const [receiptNumber, setReceiptNumber] = useState("")
+  const [receiptNumber, setReceiptNumber] = useState("BR-0001")
 
   const { toast } = useToast()
 
@@ -931,7 +929,6 @@ export function TestResizableDialog() {
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
-  // --- HELPER: CALCULATE NEXT NUMBER ---
   const calculateNextNumber = (receipts: PurchaseReceipt[]) => {
     if (!receipts || receipts.length === 0) return "BR-0001";
     const maxId = receipts.reduce((max, r) => {
@@ -952,7 +949,6 @@ export function TestResizableDialog() {
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
     setIsShaking(false)
-    // RE-CALCULATE NUMBER ON RESET
     setReceiptNumber(calculateNextNumber(existingReceipts));
   }
 
@@ -999,7 +995,6 @@ export function TestResizableDialog() {
         setAvailableRepresentatives(deduplicate(reps));
         setExistingReceipts(receipts);
         
-        // AUTO-CALCULATE ON LOAD
         setReceiptNumber(calculateNextNumber(receipts));
 
       } catch (error) {
@@ -1038,7 +1033,6 @@ export function TestResizableDialog() {
     }
   }
 
-  // --- SUBMIT LOGIC (FIXED) ---
   const handleCreateReceipt = async () => {
     if (!db) return;
     
@@ -1060,7 +1054,7 @@ export function TestResizableDialog() {
 
     try {
         const receiptData: any = {
-            receiptNumber: receiptNumber, // USE STATE
+            receiptNumber: receiptNumber, 
             supplierId: supplierId,
             receiptDate: date instanceof Date ? date.toISOString() : new Date().toISOString(),
             items: validItems.map(i => ({
@@ -1097,6 +1091,21 @@ export function TestResizableDialog() {
         toast({ title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
         setIsSubmitting(false);
     }
+  }
+
+  // --- FORCE DELETE HANDLER ---
+  const handleForceDelete = async (id: string, number: string) => {
+      if(!db) return;
+      if (!confirm(`Êtes-vous sûr de vouloir supprimer définitivement le bon ${number} ?`)) return;
+
+      try {
+          await deleteDocumentNonBlocking(doc(db, "purchaseReceipts", id));
+          toast({ title: "Supprimé", description: `Bon ${number} supprimé définitivement.` });
+          setExistingReceipts(prev => prev.filter(r => r.id !== id));
+      } catch (e) {
+          console.error("Delete failed", e);
+          toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
+      }
   }
 
   const addItem = () => {
@@ -1145,7 +1154,6 @@ export function TestResizableDialog() {
     }))
   }
 
-  // --- MERGE LOGIC ---
   const handleMerge = (originalId: string, duplicateId: string) => {
     const duplicateItem = items.find(i => i.id === duplicateId);
     if (!duplicateItem) return;
@@ -1160,7 +1168,6 @@ export function TestResizableDialog() {
         return updatedItems.filter(item => item.id !== duplicateId);
     });
 
-    // FLASH ANIMATION TRIGGER
     setFlashingRowId(originalId);
     setTimeout(() => setFlashingRowId(null), 1000);
   }
@@ -1634,6 +1641,57 @@ export function TestResizableDialog() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* --- CLEANUP SECTION (TEMPORARY) --- */}
+                  <div className="mt-8 border-t pt-6 bg-red-50 p-4 rounded-md">
+                      <h4 className="font-bold text-red-800 flex items-center gap-2 mb-4">
+                          <AlertTriangle className="h-5 w-5" />
+                          Zone de Nettoyage (Emergency Cleanup)
+                      </h4>
+                      <div className="text-sm text-red-700 mb-4">
+                          Utilisez cette liste pour supprimer définitivement les bons de réception bloqués (statut "Validé" sans stock).
+                      </div>
+                      <div className="max-h-60 overflow-y-auto border rounded-md bg-white">
+                          <table className="w-full text-sm">
+                              <thead className="bg-slate-100 text-left">
+                                  <tr>
+                                      <th className="p-2">Numéro</th>
+                                      <th className="p-2">Date</th>
+                                      <th className="p-2">Statut</th>
+                                      <th className="p-2 text-right">Action</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {existingReceipts.map(receipt => (
+                                      <tr key={receipt.id} className="border-b hover:bg-slate-50">
+                                          <td className="p-2 font-mono">{receipt.receiptNumber}</td>
+                                          <td className="p-2">{format(new Date(receipt.receiptDate), "dd/MM/yyyy")}</td>
+                                          <td className="p-2">
+                                              <span className={cn(
+                                                  "px-2 py-1 rounded-full text-xs font-semibold",
+                                                  receipt.status === 'Validé' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                                              )}>
+                                                  {receipt.status}
+                                              </span>
+                                          </td>
+                                          <td className="p-2 text-right">
+                                              <Button 
+                                                  size="sm" 
+                                                  variant="destructive" 
+                                                  className="h-7 px-2"
+                                                  onClick={() => handleForceDelete(receipt.id, receipt.receiptNumber)}
+                                              >
+                                                  <Trash2 className="h-3 w-3 mr-1" />
+                                                  Supprimer
+                                              </Button>
+                                          </td>
+                                      </tr>
+                                  ))}
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+
                 </form>
               </div>
 
