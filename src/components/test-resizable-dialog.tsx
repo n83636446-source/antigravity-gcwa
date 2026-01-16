@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -287,7 +287,6 @@ const SupplierSelector = ({
                 </div>
             </PopoverTrigger>
 
-            {/* ADDED pointer-events-auto HERE */}
             <PopoverContent 
                 className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
                 align="start"
@@ -517,17 +516,21 @@ const ArticleSelector = ({
     )
 }
 
-// --- REST OF THE FILE: SEARCH DIALOGS & MAIN FORM (UNCHANGED) ---
+// --- REST OF THE FILE: SEARCH DIALOGS & MAIN FORM ---
+
+// 1. UPDATED Representative Search Dialog
 const RepresentativeSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
   onSelect, 
-  representatives 
+  representatives,
+  onCreateNew // NEW PROP
 }: { 
   isOpen: boolean; 
   onOpenChange: (open: boolean) => void; 
   onSelect: (rep: Representative) => void;
   representatives: Representative[];
+  onCreateNew?: () => void;
 }) => {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -548,9 +551,8 @@ const RepresentativeSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
-            <div className="relative">
+        <div className="p-4 border-b flex justify-between items-center gap-4">
+            <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Filtrer par code, nom..."
@@ -560,6 +562,10 @@ const RepresentativeSearchDialog = ({
                   autoFocus
                 />
             </div>
+            {/* NEW BUTTON */}
+            <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                <Plus className="mr-2 h-4 w-4" /> Créer nouveau
+            </Button>
         </div>
         <div className="flex-1 overflow-auto p-0">
             <table className="w-full caption-bottom text-sm">
@@ -595,16 +601,19 @@ const RepresentativeSearchDialog = ({
   )
 }
 
+// 2. UPDATED Supplier Search Dialog
 const SupplierSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
   onSelect, 
-  suppliers 
+  suppliers,
+  onCreateNew // NEW PROP
 }: { 
   isOpen: boolean; 
   onOpenChange: (open: boolean) => void; 
   onSelect: (supplier: Supplier) => void;
   suppliers: Supplier[];
+  onCreateNew?: () => void;
 }) => {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -625,9 +634,8 @@ const SupplierSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un fournisseur</h2>
-            <div className="relative">
+        <div className="p-4 border-b flex justify-between items-center gap-4">
+            <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Filtrer par code, nom..."
@@ -637,6 +645,10 @@ const SupplierSearchDialog = ({
                   autoFocus
                 />
             </div>
+            {/* NEW BUTTON */}
+            <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                <Plus className="mr-2 h-4 w-4" /> Créer nouveau
+            </Button>
         </div>
         <div className="flex-1 overflow-auto p-0">
             <table className="w-full caption-bottom text-sm">
@@ -674,16 +686,19 @@ const SupplierSearchDialog = ({
   )
 }
 
+// 3. UPDATED Article Search Dialog
 const ArticleSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
   onSelect, 
-  articles 
+  articles,
+  onCreateNew // NEW PROP
 }: { 
   isOpen: boolean; 
   onOpenChange: (open: boolean) => void; 
   onSelect: (article: Article) => void;
   articles: Article[];
+  onCreateNew?: () => void;
 }) => {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -704,9 +719,8 @@ const ArticleSearchDialog = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
         <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
-            <div className="relative">
+        <div className="p-4 border-b flex justify-between items-center gap-4">
+            <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Filtrer par code ou désignation..."
@@ -716,6 +730,10 @@ const ArticleSearchDialog = ({
                   autoFocus
                 />
             </div>
+            {/* NEW BUTTON */}
+            <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+                <Plus className="mr-2 h-4 w-4" /> Créer nouveau
+            </Button>
         </div>
         <div className="flex-1 overflow-auto p-0">
             <table className="w-full caption-bottom text-sm">
@@ -1515,6 +1533,7 @@ export function TestResizableDialog() {
         onOpenChange={setIsSupplierSearchOpen}
         onSelect={handleSupplierSearchSelect}
         suppliers={availableSuppliers}
+        onCreateNew={() => { setIsSupplierSearchOpen(false); setIsCreateSupplierOpen(true); }} // WIRING
       />
 
       <RepresentativeSearchDialog 
@@ -1522,6 +1541,7 @@ export function TestResizableDialog() {
         onOpenChange={setIsRepresentativeSearchOpen}
         onSelect={handleRepresentativeSearchSelect}
         representatives={availableRepresentatives}
+        onCreateNew={() => { setIsRepresentativeSearchOpen(false); setIsCreateRepOpen(true); }} // WIRING
       />
 
       <ArticleSearchDialog 
@@ -1529,6 +1549,7 @@ export function TestResizableDialog() {
         onOpenChange={setIsSearchOpen}
         onSelect={handleArticleSearchSelect}
         articles={availableArticles}
+        onCreateNew={() => { setIsSearchOpen(false); if(searchTargetRowId) handleCreateNewArticle(searchTargetRowId); }} // WIRING
       />
     </>
   )
