@@ -21,6 +21,7 @@ export default function RepresentativesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // 1. Fetch Raw Data
   useEffect(() => {
     if (!firestore) return;
 
@@ -31,55 +32,50 @@ export default function RepresentativesPage() {
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
-      
       setRepresentatives(reps);
     });
 
     return () => unsubscribe();
   }, [firestore]);
 
-  // THE BULLETPROOF SORT
+  // 2. THE FAIL-SAFE SORT
   const sortedRepresentatives = useMemo(() => {
-    // 1. Create a copy so we don't mutate state
     const sorted = [...representatives];
 
-    // 2. Sort Logic
     sorted.sort((a, b) => {
-      // Helper: Turn "REP005" -> 5. Turn null -> 999999.
-      const getWeight = (item: Representative) => {
-        if (!item.code) return 999999; // No code? Put at bottom.
+      // Helper: Extract numeric value safely
+      const getWeight = (r: Representative) => {
+        if (!r.code) return 999999999; // No code? Bottom.
         
-        // Convert to string safely (handles numbers/nulls)
-        const str = String(item.code);
+        // Remove non-digits
+        const digits = String(r.code).replace(/[^0-9]/g, '');
         
-        // Remove everything that is NOT a number (e.g. "REP" or "-" or spaces)
-        const cleanStr = str.replace(/[^0-9]/g, '');
-        
-        // If string was just text like "TEST", cleanStr is empty. Return huge number.
-        if (cleanStr === '') return 999999;
+        // If no digits found (e.g. "TEST"), return HUGE number
+        if (!digits) return 999999999;
 
-        // Parse to integer
-        return parseInt(cleanStr, 10);
+        // Parse
+        const val = parseInt(digits, 10);
+        
+        // Final Safety: If NaN, return HUGE number
+        return isNaN(val) ? 999999999 : val;
       };
 
       const weightA = getWeight(a);
       const weightB = getWeight(b);
 
-      // Compare: Low Numbers (1) to High Numbers (5)
-      return weightA - weightB;
+      // Primary Sort: By Number (Ascending: 1, 2, 3)
+      if (weightA !== weightB) {
+        return weightA - weightB;
+      }
+
+      // Secondary Sort: By Name (Tie-breaker)
+      // This stops items from jumping around if they have the same number
+      return (a.name || "").localeCompare(b.name || "");
     });
 
-    // 3. DEBUG: Log the order to Console (Press F12 to check)
-    // This will show you exactly what order the computer thinks they are in.
-    if (sorted.length > 0) {
-        console.groupCollapsed("Representative Sort Debug");
-        console.table(sorted.map(r => ({ 
-            Code: r.code, 
-            "Calculated Weight": parseInt(String(r.code || "").replace(/[^0-9]/g, '') || "999999") 
-        })));
-        console.groupEnd();
-    }
-
+    // DEBUG: Check this in your browser console (F12)
+    console.log("Sorted List:", sorted.map(r => `${r.code} -> ${String(r.code).replace(/[^0-9]/g, '')}`));
+    
     return sorted;
   }, [representatives]);
 
@@ -99,7 +95,7 @@ export default function RepresentativesPage() {
       await deleteDoc(doc(firestore, 'representatives', representative.id));
       toast({
         title: 'Représentant supprimé',
-        description: `Le représentant ${representative.name} a été supprimé.`,
+        description: `Le représentant "${representative.name}" a été supprimé.`,
       });
       setSelectedRepresentative(null);
     } catch (error) {
@@ -135,7 +131,7 @@ export default function RepresentativesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           representative={representativeToEdit}
-          representatives={representatives}
+          representatives={representatives} // Pass raw list for calc
         />
       )}
     </div>
