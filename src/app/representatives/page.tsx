@@ -25,37 +25,35 @@ export default function RepresentativesPage() {
     const q = query(collection(firestore, 'representatives'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // 1. Get raw data
       const rawReps = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
 
-      // 2. HELPER: Bulletproof value extractor
-      const getNumericValue = (item: Representative) => {
-        // Safely convert to string, even if it's null/undefined/number
-        const safeCode = String(item.code || "");
+      // STEP 1: Calculate the sort value for every item properly
+      const mapped = rawReps.map((rep, index) => {
+        let sortValue = 999999; // Default to bottom if no code
         
-        // Try to find the first group of digits in the string
-        const match = safeCode.match(/(\d+)/);
-        
-        if (match) {
-          // Found a number? Return it as an integer
-          return parseInt(match[0], 10);
+        if (rep.code) {
+          // Remove all non-digits (e.g. "REP-005" -> "005")
+          const numbersOnly = rep.code.replace(/\D/g, '');
+          if (numbersOnly.length > 0) {
+            sortValue = parseInt(numbersOnly, 10);
+          }
         }
-        
-        // No number found? Return infinity so it goes to the bottom
-        return 999999999;
-      };
-
-      // 3. FORCE SORT: Ascending (1, 2, 3...)
-      const sortedReps = [...rawReps].sort((a, b) => {
-        const valA = getNumericValue(a);
-        const valB = getNumericValue(b);
-        return valA - valB;
+        return { index, value: sortValue, data: rep };
       });
 
-      setRepresentatives(sortedReps);
+      // STEP 2: Sort the mapped array strictly by the number
+      mapped.sort((a, b) => {
+        return a.value - b.value;
+      });
+
+      // STEP 3: Extract the sorted data
+      const finalSorted = mapped.map((el) => el.data);
+
+      console.log("Sort Order Debug:", finalSorted.map(r => `${r.code} (${r.name})`));
+      setRepresentatives(finalSorted);
     });
 
     return () => unsubscribe();
@@ -77,7 +75,7 @@ export default function RepresentativesPage() {
       await deleteDoc(doc(firestore, 'representatives', representative.id));
       toast({
         title: 'Représentant supprimé',
-        description: `Le représentant "${representative.name}" a été supprimé.`,
+        description: `Le représentant ${representative.name} a été supprimé.`,
       });
       setSelectedRepresentative(null);
     } catch (error) {
