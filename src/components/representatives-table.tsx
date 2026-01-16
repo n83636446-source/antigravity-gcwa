@@ -58,6 +58,25 @@ export function RepresentativesTable({
     }
   };
 
+  // --- THE FINAL FIX: FORCE DISPLAY ORDER HERE ---
+  // Regardless of how the data comes in, we sort it strictly by Code (1, 2, 3...)
+  // right before rendering.
+  const sortedDisplayList = [...representatives].sort((a, b) => {
+    // 1. Helper to turn "REP005" -> 5
+    const getVal = (code?: string) => {
+       if (!code) return 999999;
+       // Strip non-digits
+       const digits = String(code).replace(/\D/g, ''); 
+       return digits ? parseInt(digits, 10) : 999999;
+    };
+
+    const valA = getVal(a.code);
+    const valB = getVal(b.code);
+
+    // 2. Sort Low to High
+    return valA - valB;
+  });
+
   return (
     <>
       <Card>
@@ -97,7 +116,7 @@ export function RepresentativesTable({
           )}
         </CardHeader>
         <CardContent>
-          {representatives.length > 0 ? (
+          {sortedDisplayList.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -107,7 +126,8 @@ export function RepresentativesTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {representatives.map((representative) => (
+                {/* Render the FORCE SORTED list */}
+                {sortedDisplayList.map((representative) => (
                   <TableRow
                     key={representative.id}
                     onClick={() => handleSelectRepresentative(representative)}
