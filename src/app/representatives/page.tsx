@@ -26,29 +26,28 @@ export default function RepresentativesPage() {
     const q = query(collection(firestore, 'representatives'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const reps = snapshot.docs.map((doc) => ({
+      // 1. Map raw data
+      const rawReps = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
 
-      // FIX: Force Robust Numeric Sort
-      reps.sort((a, b) => {
-        // Extract digits only (e.g. "REP005" -> 5)
-        // If code is missing/invalid, treat as Infinity so it goes to the bottom
-        const getNumber = (code?: string) => {
-            if (!code) return Infinity;
-            const match = code.match(/(\d+)/);
-            return match ? parseInt(match[0], 10) : Infinity;
-        };
+      // 2. Create a MUTABLE copy to ensure sorting works
+      const sortedReps = [...rawReps];
 
-        const numA = getNumber(a.code);
-        const numB = getNumber(b.code);
+      // 3. Force Sort
+      sortedReps.sort((a, b) => {
+        // Extract numbers. If code is "REP005", this becomes 5.
+        // If code is missing, use 999999 to push to bottom.
+        const numA = parseInt((a.code || "").replace(/\D/g, "") || "999999", 10);
+        const numB = parseInt((b.code || "").replace(/\D/g, "") || "999999", 10);
 
-        // Sort ascending (1, 2, 3...)
+        // Sort ascending (Low to High)
         return numA - numB;
       });
 
-      setRepresentatives(reps);
+      console.log("Sorted Representatives:", sortedReps.map(r => r.code)); // Debug log
+      setRepresentatives(sortedReps);
     });
 
     return () => unsubscribe();
