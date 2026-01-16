@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { RepresentativesTable } from '@/components/representatives-table';
@@ -11,7 +11,9 @@ import type { Representative } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RepresentativesPage() {
+  // 1. Store Raw Data (Unsorted)
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
   const [representativeToEdit, setRepresentativeToEdit] = useState<Representative | undefined>(undefined);
@@ -19,45 +21,44 @@ export default function RepresentativesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // 2. Fetch Data (Just store it, don't sort it here)
   useEffect(() => {
     if (!firestore) return;
 
     const q = query(collection(firestore, 'representatives'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const rawReps = snapshot.docs.map((doc) => ({
+      const reps = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
-
-      // STEP 1: Calculate the sort value for every item properly
-      const mapped = rawReps.map((rep, index) => {
-        let sortValue = 999999; // Default to bottom if no code
-        
-        if (rep.code) {
-          // Remove all non-digits (e.g. "REP-005" -> "005")
-          const numbersOnly = rep.code.replace(/\D/g, '');
-          if (numbersOnly.length > 0) {
-            sortValue = parseInt(numbersOnly, 10);
-          }
-        }
-        return { index, value: sortValue, data: rep };
-      });
-
-      // STEP 2: Sort the mapped array strictly by the number
-      mapped.sort((a, b) => {
-        return a.value - b.value;
-      });
-
-      // STEP 3: Extract the sorted data
-      const finalSorted = mapped.map((el) => el.data);
-
-      console.log("Sort Order Debug:", finalSorted.map(r => `${r.code} (${r.name})`));
-      setRepresentatives(finalSorted);
+      
+      setRepresentatives(reps);
     });
 
     return () => unsubscribe();
   }, [firestore]);
+
+  // 3. FORCE SORT ON RENDER (The Bulletproof Fix)
+  // This runs every time the page renders, ensuring the list sent to the table 
+  // is ALWAYS sorted numerically (1, 2, 3...).
+  const sortedRepresentatives = useMemo(() => {
+    return [...representatives].sort((a, b) => {
+        // Extract number safely (e.g. "REP005" -> 5)
+        // If code is missing, treat as Infinity to push to bottom
+        const getNum = (code?: string) => {
+            if (!code) return 999999999;
+            const match = code.match(/(\d+)/);
+            return match ? parseInt(match[0], 10) : 999999999;
+        };
+
+        const numA = getNum(a.code);
+        const numB = getNum(b.code);
+
+        // A - B = Ascending (1, 2, 3...)
+        return numA - numB;
+    });
+  }, [representatives]);
 
   const handleCreate = () => {
     setRepresentativeToEdit(undefined);
@@ -98,8 +99,9 @@ export default function RepresentativesPage() {
         </Button>
       </div>
 
+      {/* PASS THE SORTED LIST HERE */}
       <RepresentativesTable
-        representatives={representatives}
+        representatives={sortedRepresentatives}
         onEdit={handleEdit}
         onDelete={handleDelete}
         selectedRepresentative={selectedRepresentative}
@@ -111,7 +113,7 @@ export default function RepresentativesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           representative={representativeToEdit}
-          representatives={representatives}
+          representatives={representatives} // Pass raw list for calc
         />
       )}
     </div>
