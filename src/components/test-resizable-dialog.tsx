@@ -11,9 +11,9 @@ import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
-import { collection, getDocs, doc } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
 import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
@@ -1063,7 +1063,7 @@ export function TestResizableDialog() {
                 price: i.price,
                 tvaRate: i.tva
             })),
-            status: "Validé",
+            status: "Brouillon", // CHANGED: Default is now Brouillon (Draft)
             totalHT: totalHT,
             totalTTC: totalTTC,
             paymentMode: paymentMethod,
@@ -1091,21 +1091,6 @@ export function TestResizableDialog() {
         toast({ title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
         setIsSubmitting(false);
     }
-  }
-
-  // --- FORCE DELETE HANDLER ---
-  const handleForceDelete = async (id: string, number: string) => {
-      if(!db) return;
-      if (!confirm(`Êtes-vous sûr de vouloir supprimer définitivement le bon ${number} ?`)) return;
-
-      try {
-          await deleteDocumentNonBlocking(doc(db, "purchaseReceipts", id));
-          toast({ title: "Supprimé", description: `Bon ${number} supprimé définitivement.` });
-          setExistingReceipts(prev => prev.filter(r => r.id !== id));
-      } catch (e) {
-          console.error("Delete failed", e);
-          toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
-      }
   }
 
   const addItem = () => {
