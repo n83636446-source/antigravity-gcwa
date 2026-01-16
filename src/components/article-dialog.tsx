@@ -86,6 +86,7 @@ export function ArticleDialog({
     },
   });
 
+  // 1. SMART CALCULATION: Find the next ARTxxx code
   const nextCode = useMemo(() => {
     if (!articles || articles.length === 0) return "ART001";
     
@@ -112,6 +113,7 @@ export function ArticleDialog({
             familyId: article.familyId || '',
         });
       } else {
+        // Use smart suggestion
         form.reset({
           code: nextCode,
           name: '',
@@ -129,6 +131,7 @@ export function ArticleDialog({
   const onSubmit = async (data: ArticleFormValues) => {
     if (!firestore) return;
 
+    // --- DUPLICATE CHECK: CODE ---
     const codeExists = articles.some(existing => {
         if (isEditMode && existing.id === article?.id) return false;
         return existing.code?.toLowerCase() === data.code.toLowerCase();
@@ -141,6 +144,7 @@ export function ArticleDialog({
         });
         return; 
     }
+    // -----------------------------
 
     const articleData = {
         code: data.code,
@@ -181,136 +185,128 @@ export function ArticleDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
-      <DialogContent className="sm:max-w-[80vw] p-6 overflow-hidden">
+      <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-            
-            {/* --- VISUAL FIX: Full Width Blue Header --- */}
-            {/* -m-6 cancels the container padding. rounded-t-lg matches the dialog corners */}
-            <DialogHeader className="bg-blue-600 p-6 -m-6 mb-6 rounded-t-lg">
-              <DialogTitle className="text-white text-xl font-semibold">
-                  {isEditMode ? "Modifier l'article" : 'Ajouter un nouvel article'}
-              </DialogTitle>
-              <DialogDescription className="text-blue-100 mt-1">
-                {isEditMode ? "Modifiez les informations de l'article." : "Remplissez les détails ci-dessous pour ajouter un nouvel article."}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>{isEditMode ? "Modifier l'article" : 'Ajouter un nouvel article'}</DialogTitle>
+              <DialogDescription>
+                {isEditMode ? "Modifiez les informations de l'article." : "Remplissez les détails ci-dessous pour ajouter un nouvel article à votre inventaire."}
               </DialogDescription>
             </DialogHeader>
-            {/* ------------------------------------------ */}
             
-            <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Code Article</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ex: ART001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nom de l'article</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ex: Souris sans fil" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                 <FormField
-                    control={form.control}
-                    name="familyId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Famille</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionnez une famille" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {families?.map((family) => (
-                              <SelectItem key={family.id} value={family.id}>
-                                {family.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prix (€)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="stockLevel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stock</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} disabled />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="reorderThreshold"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Seuil de stock bas</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Une brève description de l'article." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code Article</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: ART001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom de l'article</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Souris sans fil" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <DialogFooter className="mt-8">
+             <FormField
+                control={form.control}
+                name="familyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Famille</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez une famille" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {families?.map((family) => (
+                          <SelectItem key={family.id} value={family.id}>
+                            {family.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prix (€)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="stockLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} disabled />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="reorderThreshold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Seuil de stock bas</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Une brève description de l'article." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
               <Button type="submit">{isEditMode ? 'Enregistrer les modifications' : "Créer l'article"}</Button>
             </DialogFooter>
