@@ -11,7 +11,7 @@ import type { Representative } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RepresentativesPage() {
-  // 1. Store Raw Data (Unsorted)
+  // Store raw data
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -21,7 +21,6 @@ export default function RepresentativesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // 2. Fetch Data (Just store it, don't sort it here)
   useEffect(() => {
     if (!firestore) return;
 
@@ -39,25 +38,49 @@ export default function RepresentativesPage() {
     return () => unsubscribe();
   }, [firestore]);
 
-  // 3. FORCE SORT ON RENDER (The Bulletproof Fix)
-  // This runs every time the page renders, ensuring the list sent to the table 
-  // is ALWAYS sorted numerically (1, 2, 3...).
+  // THE BULLETPROOF SORT
   const sortedRepresentatives = useMemo(() => {
-    return [...representatives].sort((a, b) => {
-        // Extract number safely (e.g. "REP005" -> 5)
-        // If code is missing, treat as Infinity to push to bottom
-        const getNum = (code?: string) => {
-            if (!code) return 999999999;
-            const match = code.match(/(\d+)/);
-            return match ? parseInt(match[0], 10) : 999999999;
-        };
+    // 1. Create a copy so we don't mutate state
+    const sorted = [...representatives];
 
-        const numA = getNum(a.code);
-        const numB = getNum(b.code);
+    // 2. Sort Logic
+    sorted.sort((a, b) => {
+      // Helper: Turn "REP005" -> 5. Turn null -> 999999.
+      const getWeight = (item: Representative) => {
+        if (!item.code) return 999999; // No code? Put at bottom.
+        
+        // Convert to string safely (handles numbers/nulls)
+        const str = String(item.code);
+        
+        // Remove everything that is NOT a number (e.g. "REP" or "-" or spaces)
+        const cleanStr = str.replace(/[^0-9]/g, '');
+        
+        // If string was just text like "TEST", cleanStr is empty. Return huge number.
+        if (cleanStr === '') return 999999;
 
-        // A - B = Ascending (1, 2, 3...)
-        return numA - numB;
+        // Parse to integer
+        return parseInt(cleanStr, 10);
+      };
+
+      const weightA = getWeight(a);
+      const weightB = getWeight(b);
+
+      // Compare: Low Numbers (1) to High Numbers (5)
+      return weightA - weightB;
     });
+
+    // 3. DEBUG: Log the order to Console (Press F12 to check)
+    // This will show you exactly what order the computer thinks they are in.
+    if (sorted.length > 0) {
+        console.groupCollapsed("Representative Sort Debug");
+        console.table(sorted.map(r => ({ 
+            Code: r.code, 
+            "Calculated Weight": parseInt(String(r.code || "").replace(/[^0-9]/g, '') || "999999") 
+        })));
+        console.groupEnd();
+    }
+
+    return sorted;
   }, [representatives]);
 
   const handleCreate = () => {
@@ -99,7 +122,6 @@ export default function RepresentativesPage() {
         </Button>
       </div>
 
-      {/* PASS THE SORTED LIST HERE */}
       <RepresentativesTable
         representatives={sortedRepresentatives}
         onEdit={handleEdit}
@@ -113,7 +135,7 @@ export default function RepresentativesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           representative={representativeToEdit}
-          representatives={representatives} // Pass raw list for calc
+          representatives={representatives}
         />
       )}
     </div>
