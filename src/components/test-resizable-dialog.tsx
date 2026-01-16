@@ -46,7 +46,7 @@ type Supplier = {
 
 type Representative = {
   id: string
-  code?: string // Code is now available
+  code?: string 
   name: string
   email?: string
 }
@@ -953,20 +953,7 @@ export function TestResizableDialog() {
     }, 0);
   }, [availableSuppliers]);
 
-  // NEW: Calculate Last Representative Code
-  const lastRepCodeNumber = useMemo(() => {
-    return availableRepresentatives.reduce((max, rep) => {
-      // Handle legacy data without codes
-      if (!rep.code || typeof rep.code !== 'string') return max;
-      
-      const match = rep.code.match(/REP(\d+)/);
-      if (match && match[1]) {
-        const num = parseInt(match[1], 10);
-        return num > max ? num : max;
-      }
-      return max;
-    }, 0);
-  }, [availableRepresentatives]);
+  // NOTE: Representative code calculation is now handled INSIDE the RepresentativeDialog
 
   const { totalHT, totalTVA, totalTTC } = items.reduce(
     (acc, item) => {
@@ -1130,7 +1117,7 @@ export function TestResizableDialog() {
   }
 
   const handleRepresentativeChange = (value: string) => {
-      setRepresentativeId(value)
+    setRepresentativeId(value)
   }
 
   const handleRepresentativeSearchSelect = (rep: Representative) => {
@@ -1142,7 +1129,7 @@ export function TestResizableDialog() {
       // 1. Cast the new rep
       const repWithType = newRep as Representative
       
-      // 2. Add to available list so `lastRepCodeNumber` updates immediately
+      // 2. Add to available list so the dialog has the latest data
       setAvailableRepresentatives(prev => deduplicate([repWithType, ...prev]))
       
       // 3. Auto-select the new representative
@@ -1150,7 +1137,7 @@ export function TestResizableDialog() {
   }
 
   const handleSupplierChange = (value: string) => {
-      setSupplierId(value)
+    setSupplierId(value)
   }
 
   const handleSupplierSearchSelect = (supplier: Supplier) => {
@@ -1402,6 +1389,7 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
+              {/* FIX: Increased pb-40 to allow scrolling space at bottom */}
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
@@ -1484,7 +1472,7 @@ export function TestResizableDialog() {
                      </div>
                   </div>
 
-                  {/* ITEMS TABLE */}
+                  {/* ITEMS TABLE - FIX: Replaced Shadcn Table with HTML Table to remove Overflow Clipping */}
                   <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
                     <table className="w-full caption-bottom text-sm">
                       <thead className="bg-slate-50 [&_tr]:border-b">
@@ -1507,6 +1495,7 @@ export function TestResizableDialog() {
                                     articles={availableArticles}
                                     onOpenAdvanced={() => openArticleSearch(item.id)}
                                     onCreateNew={() => handleCreateNewArticle(item.id)}
+                                    // Add autoFocus prop to fix the "Auto Highlight" regression
                                     autoFocus={item.id === newRowId}
                                 />
                               </td>
@@ -1573,7 +1562,7 @@ export function TestResizableDialog() {
         isOpen={isCreateRepOpen}
         onOpenChange={setIsCreateRepOpen}
         onRepresentativeCreated={handleRepresentativeCreated}
-        lastCodeNumber={lastRepCodeNumber} 
+        representatives={availableRepresentatives} // Changed: Pass full list, not number
       />
 
       <SupplierDialog
