@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { RepresentativesTable } from '@/components/representatives-table';
@@ -11,8 +11,8 @@ import type { Representative } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RepresentativesPage() {
-  const [rawRepresentatives, setRawRepresentatives] = useState<Representative[]>([]);
-  const [sortedRepresentatives, setSortedRepresentatives] = useState<Representative[]>([]);
+  // 1. Stocker les données brutes (non triées) de Firestore
+  const [representatives, setRepresentatives] = useState<Representative[]>([]);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
@@ -21,7 +21,7 @@ export default function RepresentativesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // 1. FETCH RAW DATA
+  // 2. Récupérer les données brutes et les stocker dans l'état
   useEffect(() => {
     if (!firestore) return;
 
@@ -33,38 +33,53 @@ export default function RepresentativesPage() {
         ...doc.data(),
       })) as Representative[];
       
-      setRawRepresentatives(reps);
+      setRepresentatives(reps);
     });
 
     return () => unsubscribe();
   }, [firestore]);
 
-  // 2. PROCESS & SORT (Runs whenever raw data changes)
-  useEffect(() => {
-    const sorted = [...rawRepresentatives].sort((a, b) => {
-      const getVal = (r: Representative) => {
-        if (!r.code) return 999999;
+  // 3. FORCER LE TRI AU RENDU (La solution à toute épreuve)
+  // useMemo garantit que la liste est re-triée UNIQUEMENT lorsque les données brutes changent.
+  // C'est la manière la plus efficace et la plus sûre de gérer le tri en React.
+  const sortedRepresentatives = useMemo(() => {
+    // Crée une copie pour ne pas muter l'état original
+    const sorted = [...representatives];
+
+    // Logique de tri
+    sorted.sort((a, b) => {
+      // Fonction d'aide pour extraire le poids numérique d'un code
+      const getWeight = (r: Representative) => {
+        if (!r.code) return Infinity; // Pas de code ? Tout en bas.
         
-        // Convert to string and strip non-digits
-        const digits = String(r.code).replace(/\D/g, '');
+        // Extrait uniquement les chiffres
+        const digits = String(r.code).replace(/[^0-9]/g, '');
         
-        // If empty string (e.g. "TEST"), return huge number
-        if (!digits) return 999999;
+        // Si aucun chiffre trouvé (ex: "TEST"), tout en bas.
+        if (!digits) return Infinity;
+
+        // Conversion en entier
+        const val = parseInt(digits, 10);
         
-        return parseInt(digits, 10);
+        // Sécurité finale : si c'est NaN, tout en bas.
+        return isNaN(val) ? Infinity : val;
       };
 
-      const valA = getVal(a);
-      const valB = getVal(b);
+      const weightA = getWeight(a);
+      const weightB = getWeight(b);
 
-      return valA - valB; // Ascending: 1, 2, 3...
+      // Critère de tri principal : par numéro (ordre croissant)
+      if (weightA !== weightB) {
+        return weightA - weightB;
+      }
+
+      // Critère de tri secondaire (pour départager) : par nom, par ordre alphabétique
+      // Empêche les éléments de sauter si leur poids numérique est identique
+      return (a.name || "").localeCompare(b.name || "");
     });
-
-    // Debugging: Check the browser console to see the calculated order
-    console.log("Sort Debug:", sorted.map(r => `${r.code} (${String(r.code).replace(/\D/g, '')})`));
-
-    setSortedRepresentatives(sorted);
-  }, [rawRepresentatives]);
+    
+    return sorted;
+  }, [representatives]); // Ne s'exécute que si 'representatives' change
 
   const handleCreate = () => {
     setRepresentativeToEdit(undefined);
@@ -105,6 +120,7 @@ export default function RepresentativesPage() {
         </Button>
       </div>
 
+      {/* Le tableau reçoit maintenant la liste garantie d'être triée */}
       <RepresentativesTable
         representatives={sortedRepresentatives}
         onEdit={handleEdit}
@@ -118,7 +134,7 @@ export default function RepresentativesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           representative={representativeToEdit}
-          representatives={sortedRepresentatives} // Pass sorted list for accurate calculation
+          representatives={representatives} // La Dialog reçoit la liste brute pour calculer le prochain code
         />
       )}
     </div>
