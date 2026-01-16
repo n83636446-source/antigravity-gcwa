@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,7 +50,7 @@ type SupplierDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   supplier?: Supplier;
-  lastSupplierCodeNumber?: number;
+  // REMOVED: lastSupplierCodeNumber (Calculated internally now)
   onSupplierCreated?: (supplier: Supplier) => void;
   suppliers: Supplier[];
 };
@@ -59,9 +59,8 @@ export function SupplierDialog({
     isOpen, 
     onOpenChange, 
     supplier, 
-    lastSupplierCodeNumber = 0,
     onSupplierCreated,
-    suppliers,
+    suppliers = [], // Default to empty array
 }: SupplierDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -71,12 +70,27 @@ export function SupplierDialog({
     resolver: zodResolver(supplierSchema),
   });
 
+  // 1. SMART CALCULATION: Find the next FOUxxx code
+  const nextCode = useMemo(() => {
+    if (!suppliers || suppliers.length === 0) return "FOU001";
+
+    const maxId = suppliers.reduce((max, s) => {
+      if (!s.code) return max;
+      // Extract numbers regardless of prefix (FOU001 -> 1)
+      const digits = String(s.code).replace(/\D/g, '');
+      const num = digits ? parseInt(digits, 10) : 0;
+      return num > max ? num : max;
+    }, 0);
+
+    return `FOU${(maxId + 1).toString().padStart(3, '0')}`;
+  }, [suppliers]);
+
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && supplier) {
         form.reset(supplier);
       } else {
-        const nextCode = `FOU${(lastSupplierCodeNumber + 1).toString().padStart(3, '0')}`;
+        // Use the smart calculation
         form.reset({
           code: nextCode,
           name: '',
@@ -90,11 +104,26 @@ export function SupplierDialog({
         });
       }
     }
-  }, [supplier, isEditMode, isOpen, form, lastSupplierCodeNumber]);
+  }, [supplier, isEditMode, isOpen, form, nextCode]);
 
   const onSubmit = async (data: SupplierFormValues) => {
     if (!firestore) return;
 
+    // --- NEW VALIDATION: CHECK DUPLICATE CODE ---
+    const codeExists = suppliers.some(
+      s => s.code?.toLowerCase() === data.code.toLowerCase() && s.id !== supplier?.id
+    );
+
+    if (codeExists) {
+      form.setError('code', {
+        type: 'manual',
+        message: 'Ce code fournisseur existe déjà.',
+      });
+      return;
+    }
+
+    // --- EXISTING VALIDATIONS ---
+    
     // Check for unique ICE
     const iceExists = suppliers.some(
       s => s.ice === data.ice && s.id !== supplier?.id
