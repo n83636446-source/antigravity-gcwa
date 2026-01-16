@@ -106,21 +106,37 @@ export function RepresentativeDialog({
   const onSubmit = async (data: RepresentativeFormValues) => {
     if (!firestore) return;
 
-    // --- CRITICAL FIX: DUPLICATE CHECK ---
-    // Check if code exists in the list (case insensitive)
+    // --- DUPLICATE CHECKS ---
+    
+    // 1. Check Code
     const codeExists = representatives.some(existingRep => {
-      // If editing, skip checking against itself
       if (isEditMode && existingRep.id === representative.id) return false;
-      
       return existingRep.code?.toLowerCase() === data.code.toLowerCase();
     });
 
     if (codeExists) {
       form.setError("code", { 
         type: "manual", 
-        message: "Ce code existe déjà. Veuillez en choisir un autre." 
+        message: "Ce code existe déjà." 
       });
-      return; // STOP HERE. Do not save.
+      return; 
+    }
+
+    // 2. Check Email (New)
+    const emailExists = representatives.some(existingRep => {
+      if (isEditMode && existingRep.id === representative.id) return false;
+      // Only check if an email was actually entered (ignore empty emails)
+      if (!data.email || !existingRep.email) return false;
+      
+      return existingRep.email.toLowerCase() === data.email.toLowerCase();
+    });
+
+    if (emailExists) {
+      form.setError("email", { 
+        type: "manual", 
+        message: "Cette adresse email est déjà utilisée par un autre représentant." 
+      });
+      return; 
     }
     // -------------------------------------
 
