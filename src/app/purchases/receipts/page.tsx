@@ -6,10 +6,10 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, runTransaction, getDocs, where, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
+import { collection, query, doc, runTransaction, getDocs, where, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { FileText, Pencil, Trash2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'; // Added AlertTriangle
+import { FileText, Pencil, Trash2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -25,19 +25,28 @@ import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { format } from 'date-fns'; // Added date-fns
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export default function PurchaseReceiptsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  // --- STATES ---
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState<PurchaseReceipt | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<PurchaseReceipt | null>(null);
+  
+  // Standard Delete States
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<PurchaseReceipt | null>(null);
+  
+  // Force Delete States (Cleanup)
+  const [forceDeleteReceipt, setForceDeleteReceipt] = useState<PurchaseReceipt | null>(null);
+  
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
+  // --- DATA FETCHING ---
   const receiptsRef = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'purchaseReceipts'),) : null),
     [firestore]
@@ -89,6 +98,8 @@ export default function PurchaseReceiptsPage() {
       return codeNumber > max ? codeNumber : max;
     }, 0);
   }, [invoices]);
+
+  // --- HANDLERS ---
 
   const handleRowClick = (receipt: PurchaseReceipt) => {
     if (selectedReceipt?.id === receipt.id) {
@@ -154,15 +165,26 @@ export default function PurchaseReceiptsPage() {
     setSelectedReceipt(null);
   };
 
-  // --- FORCE DELETE HANDLER (Maintenance) ---
-  const handleForceDelete = async (id: string, number: string) => {
-      if(!firestore) return;
-      if (!confirm(`ATTENTION : Cette action supprimera définitivement le bon ${number} sans vérifier les stocks. Utilisez ceci uniquement pour corriger des erreurs. Continuer ?`)) return;
+  // --- FORCE DELETE LOGIC (Maintenance) ---
+  const requestForceDelete = (receipt: PurchaseReceipt) => {
+      console.log("Requesting force delete for:", receipt.id);
+      setForceDeleteReceipt(receipt);
+  };
 
+  const confirmForceDelete = async () => {
+      if(!firestore || !forceDeleteReceipt) {
+          console.error("Missing firestore or receipt to delete");
+          return;
+      }
+
+      console.log("Executing force delete on:", forceDeleteReceipt.id);
+      
       try {
-          await deleteDoc(doc(firestore, "purchaseReceipts", id));
-          toast({ title: "Suppression forcée", description: `Le bon ${number} a été supprimé.` });
-          if (selectedReceipt?.id === id) setSelectedReceipt(null);
+          await deleteDoc(doc(firestore, "purchaseReceipts", forceDeleteReceipt.id));
+          toast({ title: "Suppression forcée réussie", description: `Le bon ${forceDeleteReceipt.receiptNumber} a été supprimé.` });
+          
+          if (selectedReceipt?.id === forceDeleteReceipt.id) setSelectedReceipt(null);
+          setForceDeleteReceipt(null); // Close dialog
       } catch (e) {
           console.error("Force delete failed", e);
           toast({ title: "Erreur", description: "Impossible de supprimer le document.", variant: "destructive" });
@@ -436,10 +458,11 @@ export default function PurchaseReceiptsPage() {
                                         </td>
                                         <td className="p-3 text-right">
                                             <Button 
+                                                type="button"
                                                 variant="destructive" 
                                                 size="sm"
                                                 className="h-8"
-                                                onClick={() => handleForceDelete(receipt.id, receipt.receiptNumber)}
+                                                onClick={() => requestForceDelete(receipt)}
                                             >
                                                 <Trash2 className="mr-2 h-3 w-3" />
                                                 Forcer la suppression
@@ -476,6 +499,7 @@ export default function PurchaseReceiptsPage() {
           />
       )}
 
+      {/* Standard Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -495,6 +519,35 @@ export default function PurchaseReceiptsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* FORCE Delete Dialog (Maintenance) */}
+      <AlertDialog open={!!forceDeleteReceipt} onOpenChange={(open) => !open && setForceDeleteReceipt(null)}>
+        <AlertDialogContent className="border-red-500 border-2">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Suppression Forcée
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-800">
+              Vous êtes sur le point de forcer la suppression du bon <strong>{forceDeleteReceipt?.receiptNumber}</strong>.
+              <br/><br/>
+              Cela supprimera le document de la base de données <strong>sans remettre à jour les stocks</strong>.
+              <br/><br/>
+              Utilisez ceci uniquement pour corriger des erreurs de données (fantômes).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmForceDelete}
+              className="bg-red-600 hover:bg-red-700 text-white border-none"
+            >
+              Confirmer la suppression forcée
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
