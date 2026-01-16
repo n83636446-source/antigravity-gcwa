@@ -50,9 +50,8 @@ type SupplierDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   supplier?: Supplier;
-  // REMOVED: lastSupplierCodeNumber (Calculated internally now)
   onSupplierCreated?: (supplier: Supplier) => void;
-  suppliers: Supplier[];
+  suppliers: Supplier[]; // Logic: Full list for auto-calc
 };
 
 export function SupplierDialog({ 
@@ -60,7 +59,7 @@ export function SupplierDialog({
     onOpenChange, 
     supplier, 
     onSupplierCreated,
-    suppliers = [], // Default to empty array
+    suppliers = [], 
 }: SupplierDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -76,7 +75,6 @@ export function SupplierDialog({
 
     const maxId = suppliers.reduce((max, s) => {
       if (!s.code) return max;
-      // Extract numbers regardless of prefix (FOU001 -> 1)
       const digits = String(s.code).replace(/\D/g, '');
       const num = digits ? parseInt(digits, 10) : 0;
       return num > max ? num : max;
@@ -90,7 +88,6 @@ export function SupplierDialog({
       if (isEditMode && supplier) {
         form.reset(supplier);
       } else {
-        // Use the smart calculation
         form.reset({
           code: nextCode,
           name: '',
@@ -109,57 +106,41 @@ export function SupplierDialog({
   const onSubmit = async (data: SupplierFormValues) => {
     if (!firestore) return;
 
-    // --- NEW VALIDATION: CHECK DUPLICATE CODE ---
+    // --- DUPLICATE CHECKS ---
+
+    // 1. Code
     const codeExists = suppliers.some(
       s => s.code?.toLowerCase() === data.code.toLowerCase() && s.id !== supplier?.id
     );
-
     if (codeExists) {
-      form.setError('code', {
-        type: 'manual',
-        message: 'Ce code fournisseur existe déjà.',
-      });
+      form.setError('code', { type: 'manual', message: 'Ce code fournisseur existe déjà.' });
       return;
     }
 
-    // --- EXISTING VALIDATIONS ---
-    
-    // Check for unique ICE
+    // 2. ICE
     const iceExists = suppliers.some(
       s => s.ice === data.ice && s.id !== supplier?.id
     );
-
     if (iceExists) {
-      form.setError('ice', {
-        type: 'manual',
-        message: 'Cet ICE est déjà utilisé par un autre fournisseur.',
-      });
+      form.setError('ice', { type: 'manual', message: 'Cet ICE est déjà utilisé par un autre fournisseur.' });
       return;
     }
 
-    // Check for unique phone number
+    // 3. Phone
     const phoneExists = suppliers.some(
       s => s.contactPhone === data.contactPhone && s.id !== supplier?.id
     );
-
     if (phoneExists) {
-      form.setError('contactPhone', {
-        type: 'manual',
-        message: 'Ce numéro de téléphone est déjà utilisé par un autre fournisseur.',
-      });
+      form.setError('contactPhone', { type: 'manual', message: 'Ce numéro de téléphone est déjà utilisé.' });
       return;
     }
 
-    // Check for unique email
+    // 4. Email
     const emailExists = suppliers.some(
         s => s.contactEmail === data.contactEmail && s.id !== supplier?.id
     );
-
     if (emailExists) {
-        form.setError('contactEmail', {
-            type: 'manual',
-            message: 'Cet e-mail est déjà utilisé par un autre fournisseur.',
-        });
+        form.setError('contactEmail', { type: 'manual', message: 'Cet e-mail est déjà utilisé.' });
         return;
     }
     
@@ -191,7 +172,9 @@ export function SupplierDialog({
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <DialogHeader>
+            
+            {/* --- VISUAL UPDATE: HEADER SEPARATOR --- */}
+            <DialogHeader className="border-b pb-4 mb-4">
               <DialogTitle>
                 {isEditMode ? 'Modifier le fournisseur' : 'Ajouter un nouveau fournisseur'}
               </DialogTitle>
@@ -202,6 +185,7 @@ export function SupplierDialog({
                 }
               </DialogDescription>
             </DialogHeader>
+            {/* --------------------------------------- */}
 
             <div className="grid grid-cols-2 gap-4">
                <FormField
