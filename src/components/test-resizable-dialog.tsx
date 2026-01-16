@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -151,7 +151,7 @@ const RepresentativeSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
-                    {/* 1. FIXED CREATE BUTTON AT TOP */}
+                    {/* FIXED TOP ROW */}
                     <div 
                         onMouseDown={(e) => { 
                             e.stopPropagation();
@@ -164,13 +164,11 @@ const RepresentativeSelector = ({
                         Créer un nouveau représentant
                     </div>
 
-                    {/* 2. FIXED HEADERS */}
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Nom</span>
                     </div>
 
-                    {/* 3. SCROLLABLE LIST */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         
                         {filteredReps.length === 0 && (
@@ -295,7 +293,7 @@ const SupplierSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
-                    {/* 1. FIXED CREATE BUTTON */}
+                    {/* FIXED TOP ROW */}
                     <div 
                         onMouseDown={(e) => { 
                             e.stopPropagation();
@@ -308,13 +306,11 @@ const SupplierSelector = ({
                         Créer un nouveau fournisseur
                     </div>
 
-                    {/* 2. FIXED HEADERS */}
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Nom</span>
                     </div>
 
-                    {/* 3. SCROLLABLE LIST */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         
                         {filteredSuppliers.length === 0 && (
@@ -451,7 +447,7 @@ const ArticleSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
-                    {/* 1. FIXED CREATE BUTTON */}
+                    {/* FIXED TOP ROW */}
                     <div 
                         onMouseDown={(e) => { 
                             e.preventDefault(); 
@@ -464,14 +460,12 @@ const ArticleSelector = ({
                         Créer un nouvel article
                     </div>
 
-                    {/* 2. FIXED HEADERS */}
                     <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Désignation</span>
                         <span className="text-right pr-2">Stock</span>
                     </div>
 
-                    {/* 3. SCROLLABLE LIST */}
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         
                         {filteredArticles.length === 0 && (
@@ -1059,6 +1053,21 @@ export function TestResizableDialog() {
     }))
   }
 
+  const handleMerge = (originalId: string, duplicateId: string) => {
+    const duplicateItem = items.find(i => i.id === duplicateId);
+    if (!duplicateItem) return;
+
+    setItems(prev => {
+        const updatedItems = prev.map(item => {
+            if (item.id === originalId) {
+                return { ...item, qty: item.qty + duplicateItem.qty };
+            }
+            return item;
+        });
+        return updatedItems.filter(item => item.id !== duplicateId);
+    });
+  }
+
   const handleArticleChange = (rowId: string, value: string) => {
     const selectedArticle = availableArticles.find(a => a.id === value)
     if (selectedArticle) {
@@ -1469,33 +1478,53 @@ export function TestResizableDialog() {
                         </tr>
                       </thead>
                       <tbody className="[&_tr:last-child]:border-0">
-                        {items.map((item) => (
-                            <tr key={item.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                              <td className="p-4 align-middle">
-                                <ArticleSelector 
-                                    value={item.articleId}
-                                    onChange={(val) => handleArticleChange(item.id, val)}
-                                    articles={availableArticles}
-                                    onOpenAdvanced={() => openArticleSearch(item.id)}
-                                    onCreateNew={() => handleCreateNewArticle(item.id)}
-                                    // Add autoFocus prop to fix the "Auto Highlight" regression
-                                    autoFocus={item.id === newRowId}
-                                />
-                              </td>
-                              <td className="p-4 align-middle"><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></td>
-                              <td className="p-4 align-middle"><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></td>
-                              <td className="p-4 align-middle"><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></td>
-                              <td className="p-4 align-middle text-right font-medium">{(item.price * item.qty).toFixed(2)} €</td>
-                              <td className="p-4 align-middle flex items-center justify-end gap-1">
-                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
-                                   <PlusCircle className="h-4 w-4" />
-                                 </Button>
-                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
-                                   <Trash2 className="h-4 w-4" />
-                                 </Button>
-                              </td>
-                            </tr>
-                        ))}
+                        {items.map((item, index) => {
+                            // Find ORIGINAL (duplicate detection)
+                            const originalItem = item.articleId ? items.find((i, iIndex) => i.articleId === item.articleId && iIndex < index) : null;
+
+                            return (
+                                <tr key={item.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                  <td className="p-4 align-middle">
+                                    <ArticleSelector 
+                                        value={item.articleId}
+                                        onChange={(val) => handleArticleChange(item.id, val)}
+                                        articles={availableArticles}
+                                        onOpenAdvanced={() => openArticleSearch(item.id)}
+                                        onCreateNew={() => handleCreateNewArticle(item.id)}
+                                        // Add autoFocus prop to fix the "Auto Highlight" regression
+                                        autoFocus={item.id === newRowId}
+                                    />
+                                    {originalItem && (
+                                        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 mt-2 animate-in fade-in slide-in-from-top-1">
+                                           <AlertTriangle className="h-3 w-3 shrink-0" />
+                                           <span className="font-medium">Article déjà présent.</span>
+                                           <Button
+                                             size="sm"
+                                             variant="outline"
+                                             className="h-6 text-xs bg-white hover:bg-amber-100 border-amber-300 text-amber-800 ml-auto"
+                                             onClick={() => handleMerge(originalItem.id, item.id)}
+                                           >
+                                             <Merge className="mr-1 h-3 w-3" />
+                                             Fusionner
+                                           </Button>
+                                        </div>
+                                    )}
+                                  </td>
+                                  <td className="p-4 align-middle"><Input type="number" value={item.qty} min={1} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></td>
+                                  <td className="p-4 align-middle"><Input type="number" value={item.price} min={0} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} className="min-w-[60px] bg-slate-50" /></td>
+                                  <td className="p-4 align-middle"><Input type="number" value={item.tva} readOnly className="min-w-[60px] bg-slate-50" /></td>
+                                  <td className="p-4 align-middle text-right font-medium">{(item.price * item.qty).toFixed(2)} €</td>
+                                  <td className="p-4 align-middle flex items-center justify-end gap-1">
+                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer">
+                                       <PlusCircle className="h-4 w-4" />
+                                     </Button>
+                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer">
+                                       <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                  </td>
+                                </tr>
+                            )
+                        })}
                         <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                           <td colSpan={6} className="p-4 align-middle">
                              <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
