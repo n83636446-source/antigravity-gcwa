@@ -62,9 +62,6 @@ export function ArticleDialog({
   onArticleCreated,
   articles = [] 
  }: ArticleDialogProps) {
-  // DEBUG LOG
-  console.log("Article Dialog Component is Rendering...");
-
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -184,132 +181,136 @@ export function ArticleDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
-      {/* --- VISUAL TEST CHANGE: RED BORDER --- */}
-      <DialogContent className="sm:max-w-[80vw] border-8 border-red-600">
-        <div className="bg-red-600 text-white font-bold text-center p-2 mb-4">
-            TEST MODE ACTIVATED - IF YOU SEE THIS, IT WORKS
-        </div>
+      <DialogContent className="sm:max-w-[80vw] p-6 overflow-hidden">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{isEditMode ? "Modifier l'article" : 'Ajouter un nouvel article'}</DialogTitle>
-              <DialogDescription>
-                {isEditMode ? "Modifiez les informations de l'article." : "Remplissez les détails ci-dessous pour ajouter un nouvel article à votre inventaire."}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            
+            {/* --- VISUAL FIX: Full Width Blue Header --- */}
+            {/* -m-6 cancels the container padding. rounded-t-lg matches the dialog corners */}
+            <DialogHeader className="bg-blue-600 p-6 -m-6 mb-6 rounded-t-lg">
+              <DialogTitle className="text-white text-xl font-semibold">
+                  {isEditMode ? "Modifier l'article" : 'Ajouter un nouvel article'}
+              </DialogTitle>
+              <DialogDescription className="text-blue-100 mt-1">
+                {isEditMode ? "Modifiez les informations de l'article." : "Remplissez les détails ci-dessous pour ajouter un nouvel article."}
               </DialogDescription>
             </DialogHeader>
+            {/* ------------------------------------------ */}
             
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Code Article</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ex: ART001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom de l'article</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ex: Souris sans fil" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code Article</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ex: ART001" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nom de l'article</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ex: Souris sans fil" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-             <FormField
-                control={form.control}
-                name="familyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Famille</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                 <FormField
+                    control={form.control}
+                    name="familyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Famille</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionnez une famille" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {families?.map((family) => (
+                              <SelectItem key={family.id} value={family.id}>
+                                {family.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prix (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stockLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stock</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} disabled />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="reorderThreshold"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Seuil de stock bas</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez une famille" />
-                        </SelectTrigger>
+                        <Input type="number" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {families?.map((family) => (
-                          <SelectItem key={family.id} value={family.id}>
-                            {family.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prix (€)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="stockLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stock</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} disabled />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Une brève description de l'article." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </div>
 
-            <FormField
-              control={form.control}
-              name="reorderThreshold"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Seuil de stock bas</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Une brève description de l'article." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
+            <DialogFooter className="mt-8">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuler</Button>
               <Button type="submit">{isEditMode ? 'Enregistrer les modifications' : "Créer l'article"}</Button>
             </DialogFooter>
