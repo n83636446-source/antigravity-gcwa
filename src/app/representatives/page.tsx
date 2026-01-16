@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { RepresentativesTable } from '@/components/representatives-table';
@@ -22,31 +22,39 @@ export default function RepresentativesPage() {
   useEffect(() => {
     if (!firestore) return;
 
-    // Fetch unordered data
     const q = query(collection(firestore, 'representatives'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // 1. Map raw data
+      // 1. Get raw data
       const rawReps = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
 
-      // 2. Create a MUTABLE copy to ensure sorting works
-      const sortedReps = [...rawReps];
+      // 2. HELPER: Bulletproof value extractor
+      const getNumericValue = (item: Representative) => {
+        // Safely convert to string, even if it's null/undefined/number
+        const safeCode = String(item.code || "");
+        
+        // Try to find the first group of digits in the string
+        const match = safeCode.match(/(\d+)/);
+        
+        if (match) {
+          // Found a number? Return it as an integer
+          return parseInt(match[0], 10);
+        }
+        
+        // No number found? Return infinity so it goes to the bottom
+        return 999999999;
+      };
 
-      // 3. Force Sort
-      sortedReps.sort((a, b) => {
-        // Extract numbers. If code is "REP005", this becomes 5.
-        // If code is missing, use 999999 to push to bottom.
-        const numA = parseInt((a.code || "").replace(/\D/g, "") || "999999", 10);
-        const numB = parseInt((b.code || "").replace(/\D/g, "") || "999999", 10);
-
-        // Sort ascending (Low to High)
-        return numA - numB;
+      // 3. FORCE SORT: Ascending (1, 2, 3...)
+      const sortedReps = [...rawReps].sort((a, b) => {
+        const valA = getNumericValue(a);
+        const valB = getNumericValue(b);
+        return valA - valB;
       });
 
-      console.log("Sorted Representatives:", sortedReps.map(r => r.code)); // Debug log
       setRepresentatives(sortedReps);
     });
 
@@ -69,7 +77,7 @@ export default function RepresentativesPage() {
       await deleteDoc(doc(firestore, 'representatives', representative.id));
       toast({
         title: 'Représentant supprimé',
-        description: `Le représentant ${representative.name} a été supprimé.`,
+        description: `Le représentant "${representative.name}" a été supprimé.`,
       });
       setSelectedRepresentative(null);
     } catch (error) {
