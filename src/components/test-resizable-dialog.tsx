@@ -1020,11 +1020,10 @@ export function TestResizableDialog() {
     }
   }
 
-  // --- SUBMIT LOGIC ---
+  // --- SUBMIT LOGIC (FIXED) ---
   const handleCreateReceipt = async () => {
     if (!db) return;
     
-    // Validation
     if (!supplierId) {
         toast({ title: "Erreur", description: "Veuillez sélectionner un fournisseur.", variant: "destructive" });
         return;
@@ -1048,24 +1047,30 @@ export function TestResizableDialog() {
             nextNumber = `BR-${(maxId + 1).toString().padStart(4, '0')}`;
         }
 
-        const receiptData: Omit<PurchaseReceipt, "id"> = {
+        // --- SAFE PAYLOAD CONSTRUCTION ---
+        // Manually build object to avoid passing undefined values to Firestore
+        const receiptData: any = {
             receiptNumber: nextNumber,
             supplierId: supplierId,
-            receiptDate: date.toISOString(),
+            receiptDate: date instanceof Date ? date.toISOString() : new Date().toISOString(),
             items: validItems.map(i => ({
                 productId: i.articleId,
                 quantityReceived: i.qty,
                 price: i.price,
                 tvaRate: i.tva
             })),
-            status: "Validé", // Default status
+            status: "Validé",
             totalHT: totalHT,
             totalTTC: totalTTC,
             paymentMode: paymentMethod,
-            dueDate: dueDate.toISOString(),
-            representativeId: representativeId || undefined,
-            reference: reference || undefined,
+            dueDate: dueDate instanceof Date ? dueDate.toISOString() : new Date().toISOString(),
         };
+
+        // Only add optional fields if they have value
+        if (representativeId) receiptData.representativeId = representativeId;
+        if (reference) receiptData.reference = reference;
+
+        console.log("Saving receipt payload:", receiptData); // DEBUG
 
         const docRef = await addDocumentNonBlocking(collection(db, "purchaseReceipts"), receiptData);
         
