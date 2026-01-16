@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2, Eraser } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2 } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs, doc } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates" // Added delete helper
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
 import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
@@ -1458,7 +1458,7 @@ export function TestResizableDialog() {
                 className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
                 title="Fermer"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -1641,57 +1641,6 @@ export function TestResizableDialog() {
                       </tbody>
                     </table>
                   </div>
-
-                  {/* --- CLEANUP SECTION (TEMPORARY) --- */}
-                  <div className="mt-8 border-t pt-6 bg-red-50 p-4 rounded-md">
-                      <h4 className="font-bold text-red-800 flex items-center gap-2 mb-4">
-                          <AlertTriangle className="h-5 w-5" />
-                          Zone de Nettoyage (Emergency Cleanup)
-                      </h4>
-                      <div className="text-sm text-red-700 mb-4">
-                          Utilisez cette liste pour supprimer définitivement les bons de réception bloqués (statut "Validé" sans stock).
-                      </div>
-                      <div className="max-h-60 overflow-y-auto border rounded-md bg-white">
-                          <table className="w-full text-sm">
-                              <thead className="bg-slate-100 text-left">
-                                  <tr>
-                                      <th className="p-2">Numéro</th>
-                                      <th className="p-2">Date</th>
-                                      <th className="p-2">Statut</th>
-                                      <th className="p-2 text-right">Action</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  {existingReceipts.map(receipt => (
-                                      <tr key={receipt.id} className="border-b hover:bg-slate-50">
-                                          <td className="p-2 font-mono">{receipt.receiptNumber}</td>
-                                          <td className="p-2">{format(new Date(receipt.receiptDate), "dd/MM/yyyy")}</td>
-                                          <td className="p-2">
-                                              <span className={cn(
-                                                  "px-2 py-1 rounded-full text-xs font-semibold",
-                                                  receipt.status === 'Validé' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
-                                              )}>
-                                                  {receipt.status}
-                                              </span>
-                                          </td>
-                                          <td className="p-2 text-right">
-                                              <Button 
-                                                  size="sm" 
-                                                  variant="destructive" 
-                                                  className="h-7 px-2"
-                                                  onClick={() => handleForceDelete(receipt.id, receipt.receiptNumber)}
-                                              >
-                                                  <Trash2 className="h-3 w-3 mr-1" />
-                                                  Supprimer
-                                              </Button>
-                                          </td>
-                                      </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-
                 </form>
               </div>
 
