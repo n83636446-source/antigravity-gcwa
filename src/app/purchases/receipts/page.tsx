@@ -6,10 +6,10 @@ import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice
 import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, runTransaction, getDocs, where } from 'firebase/firestore';
+import { collection, query, doc, runTransaction, getDocs, where, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { FileText, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Pencil, Trash2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'; // Added AlertTriangle
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -24,7 +24,9 @@ import {
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { format } from 'date-fns'; // Added date-fns
+import { cn } from '@/lib/utils';
 
 export default function PurchaseReceiptsPage() {
   const firestore = useFirestore();
@@ -151,6 +153,21 @@ export default function PurchaseReceiptsPage() {
     setReceiptToDelete(null);
     setSelectedReceipt(null);
   };
+
+  // --- FORCE DELETE HANDLER (Maintenance) ---
+  const handleForceDelete = async (id: string, number: string) => {
+      if(!firestore) return;
+      if (!confirm(`ATTENTION : Cette action supprimera définitivement le bon ${number} sans vérifier les stocks. Utilisez ceci uniquement pour corriger des erreurs. Continuer ?`)) return;
+
+      try {
+          await deleteDoc(doc(firestore, "purchaseReceipts", id));
+          toast({ title: "Suppression forcée", description: `Le bon ${number} a été supprimé.` });
+          if (selectedReceipt?.id === id) setSelectedReceipt(null);
+      } catch (e) {
+          console.error("Force delete failed", e);
+          toast({ title: "Erreur", description: "Impossible de supprimer le document.", variant: "destructive" });
+      }
+  }
   
   const handleTransferToInvoice = () => {
     if (selectedReceipt) {
@@ -190,8 +207,6 @@ export default function PurchaseReceiptsPage() {
             const productRef = doc(firestore, 'products', item.productId);
             const productDoc = await transaction.get(productRef);
             if (!productDoc.exists()) {
-              // We could throw an error here, but for now we'll just skip it
-              // to prevent the entire transaction from failing.
               console.warn(`L'article ID "${item.productId}" est introuvable et sera ignoré.`);
               continue;
             }
@@ -309,84 +324,145 @@ export default function PurchaseReceiptsPage() {
           <Skeleton className="h-48 w-full" />
         </div>
       ) : (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Bons de réception récents</CardTitle>
-            {selectedReceipt && (
-              <div className="flex items-center gap-2">
-                {selectedReceipt.status === 'Brouillon' && (
-                   <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt} disabled={isLoading}>
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                          <span className="sr-only">Valider</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Valider</TooltipContent>
-                    </Tooltip>
-                )}
-                {selectedReceipt.status === 'Validé' && (
-                    <Tooltip>
+        <>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Bons de réception récents</CardTitle>
+                {selectedReceipt && (
+                <div className="flex items-center gap-2">
+                    {selectedReceipt.status === 'Brouillon' && (
+                        <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation} disabled={isLoading}>
-                            <XCircle className="h-4 w-4 text-orange-500" />
-                            <span className="sr-only">Annuler la validation</span>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt} disabled={isLoading}>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="sr-only">Valider</span>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Annuler la validation</TooltipContent>
+                        <TooltipContent>Valider</TooltipContent>
+                        </Tooltip>
+                    )}
+                    {selectedReceipt.status === 'Validé' && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation} disabled={isLoading}>
+                                <XCircle className="h-4 w-4 text-orange-500" />
+                                <span className="sr-only">Annuler la validation</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Annuler la validation</TooltipContent>
+                        </Tooltip>
+                    )}
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice} disabled={selectedReceipt.status !== 'Validé' || !selectedReceipt.purchaseOrderId || isLoading}>
+                        <FileText className="h-4 w-4" />
+                        <span className="sr-only">Transférer en Facture</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Transférer en Facture</TooltipContent>
                     </Tooltip>
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick} disabled={selectedReceipt.status === 'Validé' || isLoading}>
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Modifier</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Modifier</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt.status === 'Validé' || isLoading}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Supprimer</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Supprimer</TooltipContent>
+                    </Tooltip>
+                </div>
                 )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice} disabled={selectedReceipt.status !== 'Validé' || !selectedReceipt.purchaseOrderId || isLoading}>
-                      <FileText className="h-4 w-4" />
-                      <span className="sr-only">Transférer en Facture</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Transférer en Facture</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick} disabled={selectedReceipt.status === 'Validé' || isLoading}>
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Modifier</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Modifier</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt.status === 'Validé' || isLoading}>
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Supprimer</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Supprimer</TooltipContent>
-                </Tooltip>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            <PurchaseReceiptsTable
-              receipts={receipts || []}
-              purchaseOrders={allOrders || []}
-              suppliers={suppliers || []}
-              onRowClick={handleRowClick}
-              onRowDoubleClick={handleRowDoubleClick}
-              selectedReceiptId={selectedReceipt?.id}
-            />
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+                <PurchaseReceiptsTable
+                receipts={receipts || []}
+                purchaseOrders={allOrders || []}
+                suppliers={suppliers || []}
+                onRowClick={handleRowClick}
+                onRowDoubleClick={handleRowDoubleClick}
+                selectedReceiptId={selectedReceipt?.id}
+                />
+            </CardContent>
+            </Card>
+
+            {/* --- EMERGENCY CLEANUP ZONE --- */}
+            <Card className="border-red-200 bg-red-50/50 mt-8">
+                <CardHeader>
+                    <div className="flex items-center gap-2 text-red-800">
+                        <AlertTriangle className="h-5 w-5" />
+                        <CardTitle className="text-lg">Zone de Maintenance (Urgence)</CardTitle>
+                    </div>
+                    <CardDescription className="text-red-700">
+                        Utilisez cette zone pour forcer la suppression des bons de réception bloqués (ex: statut "Validé" mais sans mouvement de stock). 
+                        Cette action contourne toutes les vérifications de sécurité.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border bg-white max-h-[300px] overflow-y-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-100 text-left sticky top-0">
+                                <tr className="border-b">
+                                    <th className="p-3 font-medium text-slate-600">Numéro</th>
+                                    <th className="p-3 font-medium text-slate-600">Date</th>
+                                    <th className="p-3 font-medium text-slate-600">Fournisseur</th>
+                                    <th className="p-3 font-medium text-slate-600">Statut</th>
+                                    <th className="p-3 font-medium text-slate-600 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {receipts?.map((receipt) => (
+                                    <tr key={receipt.id} className="border-b hover:bg-slate-50 transition-colors">
+                                        <td className="p-3 font-mono">{receipt.receiptNumber}</td>
+                                        <td className="p-3">{receipt.receiptDate ? format(new Date(receipt.receiptDate), 'dd/MM/yyyy') : '-'}</td>
+                                        <td className="p-3 text-muted-foreground">
+                                            {suppliers?.find(s => s.id === receipt.supplierId)?.name || 'Inconnu'}
+                                        </td>
+                                        <td className="p-3">
+                                            <span className={cn(
+                                                "px-2 py-1 rounded-full text-xs font-semibold",
+                                                receipt.status === 'Validé' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                                            )}>
+                                                {receipt.status}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-right">
+                                            <Button 
+                                                variant="destructive" 
+                                                size="sm"
+                                                className="h-8"
+                                                onClick={() => handleForceDelete(receipt.id, receipt.receiptNumber)}
+                                            >
+                                                <Trash2 className="mr-2 h-3 w-3" />
+                                                Forcer la suppression
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+        </>
       )}
       <PurchaseReceiptDialog
-          isOpen={dialogOpen}
-          onOpenChange={handleOpenChange}
-          purchaseOrders={allOrders || []}
-          receipts={receipts || []}
-          products={products || []}
-          suppliers={suppliers || []}
-          lastReceiptNumber={lastReceiptNumber}
-          receipt={editingReceipt}
+        isOpen={dialogOpen}
+        onOpenChange={handleOpenChange}
+        purchaseOrders={allOrders || []}
+        receipts={receipts || []}
+        products={products || []}
+        suppliers={suppliers || []}
+        lastReceiptNumber={lastReceiptNumber}
+        receipt={editingReceipt}
       />
       {selectedOrderForInvoice && (
           <PurchaseInvoiceDialog
