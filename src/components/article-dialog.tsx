@@ -49,9 +49,8 @@ type ArticleDialogProps = {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   article?: Article;
-  // REMOVED: lastArticleCodeNumber (Calculated internally now)
   onArticleCreated?: (article: Article) => void;
-  articles?: Article[]; // ADDED: Full list for calculation
+  articles?: Article[]; 
 };
 
 export function ArticleDialog({ 
@@ -61,8 +60,11 @@ export function ArticleDialog({
   onOpenChange: onOpenChangeProp,
   article,
   onArticleCreated,
-  articles = [] // Default to empty array
+  articles = [] 
  }: ArticleDialogProps) {
+  // DEBUG LOG
+  console.log("Article Dialog Component is Rendering...");
+
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -87,13 +89,11 @@ export function ArticleDialog({
     },
   });
 
-  // 1. SMART CALCULATION: Find the next ARTxxx code
   const nextCode = useMemo(() => {
     if (!articles || articles.length === 0) return "ART001";
     
     const maxId = articles.reduce((max, item) => {
       if (!item.code) return max;
-      // Extract numbers: ART005 -> 5
       const digits = String(item.code).replace(/\D/g, ''); 
       const num = digits ? parseInt(digits, 10) : 0;
       return num > max ? num : max;
@@ -115,7 +115,6 @@ export function ArticleDialog({
             familyId: article.familyId || '',
         });
       } else {
-        // Use smart suggestion
         form.reset({
           code: nextCode,
           name: '',
@@ -133,7 +132,6 @@ export function ArticleDialog({
   const onSubmit = async (data: ArticleFormValues) => {
     if (!firestore) return;
 
-    // --- DUPLICATE CHECK: CODE ---
     const codeExists = articles.some(existing => {
         if (isEditMode && existing.id === article?.id) return false;
         return existing.code?.toLowerCase() === data.code.toLowerCase();
@@ -146,7 +144,6 @@ export function ArticleDialog({
         });
         return; 
     }
-    // -----------------------------
 
     const articleData = {
         code: data.code,
@@ -187,7 +184,11 @@ export function ArticleDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
-      <DialogContent className="sm:max-w-[80vw]">
+      {/* --- VISUAL TEST CHANGE: RED BORDER --- */}
+      <DialogContent className="sm:max-w-[80vw] border-8 border-red-600">
+        <div className="bg-red-600 text-white font-bold text-center p-2 mb-4">
+            TEST MODE ACTIVATED - IF YOU SEE THIS, IT WORKS
+        </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
