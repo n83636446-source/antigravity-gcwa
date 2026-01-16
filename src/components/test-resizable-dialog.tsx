@@ -121,6 +121,7 @@ const RepresentativeSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }} // FIX: Stop prop so Trigger doesn't toggle closed
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -212,7 +213,7 @@ const RepresentativeSelector = ({
     )
 }
 
-// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR (FIXED Z-INDEX) ---
+// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR ---
 const SupplierSelector = ({ 
     value, 
     onChange, 
@@ -262,6 +263,7 @@ const SupplierSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }} // FIX: Stop prop
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -285,7 +287,6 @@ const SupplierSelector = ({
                 </div>
             </PopoverTrigger>
 
-            {/* ADDED z-[99999] to fix cut-off issue */}
             <PopoverContent 
                 className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
                 align="start"
@@ -416,6 +417,7 @@ const ArticleSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }} // FIX: Stop prop
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -1489,7 +1491,7 @@ export function TestResizableDialog() {
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
-        articles={availableArticles} // Changed: Pass full list, not number
+        articles={availableArticles}
         isChild={true} 
       />
 
@@ -1497,14 +1499,14 @@ export function TestResizableDialog() {
         isOpen={isCreateRepOpen}
         onOpenChange={setIsCreateRepOpen}
         onRepresentativeCreated={handleRepresentativeCreated}
-        representatives={availableRepresentatives} // Changed: Pass full list, not number
+        representatives={availableRepresentatives}
       />
 
       <SupplierDialog
         isOpen={isCreateSupplierOpen}
         onOpenChange={setIsCreateSupplierOpen}
         onSupplierCreated={handleSupplierCreated}
-        suppliers={availableSuppliers} // Changed: Pass full list, not number
+        suppliers={availableSuppliers}
       />
 
       <SupplierSearchDialog 
