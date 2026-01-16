@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2 } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -13,11 +13,16 @@ import { cn } from "@/lib/utils"
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates"
+import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" // Importing your types
+import { useToast } from "@/hooks/use-toast" // Assuming you have this hook
+
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
 
-// --- TYPES ---
+// --- LOCAL TYPES (For Form State) ---
+// These mirror your FirestoreEntity types but are used for local state management
 type Article = {
   id: string
   code: string
@@ -891,6 +896,10 @@ export function TestResizableDialog() {
   const [showCloseAlert, setShowCloseAlert] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
   const [flashingRowId, setFlashingRowId] = useState<string | null>(null) // NEW STATE
+  const [isSubmitting, setIsSubmitting] = useState(false) // NEW STATE
+  const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([]) // NEW STATE
+
+  const { toast } = useToast()
 
   const [date, setDate] = useState<Date>(new Date())
   const [dueDate, setDueDate] = useState<Date>(new Date())
@@ -958,19 +967,22 @@ export function TestResizableDialog() {
     const fetchData = async () => {
       if (!db) return;
       try {
-        const [articlesSnap, suppliersSnap, repsSnap] = await Promise.all([
+        const [articlesSnap, suppliersSnap, repsSnap, receiptsSnap] = await Promise.all([
             getDocs(collection(db, "products")),
             getDocs(collection(db, "suppliers")),
-            getDocs(collection(db, "representatives"))
+            getDocs(collection(db, "representatives")),
+            getDocs(collection(db, "purchaseReceipts"))
         ])
 
         const articles = articlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Article[];
         const suppliers = suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Supplier[];
         const reps = repsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Representative[];
+        const receipts = receiptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PurchaseReceipt[];
 
         setAvailableArticles(deduplicate(articles));
         setAvailableSuppliers(deduplicate(suppliers));
         setAvailableRepresentatives(deduplicate(reps));
+        setExistingReceipts(receipts);
 
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -1005,6 +1017,71 @@ export function TestResizableDialog() {
 
     } catch (e) {
       console.error("Audio play failed", e);
+    }
+  }
+
+  // --- SUBMIT LOGIC ---
+  const handleCreateReceipt = async () => {
+    if (!db) return;
+    
+    // Validation
+    if (!supplierId) {
+        toast({ title: "Erreur", description: "Veuillez sélectionner un fournisseur.", variant: "destructive" });
+        return;
+    }
+    const validItems = items.filter(i => i.articleId && i.qty > 0);
+    if (validItems.length === 0) {
+        toast({ title: "Erreur", description: "Veuillez ajouter au moins un article.", variant: "destructive" });
+        return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+        // Calculate Next ID (BR-xxxx)
+        let nextNumber = "BR-0001";
+        if (existingReceipts.length > 0) {
+            const maxId = existingReceipts.reduce((max, r) => {
+                const num = parseInt(r.receiptNumber.replace("BR-", "") || "0", 10);
+                return num > max ? num : max;
+            }, 0);
+            nextNumber = `BR-${(maxId + 1).toString().padStart(4, '0')}`;
+        }
+
+        const receiptData: Omit<PurchaseReceipt, "id"> = {
+            receiptNumber: nextNumber,
+            supplierId: supplierId,
+            receiptDate: date.toISOString(),
+            items: validItems.map(i => ({
+                productId: i.articleId,
+                quantityReceived: i.qty,
+                price: i.price,
+                tvaRate: i.tva
+            })),
+            status: "Validé", // Default status
+            totalHT: totalHT,
+            totalTTC: totalTTC,
+            paymentMode: paymentMethod,
+            dueDate: dueDate.toISOString(),
+            representativeId: representativeId || undefined,
+            reference: reference || undefined,
+        };
+
+        const docRef = await addDocumentNonBlocking(collection(db, "purchaseReceipts"), receiptData);
+        
+        if (docRef) {
+            toast({ title: "Succès", description: `Bon de réception ${nextNumber} créé avec succès.` });
+            setOpen(false);
+            setTimeout(() => {
+                resetForm();
+                setIsSubmitting(false);
+            }, 300);
+        }
+
+    } catch (error) {
+        console.error("Failed to save receipt", error);
+        toast({ title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
+        setIsSubmitting(false);
     }
   }
 
@@ -1551,7 +1628,14 @@ export function TestResizableDialog() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
-                  <Button className="bg-slate-900 text-white">Créer</Button>
+                  <Button className="bg-slate-900 text-white" disabled={isSubmitting} onClick={handleCreateReceipt}>
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Enregistrement...
+                        </>
+                    ) : "Créer"}
+                  </Button>
                 </DialogFooter>
               </div>
             </div>
