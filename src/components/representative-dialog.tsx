@@ -122,7 +122,7 @@ export function RepresentativeDialog({
       return; 
     }
 
-    // 2. Check Email (New)
+    // 2. Check Email
     const emailExists = representatives.some(existingRep => {
       if (isEditMode && existingRep.id === representative.id) return false;
       // Only check if an email was actually entered (ignore empty emails)
@@ -168,7 +168,9 @@ export function RepresentativeDialog({
       <DialogContent className="sm:max-w-md">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <DialogHeader>
+            
+            {/* --- VISUAL UPDATE: HEADER SEPARATOR --- */}
+            <DialogHeader className="border-b pb-4 mb-4">
               <DialogTitle>
                 {isEditMode ? 'Modifier le représentant' : 'Ajouter un représentant'}
               </DialogTitle>
@@ -176,6 +178,7 @@ export function RepresentativeDialog({
                 Remplissez les détails du représentant.
               </DialogDescription>
             </DialogHeader>
+            {/* --------------------------------------- */}
 
             <FormField
               control={form.control}
