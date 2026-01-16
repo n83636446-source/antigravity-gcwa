@@ -46,7 +46,7 @@ type RepresentativeDialogProps = {
   onOpenChange: (open: boolean) => void;
   representative?: Representative;
   onRepresentativeCreated?: (rep: Representative) => void;
-  representatives: Representative[]; // Pass the list so Dialog can calculate
+  representatives: Representative[];
 };
 
 export function RepresentativeDialog({
@@ -69,24 +69,22 @@ export function RepresentativeDialog({
     },
   });
 
-  // INTERNAL CALCULATION: Find the next code
+  // 1. Calculate Next Code (Suggestion only)
   const nextCode = useMemo(() => {
     if (!representatives || representatives.length === 0) return "REP001";
-
+    
+    // Find highest number
     const maxId = representatives.reduce((max, rep) => {
       if (!rep.code) return max;
-      const match = rep.code.match(/REP(\d+)/i); 
-      if (match && match[1]) {
-        const num = parseInt(match[1], 10);
-        return !isNaN(num) && num > max ? num : max;
-      }
-      return max;
+      const digits = String(rep.code).replace(/\D/g, '');
+      const num = digits ? parseInt(digits, 10) : 0;
+      return num > max ? num : max;
     }, 0);
 
     return `REP${(maxId + 1).toString().padStart(3, '0')}`;
   }, [representatives]);
 
-  // RESET FORM ON OPEN
+  // 2. Reset form on open
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && representative) {
@@ -96,9 +94,8 @@ export function RepresentativeDialog({
             email: representative.email || '',
         });
       } else {
-        // Use the internally calculated code
         form.reset({
-          code: nextCode,
+          code: nextCode, // Pre-fill suggestion
           name: '',
           email: '',
         });
@@ -108,6 +105,24 @@ export function RepresentativeDialog({
 
   const onSubmit = async (data: RepresentativeFormValues) => {
     if (!firestore) return;
+
+    // --- CRITICAL FIX: DUPLICATE CHECK ---
+    // Check if code exists in the list (case insensitive)
+    const codeExists = representatives.some(existingRep => {
+      // If editing, skip checking against itself
+      if (isEditMode && existingRep.id === representative.id) return false;
+      
+      return existingRep.code?.toLowerCase() === data.code.toLowerCase();
+    });
+
+    if (codeExists) {
+      form.setError("code", { 
+        type: "manual", 
+        message: "Ce code existe déjà. Veuillez en choisir un autre." 
+      });
+      return; // STOP HERE. Do not save.
+    }
+    // -------------------------------------
 
     if (isEditMode && representative) {
       const representativeDocRef = doc(firestore, 'representatives', representative.id);
