@@ -121,7 +121,7 @@ const RepresentativeSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onClick={(e) => { e.stopPropagation(); setOpen(true); }} // FIX: Stop prop so Trigger doesn't toggle closed
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -146,7 +146,7 @@ const RepresentativeSelector = ({
             </PopoverTrigger>
             
             <PopoverContent 
-                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
+                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
                 align="start"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
@@ -263,7 +263,7 @@ const SupplierSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onClick={(e) => { e.stopPropagation(); setOpen(true); }} // FIX: Stop prop
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -287,8 +287,9 @@ const SupplierSelector = ({
                 </div>
             </PopoverTrigger>
 
+            {/* ADDED pointer-events-auto HERE */}
             <PopoverContent 
-                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
+                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
                 align="start"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
@@ -417,7 +418,7 @@ const ArticleSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => setOpen(true)}
-                        onClick={(e) => { e.stopPropagation(); setOpen(true); }} // FIX: Stop prop
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -442,7 +443,7 @@ const ArticleSelector = ({
             </PopoverTrigger>
 
             <PopoverContent 
-                className="w-[600px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
+                className="w-[600px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
                 align="start"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
@@ -500,7 +501,7 @@ const ArticleSelector = ({
 
                         <div 
                             onMouseDown={(e) => { 
-                                e.preventDefault();
+                                e.preventDefault(); 
                                 setOpen(false); 
                                 onOpenAdvanced();
                             }} 
@@ -1491,7 +1492,7 @@ export function TestResizableDialog() {
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
-        articles={availableArticles}
+        articles={availableArticles} // Changed: Pass full list, not number
         isChild={true} 
       />
 
@@ -1499,14 +1500,14 @@ export function TestResizableDialog() {
         isOpen={isCreateRepOpen}
         onOpenChange={setIsCreateRepOpen}
         onRepresentativeCreated={handleRepresentativeCreated}
-        representatives={availableRepresentatives}
+        representatives={availableRepresentatives} // Changed: Pass full list, not number
       />
 
       <SupplierDialog
         isOpen={isCreateSupplierOpen}
         onOpenChange={setIsCreateSupplierOpen}
         onSupplierCreated={handleSupplierCreated}
-        suppliers={availableSuppliers}
+        suppliers={availableSuppliers} // Changed: Pass full list, not number
       />
 
       <SupplierSearchDialog 
