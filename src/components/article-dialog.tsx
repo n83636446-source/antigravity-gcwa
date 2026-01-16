@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -49,8 +49,9 @@ type ArticleDialogProps = {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   article?: Article;
-  lastArticleCodeNumber?: number;
+  // REMOVED: lastArticleCodeNumber (Calculated internally now)
   onArticleCreated?: (article: Article) => void;
+  articles?: Article[]; // ADDED: Full list for calculation
 };
 
 export function ArticleDialog({ 
@@ -59,8 +60,8 @@ export function ArticleDialog({
   isOpen: openProp,
   onOpenChange: onOpenChangeProp,
   article,
-  lastArticleCodeNumber = 0,
-  onArticleCreated
+  onArticleCreated,
+  articles = [] // Default to empty array
  }: ArticleDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -86,6 +87,21 @@ export function ArticleDialog({
     },
   });
 
+  // 1. SMART CALCULATION: Find the next ARTxxx code
+  const nextCode = useMemo(() => {
+    if (!articles || articles.length === 0) return "ART001";
+    
+    const maxId = articles.reduce((max, item) => {
+      if (!item.code) return max;
+      // Extract numbers: ART005 -> 5
+      const digits = String(item.code).replace(/\D/g, ''); 
+      const num = digits ? parseInt(digits, 10) : 0;
+      return num > max ? num : max;
+    }, 0);
+
+    return `ART${(maxId + 1).toString().padStart(3, '0')}`;
+  }, [articles]);
+
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && article) {
@@ -99,7 +115,7 @@ export function ArticleDialog({
             familyId: article.familyId || '',
         });
       } else {
-        const nextCode = `ART${(lastArticleCodeNumber + 1).toString().padStart(3, '0')}`;
+        // Use smart suggestion
         form.reset({
           code: nextCode,
           name: '',
@@ -111,11 +127,26 @@ export function ArticleDialog({
         });
       }
     }
-  }, [article, isEditMode, isOpen, form, lastArticleCodeNumber]);
+  }, [article, isEditMode, isOpen, form, nextCode]);
 
 
   const onSubmit = async (data: ArticleFormValues) => {
     if (!firestore) return;
+
+    // --- DUPLICATE CHECK: CODE ---
+    const codeExists = articles.some(existing => {
+        if (isEditMode && existing.id === article?.id) return false;
+        return existing.code?.toLowerCase() === data.code.toLowerCase();
+    });
+  
+    if (codeExists) {
+        form.setError("code", { 
+          type: "manual", 
+          message: "Ce code article existe déjà." 
+        });
+        return; 
+    }
+    // -----------------------------
 
     const articleData = {
         code: data.code,

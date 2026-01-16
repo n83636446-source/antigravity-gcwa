@@ -125,26 +125,6 @@ export function PurchaseReceiptDialog({
   
   const gridLayout = "grid grid-cols-[1fr_120px_100px_80px_120px_50px] gap-2 items-end text-left";
 
-
-  const lastSupplierCodeNumber = useMemo(() => {
-    if (!suppliers || suppliers.length === 0) return 0;
-    return suppliers.reduce((max, s) => {
-      const codeNumber = parseInt((s.code || 'FOU0').replace('FOU', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [suppliers]);
-  
-  const lastArticleCodeNumber = useMemo(() => {
-    if (!products || products.length === 0) {
-      return 0;
-    }
-    return products.reduce((max, s) => {
-      const codeNumber = parseInt((s.code || 'ART0').replace('ART', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [products]);
-
-
   // Filter out purchase orders that already have a receipt
   const availablePurchaseOrders = useMemo(() => {
     if (!receipts || !purchaseOrders) return [];
@@ -775,12 +755,11 @@ export function PurchaseReceiptDialog({
       isOpen={isArticleDialogOpen}
       onOpenChange={setArticleDialogOpen}
       onArticleCreated={handleArticleCreated}
-      lastArticleCodeNumber={lastArticleCodeNumber}
+      articles={products || []}
     />
     <SupplierDialog
       isOpen={isSupplierDialogOpen}
       onOpenChange={setSupplierDialogOpen}
-      lastSupplierCodeNumber={lastSupplierCodeNumber}
       onSupplierCreated={handleSupplierCreated}
       suppliers={suppliers || []}
     />

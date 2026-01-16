@@ -65,6 +65,7 @@ export default function DashboardPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         article={editingArticle}
+        articles={articles || []}
       />
     </div>
   );

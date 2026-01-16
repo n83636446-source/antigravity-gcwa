@@ -931,29 +931,6 @@ export function TestResizableDialog() {
   }
 
   // --- CALCULATIONS ---
-  const lastArticleCodeNumber = useMemo(() => {
-    return availableArticles.reduce((max, article) => {
-      const match = article.code.match(/ART(\d+)/);
-      if (match && match[1]) {
-        const num = parseInt(match[1], 10);
-        return num > max ? num : max;
-      }
-      return max;
-    }, 0);
-  }, [availableArticles]);
-
-  const lastSupplierCodeNumber = useMemo(() => {
-    return availableSuppliers.reduce((max, supplier) => {
-      const match = supplier.code.match(/FOU(\d+)/);
-      if (match && match[1]) {
-        const num = parseInt(match[1], 10);
-        return num > max ? num : max;
-      }
-      return max;
-    }, 0);
-  }, [availableSuppliers]);
-
-  // NOTE: Representative code calculation is now handled INSIDE the RepresentativeDialog
 
   const { totalHT, totalTVA, totalTTC } = items.reduce(
     (acc, item) => {
@@ -1129,7 +1106,7 @@ export function TestResizableDialog() {
       // 1. Cast the new rep
       const repWithType = newRep as Representative
       
-      // 2. Add to available list so the dialog has the latest data
+      // 2. Add to available list so it's available for selection
       setAvailableRepresentatives(prev => deduplicate([repWithType, ...prev]))
       
       // 3. Auto-select the new representative
@@ -1554,7 +1531,7 @@ export function TestResizableDialog() {
         isOpen={isCreateArticleOpen}
         onOpenChange={setIsCreateArticleOpen}
         onArticleCreated={handleArticleCreated}
-        lastArticleCodeNumber={lastArticleCodeNumber}
+        articles={availableArticles}
         isChild={true} 
       />
 
@@ -1562,14 +1539,13 @@ export function TestResizableDialog() {
         isOpen={isCreateRepOpen}
         onOpenChange={setIsCreateRepOpen}
         onRepresentativeCreated={handleRepresentativeCreated}
-        representatives={availableRepresentatives} // Changed: Pass full list, not number
+        representatives={availableRepresentatives}
       />
 
       <SupplierDialog
         isOpen={isCreateSupplierOpen}
         onOpenChange={setIsCreateSupplierOpen}
         onSupplierCreated={handleSupplierCreated}
-        lastSupplierCodeNumber={lastSupplierCodeNumber}
         suppliers={availableSuppliers}
       />
 

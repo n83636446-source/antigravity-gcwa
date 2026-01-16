@@ -74,16 +74,6 @@ export default function ArticlesPage() {
 
   const isLoading = isLoadingArticles || isLoadingFamilies || !purchaseOrders || !purchaseReceipts || !purchaseInvoices;
 
-  const lastArticleCodeNumber = useMemo(() => {
-    if (!articles || articles.length === 0) {
-      return 0;
-    }
-    return articles.reduce((max, s) => {
-      const codeNumber = parseInt((s.code || 'ART0').replace('ART', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [articles]);
-
   const getFamilyName = (familyId?: string) => {
     if (!familyId || !families) return 'N/A';
     return families.find(f => f.id === familyId)?.name ?? 'Inconnu';
@@ -233,7 +223,7 @@ export default function ArticlesPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         article={editingArticle}
-        lastArticleCodeNumber={lastArticleCodeNumber}
+        articles={articles || []}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
