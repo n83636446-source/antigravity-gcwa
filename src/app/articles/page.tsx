@@ -74,11 +74,26 @@ export default function ArticlesPage() {
 
   const isLoading = isLoadingArticles || isLoadingFamilies || !purchaseOrders || !purchaseReceipts || !purchaseInvoices;
 
+  // --- SORTING LOGIC ---
+  const sortedArticles = useMemo(() => {
+    if (!articles) return [];
+    return [...articles].sort((a, b) => {
+      // Helper to extract number from "ART001"
+      const getVal = (code?: string) => {
+        if (!code) return 999999;
+        const digits = code.replace(/\D/g, '');
+        return digits ? parseInt(digits, 10) : 999999;
+      };
+      
+      // Sort Low -> High
+      return getVal(a.code) - getVal(b.code);
+    });
+  }, [articles]);
+
   const getFamilyName = (familyId?: string) => {
     if (!familyId || !families) return 'N/A';
     return families.find(f => f.id === familyId)?.name ?? 'Inconnu';
   }
-
 
   const handleAdd = () => {
     setEditingArticle(undefined);
@@ -97,7 +112,7 @@ export default function ArticlesPage() {
   
   const handleSelectArticle = (article: Article) => {
     if (selectedArticle?.id === article.id) {
-      setSelectedArticle(null); // Deselect if clicking the same row
+      setSelectedArticle(null);
     } else {
       setSelectedArticle(article);
     }
@@ -114,7 +129,7 @@ export default function ArticlesPage() {
       toast({
         variant: 'destructive',
         title: 'Suppression impossible',
-        description: `L'article "${articleToDelete.name}" est utilisé dans des bons de commande, de réception ou des factures et ne peut pas être supprimé.`,
+        description: `L'article "${articleToDelete.name}" est utilisé dans des documents et ne peut pas être supprimé.`,
         duration: 5000,
       });
       setDeleteDialogOpen(false);
@@ -192,7 +207,8 @@ export default function ArticlesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(articles || []).map((article) => (
+                {/* Render SORTED articles */}
+                {sortedArticles.map((article) => (
                   <TableRow
                     key={article.id}
                     onClick={() => handleSelectArticle(article)}
@@ -223,7 +239,7 @@ export default function ArticlesPage() {
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
         article={editingArticle}
-        articles={articles || []}
+        articles={articles || []} // Pass raw list for calc
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
