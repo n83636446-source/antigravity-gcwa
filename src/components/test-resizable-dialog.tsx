@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-// Keep Popover imports for DatePicker
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
@@ -72,24 +71,6 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- HOOK: CLICK OUTSIDE ---
-function useClickOutside(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
-    useEffect(() => {
-        const listener = (event: MouseEvent | TouchEvent) => {
-            if (!ref.current || ref.current.contains(event.target as Node)) {
-                return;
-            }
-            handler(event);
-        };
-        document.addEventListener("mousedown", listener);
-        document.addEventListener("touchstart", listener);
-        return () => {
-            document.removeEventListener("mousedown", listener);
-            document.removeEventListener("touchstart", listener);
-        };
-    }, [ref, handler]);
-}
-
 // --- COMPONENT: AUTOCOMPLETE REPRESENTATIVE SELECTOR ---
 const RepresentativeSelector = ({ 
     value, 
@@ -106,10 +87,6 @@ const RepresentativeSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    const wrapperRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
-
-    useClickOutside(wrapperRef, () => setOpen(false));
 
     useEffect(() => {
         const selected = representatives.find(r => r.id === value)
@@ -136,41 +113,43 @@ const RepresentativeSelector = ({
     }
 
     return (
-        <div ref={wrapperRef} className="relative w-full">
-            <div className="relative">
-                <Input
-                    ref={inputRef}
-                    placeholder="Sélectionnez un représentant..."
-                    value={inputValue}
-                    autoComplete="off" 
-                    onFocus={() => setOpen(true)}
-                    onChange={(e) => {
-                        setInputValue(e.target.value)
-                        setOpen(true)
-                    }}
-                    className="w-full pr-10" 
-                />
-                <Button 
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
-                    onClick={(e) => {
-                        e.preventDefault() 
-                        e.stopPropagation() 
-                        onOpenAdvanced()
-                    }}
-                    title="Recherche avancée"
-                >
-                    <Search className="h-4 w-4" />
-                </Button>
-            </div>
-
-            {open && (
-                <div 
-                    className="absolute top-full left-0 mt-1 w-[500px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
-                    onMouseDown={(e) => e.preventDefault()} 
-                >
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        placeholder="Sélectionnez un représentant..."
+                        value={inputValue}
+                        autoComplete="off" 
+                        onFocus={() => setOpen(true)}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        className="w-full pr-10" 
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.preventDefault() 
+                            e.stopPropagation() 
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+            
+            <PopoverContent 
+                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="flex flex-col">
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
                         <span className="text-left">Nom</span>
@@ -228,12 +207,314 @@ const RepresentativeSelector = ({
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            </PopoverContent>
+        </Popover>
     )
 }
 
-// --- COMPONENT: ADVANCED REPRESENTATIVE SEARCH DIALOG ---
+// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR (FIXED Z-INDEX) ---
+const SupplierSelector = ({ 
+    value, 
+    onChange, 
+    suppliers, 
+    onOpenAdvanced,
+    onCreateNew
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    suppliers: Supplier[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+
+    useEffect(() => {
+        const selected = suppliers.find(s => s.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, suppliers])
+
+    const filteredSuppliers = useMemo(() => {
+        if (!inputValue) return suppliers.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return suppliers.filter(s => 
+            s.name.toLowerCase().includes(lower) || 
+            s.code.toLowerCase().includes(lower)
+        ).slice(0, 20); 
+    }, [inputValue, suppliers])
+
+    const handleSelect = (supplier: Supplier) => {
+        onChange(supplier.id)
+        setInputValue(supplier.name)
+        setOpen(false)
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        placeholder="Sélectionnez un fournisseur..."
+                        value={inputValue}
+                        autoComplete="off" 
+                        onFocus={() => setOpen(true)}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        className="w-full pr-10" 
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.preventDefault() 
+                            e.stopPropagation() 
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+
+            {/* ADDED z-[99999] to fix cut-off issue */}
+            <PopoverContent 
+                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="flex flex-col">
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Nom</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onCreateNew(); 
+                            }} 
+                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <PlusCircle className="ml-2 h-4 w-4" />
+                            Créer un nouveau fournisseur
+                        </div>
+
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        {filteredSuppliers.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun fournisseur trouvé.
+                            </div>
+                        )}
+
+                        {filteredSuppliers.map((supplier) => (
+                            <div
+                                key={supplier.id}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(supplier);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_1fr] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{supplier.code}</span>
+                                    <span className="text-left truncate font-medium">{supplier.name}</span>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.stopPropagation();
+                                setOpen(false); 
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
+const ArticleSelector = ({ 
+    value, 
+    onChange, 
+    articles, 
+    onOpenAdvanced,
+    onCreateNew,
+    autoFocus = false
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    articles: Article[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void,
+    autoFocus?: boolean
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        if (autoFocus && inputRef.current) {
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+        }
+    }, [autoFocus]);
+
+    useEffect(() => {
+        const selected = articles.find(a => a.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, articles])
+
+    const filteredArticles = useMemo(() => {
+        if (!inputValue) return articles.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return articles.filter(a => 
+            a.name.toLowerCase().includes(lower) || 
+            a.code.toLowerCase().includes(lower)
+        ).slice(0, 20); 
+    }, [inputValue, articles])
+
+    const handleSelect = (article: Article) => {
+        onChange(article.id)
+        setInputValue(article.name)
+        setOpen(false)
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        ref={inputRef}
+                        placeholder="Saisir un article..."
+                        value={inputValue}
+                        autoComplete="off" 
+                        onFocus={() => setOpen(true)}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        className="w-full pr-10" 
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.preventDefault() 
+                            e.stopPropagation() 
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+
+            <PopoverContent 
+                className="w-[600px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999]" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="flex flex-col">
+                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Désignation</span>
+                        <span className="text-right pr-2">Stock</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.preventDefault(); 
+                                setOpen(false); 
+                                onCreateNew(); 
+                            }} 
+                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <PlusCircle className="ml-2 h-4 w-4" />
+                            Créer un nouvel article
+                        </div>
+
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        {filteredArticles.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun article trouvé.
+                            </div>
+                        )}
+
+                        {filteredArticles.map((article) => (
+                            <div
+                                key={article.id}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    handleSelect(article);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{article.code}</span>
+                                    <span className="text-left truncate font-medium">{article.name}</span>
+                                    <span className={cn(
+                                        "text-right font-medium text-xs pr-2",
+                                        (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                    )}>
+                                        {article.stockLevel ?? 0}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => { 
+                                e.preventDefault();
+                                setOpen(false); 
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+// --- REST OF THE FILE: SEARCH DIALOGS & MAIN FORM (UNCHANGED) ---
 const RepresentativeSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
@@ -311,148 +592,6 @@ const RepresentativeSearchDialog = ({
   )
 }
 
-// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR ---
-const SupplierSelector = ({ 
-    value, 
-    onChange, 
-    suppliers, 
-    onOpenAdvanced,
-    onCreateNew
-}: { 
-    value: string, 
-    onChange: (id: string) => void, 
-    suppliers: Supplier[],
-    onOpenAdvanced: () => void,
-    onCreateNew: () => void
-}) => {
-    const [open, setOpen] = useState(false)
-    const [inputValue, setInputValue] = useState("")
-    const wrapperRef = useRef<HTMLDivElement>(null)
-
-    useClickOutside(wrapperRef, () => setOpen(false));
-
-    useEffect(() => {
-        const selected = suppliers.find(s => s.id === value)
-        if (selected) {
-            setInputValue(selected.name)
-        } else if (!value) {
-            setInputValue("")
-        }
-    }, [value, suppliers])
-
-    const filteredSuppliers = useMemo(() => {
-        if (!inputValue) return suppliers.slice(0, 10); 
-        const lower = inputValue.toLowerCase()
-        return suppliers.filter(s => 
-            s.name.toLowerCase().includes(lower) || 
-            s.code.toLowerCase().includes(lower)
-        ).slice(0, 20); 
-    }, [inputValue, suppliers])
-
-    const handleSelect = (supplier: Supplier) => {
-        onChange(supplier.id)
-        setInputValue(supplier.name)
-        setOpen(false)
-    }
-
-    return (
-        <div ref={wrapperRef} className="relative w-full">
-            <div className="relative">
-                <Input
-                    placeholder="Sélectionnez un fournisseur..."
-                    value={inputValue}
-                    autoComplete="off" 
-                    onFocus={() => setOpen(true)}
-                    onChange={(e) => {
-                        setInputValue(e.target.value)
-                        setOpen(true)
-                    }}
-                    className="w-full pr-10" 
-                />
-                <Button 
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
-                    onClick={(e) => {
-                        e.preventDefault() 
-                        e.stopPropagation() 
-                        onOpenAdvanced()
-                    }}
-                    title="Recherche avancée"
-                >
-                    <Search className="h-4 w-4" />
-                </Button>
-            </div>
-
-            {open && (
-                <div 
-                    className="absolute top-full left-0 mt-1 w-[500px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
-                    onMouseDown={(e) => e.preventDefault()} 
-                >
-                    <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
-                        <span className="text-left pl-2">Code</span>
-                        <span className="text-left">Nom</span>
-                    </div>
-
-                    <div className="max-h-[300px] overflow-y-auto p-1">
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.stopPropagation();
-                                setOpen(false); 
-                                onCreateNew(); 
-                            }} 
-                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            Créer un nouveau fournisseur
-                        </div>
-
-                        <div className="h-px bg-slate-100 my-1" />
-                        
-                        {filteredSuppliers.length === 0 && (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                                Aucun fournisseur trouvé.
-                            </div>
-                        )}
-
-                        {filteredSuppliers.map((supplier) => (
-                            <div
-                                key={supplier.id}
-                                onMouseDown={(e) => {
-                                    e.stopPropagation();
-                                    handleSelect(supplier);
-                                }}
-                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
-                            >
-                                <div className="grid grid-cols-[100px_1fr] items-center gap-4 w-full">
-                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{supplier.code}</span>
-                                    <span className="text-left truncate font-medium">{supplier.name}</span>
-                                </div>
-                            </div>
-                        ))}
-
-                        <div className="h-px bg-slate-100 my-1" />
-
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.stopPropagation();
-                                setOpen(false); 
-                                onOpenAdvanced();
-                            }} 
-                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <Search className="h-4 w-4" />
-                            Ouvrir la liste complète...
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-// --- COMPONENT: ADVANCED SUPPLIER SEARCH DIALOG ---
 const SupplierSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
@@ -532,167 +671,6 @@ const SupplierSearchDialog = ({
   )
 }
 
-// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
-const ArticleSelector = ({ 
-    value, 
-    onChange, 
-    articles, 
-    onOpenAdvanced,
-    onCreateNew,
-    autoFocus = false
-}: { 
-    value: string, 
-    onChange: (id: string) => void, 
-    articles: Article[],
-    onOpenAdvanced: () => void,
-    onCreateNew: () => void,
-    autoFocus?: boolean
-}) => {
-    const [open, setOpen] = useState(false)
-    const [inputValue, setInputValue] = useState("")
-    const wrapperRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
-
-    useClickOutside(wrapperRef, () => setOpen(false));
-
-    useEffect(() => {
-        if (autoFocus && inputRef.current) {
-            setTimeout(() => {
-                inputRef.current?.focus();
-            }, 50);
-        }
-    }, [autoFocus]);
-
-    useEffect(() => {
-        const selected = articles.find(a => a.id === value)
-        if (selected) {
-            setInputValue(selected.name)
-        } else if (!value) {
-            setInputValue("")
-        }
-    }, [value, articles])
-
-    const filteredArticles = useMemo(() => {
-        if (!inputValue) return articles.slice(0, 10); 
-        const lower = inputValue.toLowerCase()
-        return articles.filter(a => 
-            a.name.toLowerCase().includes(lower) || 
-            a.code.toLowerCase().includes(lower)
-        ).slice(0, 20); 
-    }, [inputValue, articles])
-
-    const handleSelect = (article: Article) => {
-        onChange(article.id)
-        setInputValue(article.name)
-        setOpen(false)
-    }
-
-    return (
-        <div ref={wrapperRef} className="relative w-full">
-            <div className="relative">
-                <Input
-                    ref={inputRef}
-                    placeholder="Saisir un article..."
-                    value={inputValue}
-                    autoComplete="off" 
-                    onFocus={() => setOpen(true)}
-                    onChange={(e) => {
-                        setInputValue(e.target.value)
-                        setOpen(true)
-                    }}
-                    className="w-full pr-10" 
-                />
-                <Button 
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
-                    onClick={(e) => {
-                        e.preventDefault() 
-                        e.stopPropagation() 
-                        onOpenAdvanced()
-                    }}
-                    title="Recherche avancée"
-                >
-                    <Search className="h-4 w-4" />
-                </Button>
-            </div>
-
-            {open && (
-                <div 
-                    className="absolute top-full left-0 mt-1 w-[600px] z-[99999] bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden flex flex-col"
-                    onMouseDown={(e) => e.preventDefault()} 
-                >
-                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
-                        <span className="text-left pl-2">Code</span>
-                        <span className="text-left">Désignation</span>
-                        <span className="text-right pr-2">Stock</span>
-                    </div>
-
-                    <div className="max-h-[300px] overflow-y-auto p-1">
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.preventDefault(); 
-                                setOpen(false); 
-                                onCreateNew(); 
-                            }} 
-                            className="flex items-center gap-2 px-2 py-2.5 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            Créer un nouvel article
-                        </div>
-
-                        <div className="h-px bg-slate-100 my-1" />
-                        
-                        {filteredArticles.length === 0 && (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                                Aucun article trouvé.
-                            </div>
-                        )}
-
-                        {filteredArticles.map((article) => (
-                            <div
-                                key={article.id}
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    handleSelect(article);
-                                }}
-                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
-                            >
-                                <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
-                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{article.code}</span>
-                                    <span className="text-left truncate font-medium">{article.name}</span>
-                                    <span className={cn(
-                                        "text-right font-medium text-xs pr-2",
-                                        (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
-                                    )}>
-                                        {article.stockLevel ?? 0}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-
-                        <div className="h-px bg-slate-100 my-1" />
-
-                        <div 
-                            onMouseDown={(e) => { 
-                                e.preventDefault();
-                                setOpen(false); 
-                                onOpenAdvanced();
-                            }} 
-                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
-                        >
-                            <Search className="h-4 w-4" />
-                            Ouvrir la liste complète...
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-// --- COMPONENT: ADVANCED ARTICLE SEARCH DIALOG ---
 const ArticleSearchDialog = ({ 
   isOpen, 
   onOpenChange, 
@@ -774,7 +752,6 @@ const ArticleSearchDialog = ({
   )
 }
 
-// --- COMPONENT: CUSTOM CALENDAR ---
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -842,7 +819,6 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
   )
 }
 
-// --- DATE PICKER FIELD ---
 const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false)
   return (
@@ -870,11 +846,9 @@ export function TestResizableDialog() {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
-  // --- ALERT STATE ---
   const [showCloseAlert, setShowCloseAlert] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
 
-  // --- FORM STATE ---
   const [date, setDate] = useState<Date>(new Date())
   const [dueDate, setDueDate] = useState<Date>(new Date())
   const [supplierId, setSupplierId] = useState<string>("")
@@ -882,7 +856,6 @@ export function TestResizableDialog() {
   const [representativeId, setRepresentativeId] = useState<string>("")
   const [reference, setReference] = useState<string>("")
   
-  // --- DATA STATE ---
   const [items, setItems] = useState<InvoiceItem[]>([
     { id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }
   ])
@@ -890,23 +863,19 @@ export function TestResizableDialog() {
   const [availableSuppliers, setAvailableSuppliers] = useState<Supplier[]>([])
   const [availableRepresentatives, setAvailableRepresentatives] = useState<Representative[]>([])
 
-  // --- FOCUS & MODAL STATE ---
   const [newRowId, setNewRowId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) 
-  const [isRepresentativeSearchOpen, setIsRepresentativeSearchOpen] = useState(false) // NEW
+  const [isRepresentativeSearchOpen, setIsRepresentativeSearchOpen] = useState(false) 
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
 
-  // --- FIRESTORE ---
   const db = useFirestore()
 
-  // --- MODAL STATES ---
   const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
   const [isCreateRepOpen, setIsCreateRepOpen] = useState(false)
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
-  // --- RESET FUNCTION ---
   const resetForm = () => {
     setDate(new Date())
     setDueDate(new Date())
@@ -920,7 +889,6 @@ export function TestResizableDialog() {
     setIsShaking(false)
   }
 
-  // --- DIRTY CHECK ---
   const isFormDirty = () => {
     if (!isSameDay(date, new Date())) return true;
     if (!isSameDay(dueDate, new Date())) return true;
@@ -929,9 +897,6 @@ export function TestResizableDialog() {
     if (items.length === 1 && items[0].articleId !== "") return true;
     return false;
   }
-
-  // --- NO CALCULATIONS HERE ANYMORE ---
-  // The dialogs calculate their own codes now.
 
   const { totalHT, totalTVA, totalTTC } = items.reduce(
     (acc, item) => {
@@ -946,7 +911,6 @@ export function TestResizableDialog() {
     { totalHT: 0, totalTVA: 0, totalTTC: 0 }
   );
 
-  // --- FETCH ALL DATA ---
   useEffect(() => {
     const fetchData = async () => {
       if (!db) return;
@@ -963,7 +927,6 @@ export function TestResizableDialog() {
 
         setAvailableArticles(deduplicate(articles));
         setAvailableSuppliers(deduplicate(suppliers));
-        // Force refresh of representatives to catch new "REP001"
         setAvailableRepresentatives(deduplicate(reps));
 
       } catch (error) {
@@ -973,7 +936,6 @@ export function TestResizableDialog() {
     if (open && db) fetchData()
   }, [open, db])
 
-  // --- SOUND EFFECT (DISSONANT BUZZER) ---
   const playWarningSound = () => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -1003,7 +965,6 @@ export function TestResizableDialog() {
     }
   }
 
-  // --- TABLE ACTIONS ---
   const addItem = () => {
     const id = generateId()
     const newItem = { id, articleId: "", qty: 1, price: 0, tva: 20 }
@@ -1019,12 +980,11 @@ export function TestResizableDialog() {
         const index = prevItems.findIndex(item => item.id === currentId)
         if (index === -1) return prevItems
         
-        // Create new array with item inserted at index + 1
         const newItems = [...prevItems]
         newItems.splice(index + 1, 0, newItem)
         return newItems
     })
-    setNewRowId(newId) // Trigger auto-focus
+    setNewRowId(newId) 
   }
 
   const removeItem = (id: string) => {
@@ -1067,7 +1027,6 @@ export function TestResizableDialog() {
       setIsCreateArticleOpen(true)
   }
 
-  // --- SEARCH DIALOG HANDLERS ---
   const openArticleSearch = (rowId: string) => {
       setSearchTargetRowId(rowId)
       setIsSearchOpen(true)
@@ -1132,8 +1091,6 @@ export function TestResizableDialog() {
       setSupplierId(supplierWithType.id)
   }
 
-
-  // --- ROBUST SIDEBAR TRACKING ---
   useEffect(() => {
     const getSidebarWidth = () => {
       const sidebar = document.querySelector('aside') || 
@@ -1157,7 +1114,6 @@ export function TestResizableDialog() {
     return () => clearInterval(interval);
   }, [])
 
-  // --- CONTROL LOGIC ---
   const handleMainButtonClick = () => {
     if (open) {
         if (isMinimized) setIsMinimized(false)
@@ -1262,7 +1218,6 @@ export function TestResizableDialog() {
         <DialogContent 
           onInteractOutside={(e) => {
             e.preventDefault(); 
-            // ALERT FIX: Shake if the alert is showing and user clicks backdrop
             if (showCloseAlert) {
                 handleOverlayClick();
                 return;
@@ -1370,7 +1325,6 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              {/* FIX: Increased pb-40 to allow scrolling space at bottom */}
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
@@ -1453,7 +1407,7 @@ export function TestResizableDialog() {
                      </div>
                   </div>
 
-                  {/* ITEMS TABLE - FIX: Replaced Shadcn Table with HTML Table to remove Overflow Clipping */}
+                  {/* ITEMS TABLE */}
                   <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
                     <table className="w-full caption-bottom text-sm">
                       <thead className="bg-slate-50 [&_tr]:border-b">
