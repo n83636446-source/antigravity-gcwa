@@ -895,9 +895,12 @@ export function TestResizableDialog() {
   
   const [showCloseAlert, setShowCloseAlert] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
-  const [flashingRowId, setFlashingRowId] = useState<string | null>(null) // NEW STATE
-  const [isSubmitting, setIsSubmitting] = useState(false) // NEW STATE
-  const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([]) // NEW STATE
+  const [flashingRowId, setFlashingRowId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([])
+  
+  // --- NEW STATE: Receipt Number ---
+  const [receiptNumber, setReceiptNumber] = useState("")
 
   const { toast } = useToast()
 
@@ -928,6 +931,16 @@ export function TestResizableDialog() {
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
+  // --- HELPER: CALCULATE NEXT NUMBER ---
+  const calculateNextNumber = (receipts: PurchaseReceipt[]) => {
+    if (!receipts || receipts.length === 0) return "BR-0001";
+    const maxId = receipts.reduce((max, r) => {
+        const num = parseInt(r.receiptNumber.replace("BR-", "") || "0", 10);
+        return num > max ? num : max;
+    }, 0);
+    return `BR-${(maxId + 1).toString().padStart(4, '0')}`;
+  };
+
   const resetForm = () => {
     setDate(new Date())
     setDueDate(new Date())
@@ -939,6 +952,8 @@ export function TestResizableDialog() {
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
     setIsShaking(false)
+    // RE-CALCULATE NUMBER ON RESET
+    setReceiptNumber(calculateNextNumber(existingReceipts));
   }
 
   const isFormDirty = () => {
@@ -983,6 +998,9 @@ export function TestResizableDialog() {
         setAvailableSuppliers(deduplicate(suppliers));
         setAvailableRepresentatives(deduplicate(reps));
         setExistingReceipts(receipts);
+        
+        // AUTO-CALCULATE ON LOAD
+        setReceiptNumber(calculateNextNumber(receipts));
 
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -1033,24 +1051,16 @@ export function TestResizableDialog() {
         toast({ title: "Erreur", description: "Veuillez ajouter au moins un article.", variant: "destructive" });
         return;
     }
+    if (!receiptNumber.trim()) {
+        toast({ title: "Erreur", description: "Le numéro de bon est requis.", variant: "destructive" });
+        return;
+    }
 
     setIsSubmitting(true);
 
     try {
-        // Calculate Next ID (BR-xxxx)
-        let nextNumber = "BR-0001";
-        if (existingReceipts.length > 0) {
-            const maxId = existingReceipts.reduce((max, r) => {
-                const num = parseInt(r.receiptNumber.replace("BR-", "") || "0", 10);
-                return num > max ? num : max;
-            }, 0);
-            nextNumber = `BR-${(maxId + 1).toString().padStart(4, '0')}`;
-        }
-
-        // --- SAFE PAYLOAD CONSTRUCTION ---
-        // Manually build object to avoid passing undefined values to Firestore
         const receiptData: any = {
-            receiptNumber: nextNumber,
+            receiptNumber: receiptNumber, // USE STATE
             supplierId: supplierId,
             receiptDate: date instanceof Date ? date.toISOString() : new Date().toISOString(),
             items: validItems.map(i => ({
@@ -1066,16 +1076,15 @@ export function TestResizableDialog() {
             dueDate: dueDate instanceof Date ? dueDate.toISOString() : new Date().toISOString(),
         };
 
-        // Only add optional fields if they have value
         if (representativeId) receiptData.representativeId = representativeId;
         if (reference) receiptData.reference = reference;
 
-        console.log("Saving receipt payload:", receiptData); // DEBUG
+        console.log("Saving receipt payload:", receiptData);
 
         const docRef = await addDocumentNonBlocking(collection(db, "purchaseReceipts"), receiptData);
         
         if (docRef) {
-            toast({ title: "Succès", description: `Bon de réception ${nextNumber} créé avec succès.` });
+            toast({ title: "Succès", description: `Bon de réception ${receiptNumber} créé avec succès.` });
             setOpen(false);
             setTimeout(() => {
                 resetForm();
@@ -1482,7 +1491,11 @@ export function TestResizableDialog() {
                             <div className="space-y-4 pt-2">
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                   <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
-                                  <Input value="BR-0001" className="w-full min-w-0" readOnly />
+                                  <Input 
+                                    value={receiptNumber} 
+                                    onChange={(e) => setReceiptNumber(e.target.value)} 
+                                    className="w-full min-w-0 font-mono" 
+                                  />
                                </div>
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                   <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
