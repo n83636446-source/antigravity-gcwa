@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { RepresentativesTable } from '@/components/representatives-table';
@@ -11,8 +11,8 @@ import type { Representative } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RepresentativesPage() {
-  // Store raw data
-  const [representatives, setRepresentatives] = useState<Representative[]>([]);
+  const [rawRepresentatives, setRawRepresentatives] = useState<Representative[]>([]);
+  const [sortedRepresentatives, setSortedRepresentatives] = useState<Representative[]>([]);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
@@ -21,7 +21,7 @@ export default function RepresentativesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // 1. Fetch Raw Data
+  // 1. FETCH RAW DATA
   useEffect(() => {
     if (!firestore) return;
 
@@ -32,52 +32,39 @@ export default function RepresentativesPage() {
         id: doc.id,
         ...doc.data(),
       })) as Representative[];
-      setRepresentatives(reps);
+      
+      setRawRepresentatives(reps);
     });
 
     return () => unsubscribe();
   }, [firestore]);
 
-  // 2. THE FAIL-SAFE SORT
-  const sortedRepresentatives = useMemo(() => {
-    const sorted = [...representatives];
-
-    sorted.sort((a, b) => {
-      // Helper: Extract numeric value safely
-      const getWeight = (r: Representative) => {
-        if (!r.code) return 999999999; // No code? Bottom.
+  // 2. PROCESS & SORT (Runs whenever raw data changes)
+  useEffect(() => {
+    const sorted = [...rawRepresentatives].sort((a, b) => {
+      const getVal = (r: Representative) => {
+        if (!r.code) return 999999;
         
-        // Remove non-digits
-        const digits = String(r.code).replace(/[^0-9]/g, '');
+        // Convert to string and strip non-digits
+        const digits = String(r.code).replace(/\D/g, '');
         
-        // If no digits found (e.g. "TEST"), return HUGE number
-        if (!digits) return 999999999;
-
-        // Parse
-        const val = parseInt(digits, 10);
+        // If empty string (e.g. "TEST"), return huge number
+        if (!digits) return 999999;
         
-        // Final Safety: If NaN, return HUGE number
-        return isNaN(val) ? 999999999 : val;
+        return parseInt(digits, 10);
       };
 
-      const weightA = getWeight(a);
-      const weightB = getWeight(b);
+      const valA = getVal(a);
+      const valB = getVal(b);
 
-      // Primary Sort: By Number (Ascending: 1, 2, 3)
-      if (weightA !== weightB) {
-        return weightA - weightB;
-      }
-
-      // Secondary Sort: By Name (Tie-breaker)
-      // This stops items from jumping around if they have the same number
-      return (a.name || "").localeCompare(b.name || "");
+      return valA - valB; // Ascending: 1, 2, 3...
     });
 
-    // DEBUG: Check this in your browser console (F12)
-    console.log("Sorted List:", sorted.map(r => `${r.code} -> ${String(r.code).replace(/[^0-9]/g, '')}`));
-    
-    return sorted;
-  }, [representatives]);
+    // Debugging: Check the browser console to see the calculated order
+    console.log("Sort Debug:", sorted.map(r => `${r.code} (${String(r.code).replace(/\D/g, '')})`));
+
+    setSortedRepresentatives(sorted);
+  }, [rawRepresentatives]);
 
   const handleCreate = () => {
     setRepresentativeToEdit(undefined);
@@ -95,7 +82,7 @@ export default function RepresentativesPage() {
       await deleteDoc(doc(firestore, 'representatives', representative.id));
       toast({
         title: 'Représentant supprimé',
-        description: `Le représentant "${representative.name}" a été supprimé.`,
+        description: `Le représentant ${representative.name} a été supprimé.`,
       });
       setSelectedRepresentative(null);
     } catch (error) {
@@ -131,7 +118,7 @@ export default function RepresentativesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           representative={representativeToEdit}
-          representatives={representatives} // Pass raw list for calc
+          representatives={sortedRepresentatives} // Pass sorted list for accurate calculation
         />
       )}
     </div>
