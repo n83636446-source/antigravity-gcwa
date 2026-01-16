@@ -188,12 +188,15 @@ export function ArticleDialog({
       <DialogContent className="sm:max-w-[80vw]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <DialogHeader>
+            
+            {/* --- VISUAL UPDATE: DEFINED HEADER --- */}
+            <DialogHeader className="border-b pb-4 mb-4">
               <DialogTitle>{isEditMode ? "Modifier l'article" : 'Ajouter un nouvel article'}</DialogTitle>
               <DialogDescription>
                 {isEditMode ? "Modifiez les informations de l'article." : "Remplissez les détails ci-dessous pour ajouter un nouvel article à votre inventaire."}
               </DialogDescription>
             </DialogHeader>
+            {/* ------------------------------------- */}
             
             <div className="grid grid-cols-2 gap-4">
               <FormField
