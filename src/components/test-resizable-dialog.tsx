@@ -941,7 +941,7 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [size, setSize] = useState({ width: 900, height: 600 }) // Default safe size
+  const [size, setSize] = useState({ width: 900, height: 550 }) // Default safe size
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
@@ -1448,7 +1448,8 @@ export function TestResizableDialog() {
             if (isMinimized) return; 
           }}
           className={cn(
-              "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
+              "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto ease-in-out [&>button]:!hidden pointer-events-none",
+              "transition-[width,height]", // Use specific transitions
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
@@ -1456,15 +1457,18 @@ export function TestResizableDialog() {
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
-            maxHeight: isMinimized ? "none" : "85vh", // VIEWPORT CONSTRAINT
+            maxHeight: isMinimized ? "none" : "80vh", // VIEWPORT CONSTRAINT
             
-            // --- FIXED POSITIONING LOGIC ---
-            position: isMinimized ? "fixed" : "relative", 
-            left: isMinimized ? (dockOffset || 0) + 16 : "auto",
+            position: "fixed",
+            left: isMinimized ? (dockOffset || 0) + 16 : "50%",
             bottom: isMinimized ? 0 : "auto", 
-            transform: isMinimized ? "none" : `translate(${position.x}px, ${position.y}px)`, 
+            top: isMinimized ? "auto" : "50%",
+
+            transform: isMinimized 
+                ? 'none' 
+                : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`, // CORRECT CENTERING
             
-            transition: isDragging ? "none" : "all 0.2s ease-in-out"
+            transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out, left 0.2s ease-in-out" 
           }}
         >
           <div 
@@ -1474,7 +1478,7 @@ export function TestResizableDialog() {
             className={cn(
               "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
-              isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
+              "transition-all duration-100 ease-in-out"
             )}
             style={{ 
                 width: "100%", 
