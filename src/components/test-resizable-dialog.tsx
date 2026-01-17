@@ -82,7 +82,7 @@ const RepresentativeSelector = ({
     representatives, 
     onOpenAdvanced,
     onCreateNew,
-    hasError // NEW PROP
+    hasError 
 }: { 
     value: string, 
     onChange: (id: string) => void, 
@@ -93,7 +93,7 @@ const RepresentativeSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    const skipOpenRef = useRef(false) // FIX: Ref to block re-opening
+    const skipOpenRef = useRef(false)
 
     useEffect(() => {
         const selected = representatives.find(r => r.id === value)
@@ -114,11 +114,11 @@ const RepresentativeSelector = ({
     }, [inputValue, representatives])
 
     const handleSelect = (rep: Representative) => {
-        skipOpenRef.current = true; // Block focus event
+        skipOpenRef.current = true;
         onChange(rep.id)
         setInputValue(rep.name)
         setOpen(false)
-        setTimeout(() => { skipOpenRef.current = false; }, 150); // Release block after delay
+        setTimeout(() => { skipOpenRef.current = false; }, 150);
     }
 
     return (
@@ -130,7 +130,7 @@ const RepresentativeSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => {
-                            if (skipOpenRef.current) return; // CHECK BLOCK
+                            if (skipOpenRef.current) return;
                             setOpen(true)
                         }}
                         onClick={(e) => { 
@@ -240,7 +240,7 @@ const SupplierSelector = ({
     suppliers, 
     onOpenAdvanced,
     onCreateNew,
-    hasError // NEW PROP
+    hasError 
 }: { 
     value: string, 
     onChange: (id: string) => void, 
@@ -400,7 +400,7 @@ const ArticleSelector = ({
     onOpenAdvanced,
     onCreateNew,
     autoFocus = false,
-    hasError // NEW PROP
+    hasError 
 }: { 
     value: string, 
     onChange: (id: string) => void, 
@@ -951,11 +951,12 @@ export function TestResizableDialog() {
   const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([])
   
   const [receiptNumber, setReceiptNumber] = useState("BR-0001")
+  const [remarks, setRemarks] = useState("") // NEW STATE
   const [formErrors, setFormErrors] = useState<{
       supplier?: boolean;
       items?: boolean;
       receiptNumber?: boolean;
-  }>({}) // NEW STATE
+  }>({}) 
 
   const { toast } = useToast()
 
@@ -1002,18 +1003,19 @@ export function TestResizableDialog() {
     setPaymentMethod("cash")
     setRepresentativeId("")
     setReference("")
+    setRemarks("") // RESET REMARKS
     setItems([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }])
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
     setIsShaking(false)
-    setFormErrors({}) // Clear errors
+    setFormErrors({}) 
     setReceiptNumber(calculateNextNumber(existingReceipts));
   }
 
   const isFormDirty = () => {
     if (!isSameDay(date, new Date())) return true;
     if (!isSameDay(dueDate, new Date())) return true;
-    if (supplierId !== "" || representativeId !== "" || reference !== "") return true;
+    if (supplierId !== "" || representativeId !== "" || reference !== "" || remarks !== "") return true; // CHECK REMARKS
     if (items.length > 1) return true;
     if (items.length === 1 && items[0].articleId !== "") return true;
     return false;
@@ -1114,7 +1116,6 @@ export function TestResizableDialog() {
 
     if (hasError) {
         setFormErrors(newErrors);
-        // Optional: Shake logic or simple toast
         setIsShaking(true);
         setTimeout(() => setIsShaking(false), 400);
         playWarningSound(); 
@@ -1145,6 +1146,7 @@ export function TestResizableDialog() {
 
         if (representativeId) receiptData.representativeId = representativeId;
         if (reference) receiptData.reference = reference;
+        if (remarks) receiptData.remarks = remarks; // ADD REMARKS
 
         console.log("Saving receipt payload:", receiptData);
 
@@ -1628,6 +1630,10 @@ export function TestResizableDialog() {
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                                   <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
                                   <Input placeholder="Référence" className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
+                               </div>
+                               <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                                  <Label className={isMobile ? "text-left" : "text-right"}>Remarque</Label>
+                                  <Input placeholder="Remarque" className="w-full min-w-0" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
                                </div>
                             </div>
                          </div>
