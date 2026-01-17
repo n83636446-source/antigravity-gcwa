@@ -572,284 +572,6 @@ const ArticleSelector = ({
     )
 }
 
-// --- REST OF THE FILE: SEARCH DIALOGS & MAIN FORM ---
-
-// 1. UPDATED Representative Search Dialog
-const RepresentativeSearchDialog = ({ 
-  isOpen, 
-  onOpenChange, 
-  onSelect, 
-  representatives,
-  onCreateNew // NEW PROP
-}: { 
-  isOpen: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  onSelect: (rep: Representative) => void;
-  representatives: Representative[];
-  onCreateNew?: () => void;
-}) => {
-  const [searchTerm, setSearchTerm] = useState("")
-
-  const filteredReps = useMemo(() => {
-    if (!searchTerm) return representatives;
-    const lowerTerm = searchTerm.toLowerCase();
-    return representatives.filter(r => 
-      r.name.toLowerCase().includes(lowerTerm) || 
-      (r.code && r.code.toLowerCase().includes(lowerTerm))
-    );
-  }, [searchTerm, representatives]);
-
-  useEffect(() => {
-    if (isOpen) setSearchTerm("")
-  }, [isOpen])
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Filtrer par code, nom..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                  autoFocus
-                />
-            </div>
-        </div>
-        
-        {/* NEW TOP ROW (Fixed above table) */}
-        <div 
-            onClick={onCreateNew}
-            className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
-        >
-            <PlusCircle className="h-4 w-4" />
-            Créer un nouveau représentant
-        </div>
-
-        <div className="flex-1 overflow-auto p-0">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                    </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {filteredReps.length === 0 ? (
-                        <tr className="border-b transition-colors">
-                            <td colSpan={3} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun représentant trouvé.</td>
-                        </tr>
-                    ) : (
-                        filteredReps.map(rep => (
-                            <tr key={rep.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
-                                <td className="p-4 align-middle font-mono text-xs">{rep.code || "-"}</td>
-                                <td className="p-4 align-middle font-medium">{rep.name}</td>
-                                <td className="p-4 align-middle text-muted-foreground">{rep.email || "-"}</td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-        </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// 2. UPDATED Supplier Search Dialog
-const SupplierSearchDialog = ({ 
-  isOpen, 
-  onOpenChange, 
-  onSelect, 
-  suppliers,
-  onCreateNew // NEW PROP
-}: { 
-  isOpen: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  onSelect: (supplier: Supplier) => void;
-  suppliers: Supplier[];
-  onCreateNew?: () => void;
-}) => {
-  const [searchTerm, setSearchTerm] = useState("")
-
-  const filteredSuppliers = useMemo(() => {
-    if (!searchTerm) return suppliers;
-    const lowerTerm = searchTerm.toLowerCase();
-    return suppliers.filter(s => 
-      s.name.toLowerCase().includes(lowerTerm) || 
-      s.code.toLowerCase().includes(lowerTerm)
-    );
-  }, [searchTerm, suppliers]);
-
-  useEffect(() => {
-    if (isOpen) setSearchTerm("")
-  }, [isOpen])
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un fournisseur</h2>
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Filtrer par code, nom..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                  autoFocus
-                />
-            </div>
-        </div>
-
-        {/* NEW TOP ROW */}
-        <div 
-            onClick={onCreateNew}
-            className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
-        >
-            <PlusCircle className="h-4 w-4" />
-            Créer un nouveau fournisseur
-        </div>
-
-        <div className="flex-1 overflow-auto p-0">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Contact</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                    </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {filteredSuppliers.length === 0 ? (
-                        <tr className="border-b transition-colors">
-                            <td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun fournisseur trouvé.</td>
-                        </tr>
-                    ) : (
-                        filteredSuppliers.map(supplier => (
-                            <tr key={supplier.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(supplier)}>
-                                <td className="p-4 align-middle font-mono text-xs">{supplier.code}</td>
-                                <td className="p-4 align-middle font-medium">{supplier.name}</td>
-                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactName || "-"}</td>
-                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactEmail || "-"}</td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-        </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// 3. UPDATED Article Search Dialog
-const ArticleSearchDialog = ({ 
-  isOpen, 
-  onOpenChange, 
-  onSelect, 
-  articles,
-  onCreateNew // NEW PROP
-}: { 
-  isOpen: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  onSelect: (article: Article) => void;
-  articles: Article[];
-  onCreateNew?: () => void;
-}) => {
-  const [searchTerm, setSearchTerm] = useState("")
-
-  const filteredArticles = useMemo(() => {
-    if (!searchTerm) return articles;
-    const lowerTerm = searchTerm.toLowerCase();
-    return articles.filter(a => 
-      a.name.toLowerCase().includes(lowerTerm) || 
-      a.code.toLowerCase().includes(lowerTerm)
-    );
-  }, [searchTerm, articles]);
-
-  useEffect(() => {
-    if (isOpen) setSearchTerm("")
-  }, [isOpen])
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Filtrer par code ou désignation..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                  autoFocus
-                />
-            </div>
-        </div>
-
-        {/* NEW TOP ROW */}
-        <div 
-            onClick={onCreateNew}
-            className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
-        >
-            <PlusCircle className="h-4 w-4" />
-            Créer un nouvel article
-        </div>
-
-        <div className="flex-1 overflow-auto p-0">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Désignation</th>
-                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[100px] text-right">Prix</th>
-                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px] text-right">Stock</th>
-                    </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {filteredArticles.length === 0 ? (
-                        <tr className="border-b transition-colors">
-                            <td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun article trouvé.</td>
-                        </tr>
-                    ) : (
-                        filteredArticles.map(article => (
-                            <tr key={article.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(article)}>
-                                <td className="p-4 align-middle font-mono text-xs">{article.code}</td>
-                                <td className="p-4 align-middle font-medium">{article.name}</td>
-                                <td className="p-4 align-middle text-right">{article.price.toFixed(2)} €</td>
-                                <td className={cn("p-4 align-middle text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>
-                                    {article.stockLevel ?? 0}
-                                </td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-        </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -940,7 +662,7 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [size, setSize] = useState({ width: 1000, height: 800 })
+  const [size, setSize] = useState({ width: 900, height: 600 }) 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
@@ -1450,15 +1172,19 @@ export function TestResizableDialog() {
               "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-100 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
-                : "fixed left-[50%] top-[50%] z-50" // Removed translate classes
+                : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
-            transform: isMinimized ? "translate(0px, 0px)" : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`, 
+            maxHeight: isMinimized ? "none" : "85vh", // FIX: Constraint height
+            
+            // --- FIXED POSITIONING LOGIC ---
+            position: isMinimized ? "fixed" : "relative", 
+            left: isMinimized ? (dockOffset || 0) + 16 : "auto",
             bottom: isMinimized ? 0 : "auto", 
-            left: isMinimized ? (dockOffset || 0) + 16 : "50%",
-            top: isMinimized ? "auto" : "50%", // Added top property
+            transform: isMinimized ? "none" : `translate(${position.x}px, ${position.y}px)`, 
+            
             transition: isDragging ? "none" : "all 0.2s ease-in-out"
           }}
         >
