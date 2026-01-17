@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 // --- FIREBASE IMPORTS ---
 import { collection, getDocs, doc, deleteDoc } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
 import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
@@ -81,13 +81,15 @@ const RepresentativeSelector = ({
     onChange, 
     representatives, 
     onOpenAdvanced,
-    onCreateNew
+    onCreateNew,
+    hasError // NEW PROP
 }: { 
     value: string, 
     onChange: (id: string) => void, 
     representatives: Representative[],
     onOpenAdvanced: () => void,
-    onCreateNew: () => void
+    onCreateNew: () => void,
+    hasError?: boolean
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
@@ -112,7 +114,7 @@ const RepresentativeSelector = ({
     }, [inputValue, representatives])
 
     const handleSelect = (rep: Representative) => {
-        skipOpenRef.current = true; // Block
+        skipOpenRef.current = true; // Block focus event
         onChange(rep.id)
         setInputValue(rep.name)
         setOpen(false)
@@ -140,7 +142,7 @@ const RepresentativeSelector = ({
                             setInputValue(e.target.value)
                             setOpen(true)
                         }}
-                        className="w-full pr-10" 
+                        className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
                     />
                     <Button 
                         type="button"
@@ -216,9 +218,7 @@ const RepresentativeSelector = ({
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => { 
                                 e.stopPropagation();
-                                skipOpenRef.current = true;
-                                setOpen(false);
-                                setTimeout(() => { skipOpenRef.current = false; }, 150);
+                                setTimeout(() => setOpen(false), 0);
                                 onOpenAdvanced();
                             }} 
                             className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
@@ -239,17 +239,19 @@ const SupplierSelector = ({
     onChange, 
     suppliers, 
     onOpenAdvanced,
-    onCreateNew
+    onCreateNew,
+    hasError // NEW PROP
 }: { 
     value: string, 
     onChange: (id: string) => void, 
     suppliers: Supplier[],
     onOpenAdvanced: () => void,
-    onCreateNew: () => void
+    onCreateNew: () => void,
+    hasError?: boolean
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
-    const skipOpenRef = useRef(false) // FIX: Ref
+    const skipOpenRef = useRef(false)
 
     useEffect(() => {
         const selected = suppliers.find(s => s.id === value)
@@ -270,7 +272,7 @@ const SupplierSelector = ({
     }, [inputValue, suppliers])
 
     const handleSelect = (supplier: Supplier) => {
-        skipOpenRef.current = true; // Block
+        skipOpenRef.current = true;
         onChange(supplier.id)
         setInputValue(supplier.name)
         setOpen(false)
@@ -286,7 +288,7 @@ const SupplierSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => {
-                            if (skipOpenRef.current) return; // CHECK BLOCK
+                            if (skipOpenRef.current) return;
                             setOpen(true)
                         }}
                         onClick={(e) => { 
@@ -298,7 +300,7 @@ const SupplierSelector = ({
                             setInputValue(e.target.value)
                             setOpen(true)
                         }}
-                        className="w-full pr-10" 
+                        className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
                     />
                     <Button 
                         type="button"
@@ -375,9 +377,7 @@ const SupplierSelector = ({
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => { 
                                 e.stopPropagation();
-                                skipOpenRef.current = true;
-                                setOpen(false);
-                                setTimeout(() => { skipOpenRef.current = false; }, 150);
+                                setTimeout(() => setOpen(false), 0);
                                 onOpenAdvanced();
                             }} 
                             className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
@@ -399,19 +399,21 @@ const ArticleSelector = ({
     articles, 
     onOpenAdvanced,
     onCreateNew,
-    autoFocus = false
+    autoFocus = false,
+    hasError // NEW PROP
 }: { 
     value: string, 
     onChange: (id: string) => void, 
     articles: Article[],
     onOpenAdvanced: () => void,
     onCreateNew: () => void,
-    autoFocus?: boolean
+    autoFocus?: boolean,
+    hasError?: boolean
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
-    const skipOpenRef = useRef(false) // FIX: Ref
+    const skipOpenRef = useRef(false)
 
     useEffect(() => {
         if (autoFocus && inputRef.current) {
@@ -440,7 +442,7 @@ const ArticleSelector = ({
     }, [inputValue, articles])
 
     const handleSelect = (article: Article) => {
-        skipOpenRef.current = true; // Block
+        skipOpenRef.current = true;
         onChange(article.id)
         setInputValue(article.name)
         setOpen(false)
@@ -457,7 +459,7 @@ const ArticleSelector = ({
                         value={inputValue}
                         autoComplete="off" 
                         onFocus={() => {
-                            if (skipOpenRef.current) return; // CHECK BLOCK
+                            if (skipOpenRef.current) return;
                             setOpen(true)
                         }}
                         onClick={(e) => { 
@@ -469,7 +471,7 @@ const ArticleSelector = ({
                             setInputValue(e.target.value)
                             setOpen(true)
                         }}
-                        className="w-full pr-10" 
+                        className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
                     />
                     <Button 
                         type="button"
@@ -552,7 +554,7 @@ const ArticleSelector = ({
                         <div 
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => { 
-                                e.stopPropagation();
+                                e.stopPropagation(); 
                                 skipOpenRef.current = true;
                                 setOpen(false);
                                 setTimeout(() => { skipOpenRef.current = false; }, 150);
@@ -949,6 +951,11 @@ export function TestResizableDialog() {
   const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([])
   
   const [receiptNumber, setReceiptNumber] = useState("BR-0001")
+  const [formErrors, setFormErrors] = useState<{
+      supplier?: boolean;
+      items?: boolean;
+      receiptNumber?: boolean;
+  }>({}) // NEW STATE
 
   const { toast } = useToast()
 
@@ -999,6 +1006,7 @@ export function TestResizableDialog() {
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
     setIsShaking(false)
+    setFormErrors({}) // Clear errors
     setReceiptNumber(calculateNextNumber(existingReceipts));
   }
 
@@ -1086,20 +1094,35 @@ export function TestResizableDialog() {
   const handleCreateReceipt = async () => {
     if (!db) return;
     
+    // --- VALIDATION START ---
+    const newErrors: typeof formErrors = {};
+    let hasError = false;
+
     if (!supplierId) {
-        toast({ title: "Erreur", description: "Veuillez sélectionner un fournisseur.", variant: "destructive" });
-        return;
+        newErrors.supplier = true;
+        hasError = true;
+    }
+    if (!receiptNumber.trim()) {
+        newErrors.receiptNumber = true;
+        hasError = true;
     }
     const validItems = items.filter(i => i.articleId && i.qty > 0);
     if (validItems.length === 0) {
-        toast({ title: "Erreur", description: "Veuillez ajouter au moins un article.", variant: "destructive" });
-        return;
-    }
-    if (!receiptNumber.trim()) {
-        toast({ title: "Erreur", description: "Le numéro de bon est requis.", variant: "destructive" });
-        return;
+        newErrors.items = true;
+        hasError = true;
     }
 
+    if (hasError) {
+        setFormErrors(newErrors);
+        // Optional: Shake logic or simple toast
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 400);
+        playWarningSound(); 
+        return;
+    }
+    // --- VALIDATION END ---
+
+    setFormErrors({});
     setIsSubmitting(true);
 
     try {
@@ -1113,7 +1136,7 @@ export function TestResizableDialog() {
                 price: i.price,
                 tvaRate: i.tva
             })),
-            status: "Brouillon", // CHANGED: Default is now Brouillon (Draft)
+            status: "Brouillon", 
             totalHT: totalHT,
             totalTTC: totalTTC,
             paymentMode: paymentMethod,
@@ -1532,11 +1555,11 @@ export function TestResizableDialog() {
                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                             <div className="space-y-4 pt-2">
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                  <Label className={isMobile ? "text-left" : "text-right"}>Numéro</Label>
+                                  <Label className={cn(isMobile ? "text-left" : "text-right", formErrors.receiptNumber && "text-red-500")}>Numéro *</Label>
                                   <Input 
                                     value={receiptNumber} 
                                     onChange={(e) => setReceiptNumber(e.target.value)} 
-                                    className="w-full min-w-0 font-mono" 
+                                    className={cn("w-full min-w-0 font-mono", formErrors.receiptNumber && "border-red-500 focus-visible:ring-red-500")}
                                   />
                                </div>
                                <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -1550,14 +1573,18 @@ export function TestResizableDialog() {
                             <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                              <div className="space-y-4 pt-2">
                                 <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                                   <Label className={isMobile ? "text-left" : "text-right"}>Fournisseur</Label>
-                                   <SupplierSelector 
-                                      value={supplierId}
-                                      onChange={handleSupplierChange}
-                                      suppliers={availableSuppliers}
-                                      onOpenAdvanced={() => setIsSupplierSearchOpen(true)}
-                                      onCreateNew={() => setIsCreateSupplierOpen(true)}
-                                   />
+                                   <Label className={cn(isMobile ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
+                                   <div className="w-full">
+                                       <SupplierSelector 
+                                          value={supplierId}
+                                          onChange={handleSupplierChange}
+                                          suppliers={availableSuppliers}
+                                          onOpenAdvanced={() => setIsSupplierSearchOpen(true)}
+                                          onCreateNew={() => setIsCreateSupplierOpen(true)}
+                                          hasError={formErrors.supplier}
+                                       />
+                                       {formErrors.supplier && <span className="text-xs text-red-500 mt-1 block">Le fournisseur est obligatoire.</span>}
+                                   </div>
                                 </div>
                              </div>
                          </div>
@@ -1608,7 +1635,8 @@ export function TestResizableDialog() {
                   </div>
 
                   {/* ITEMS TABLE */}
-                  <div className="border border-blue-800 rounded-md min-h-[500px] overflow-visible">
+                  <div className={cn("border border-blue-800 rounded-md min-h-[500px] overflow-visible", formErrors.items && "border-red-500 shadow-[0_0_0_1px_rgba(239,68,68,1)]")}>
+                    {formErrors.items && <div className="bg-red-50 text-red-600 text-xs px-4 py-2 border-b border-red-100 font-medium">Veuillez ajouter au moins un article valide.</div>}
                     <table className="w-full caption-bottom text-sm">
                       <thead className="bg-slate-50 [&_tr]:border-b">
                         <tr className="border-b border-blue-800 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
