@@ -951,7 +951,7 @@ export function TestResizableDialog() {
   const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([])
   
   const [receiptNumber, setReceiptNumber] = useState("BR-0001")
-  const [remarks, setRemarks] = useState("") // NEW STATE
+  const [remarks, setRemarks] = useState("") 
   const [formErrors, setFormErrors] = useState<{
       supplier?: boolean;
       items?: boolean;
@@ -1451,19 +1451,27 @@ export function TestResizableDialog() {
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
                 : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
           )}
-          style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.2s ease-out" } : {}}
+          style={{ 
+            width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
+            height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
+            transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`,
+            bottom: isMinimized ? 0 : "auto", 
+            left: isMinimized ? (dockOffset || 0) + 16 : "50%",
+            transition: isDragging ? "none" : "all 0.2s ease-in-out"
+          }}
         >
           <div 
             onClick={isMinimized ? toggleMinimize : undefined}
+            onMouseEnter={() => isMinimized && setIsHoveringDock(true)}
+            onMouseLeave={() => setIsHoveringDock(false)}
             className={cn(
               "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
               isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
             )}
             style={{ 
-              width: isMinimized ? 280 : size.width, 
-              height: isMinimized ? "auto" : size.height,
-              transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`
+                width: "100%", 
+                height: "100%"
             }}
           >
             {/* --- CUSTOM ALERT OVERLAY --- */}
@@ -1543,7 +1551,7 @@ export function TestResizableDialog() {
                </div>
             )}
 
-            <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && "hidden")}>
+            <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && !isHoveringDock && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
               <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
