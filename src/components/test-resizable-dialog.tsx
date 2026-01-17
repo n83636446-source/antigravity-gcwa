@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2 } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2, Eraser } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, doc, deleteDoc } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
 import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
@@ -91,6 +91,7 @@ const RepresentativeSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
+    const skipOpenRef = useRef(false) // FIX: Ref to block re-opening
 
     useEffect(() => {
         const selected = representatives.find(r => r.id === value)
@@ -111,9 +112,11 @@ const RepresentativeSelector = ({
     }, [inputValue, representatives])
 
     const handleSelect = (rep: Representative) => {
+        skipOpenRef.current = true; // Block
         onChange(rep.id)
         setInputValue(rep.name)
         setOpen(false)
+        setTimeout(() => { skipOpenRef.current = false; }, 150); // Release block after delay
     }
 
     return (
@@ -124,8 +127,15 @@ const RepresentativeSelector = ({
                         placeholder="Sélectionnez un représentant..."
                         value={inputValue}
                         autoComplete="off" 
-                        onFocus={() => setOpen(true)}
-                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+                        onFocus={() => {
+                            if (skipOpenRef.current) return; // CHECK BLOCK
+                            setOpen(true)
+                        }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (skipOpenRef.current) return;
+                            setOpen(true); 
+                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -155,11 +165,13 @@ const RepresentativeSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
-                    {/* FIXED TOP ROW */}
                     <div 
-                        onMouseDown={(e) => { 
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { 
                             e.stopPropagation();
-                            setOpen(false); 
+                            skipOpenRef.current = true;
+                            setOpen(false);
+                            setTimeout(() => { skipOpenRef.current = false; }, 150);
                             onCreateNew(); 
                         }} 
                         className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
@@ -184,7 +196,8 @@ const RepresentativeSelector = ({
                         {filteredReps.map((rep) => (
                             <div
                                 key={rep.id}
-                                onMouseDown={(e) => {
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
                                     e.stopPropagation();
                                     handleSelect(rep);
                                 }}
@@ -200,9 +213,12 @@ const RepresentativeSelector = ({
                         <div className="h-px bg-slate-100 my-1" />
 
                         <div 
-                            onMouseDown={(e) => { 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { 
                                 e.stopPropagation();
-                                setOpen(false); 
+                                skipOpenRef.current = true;
+                                setOpen(false);
+                                setTimeout(() => { skipOpenRef.current = false; }, 150);
                                 onOpenAdvanced();
                             }} 
                             className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
@@ -233,6 +249,7 @@ const SupplierSelector = ({
 }) => {
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
+    const skipOpenRef = useRef(false) // FIX: Ref
 
     useEffect(() => {
         const selected = suppliers.find(s => s.id === value)
@@ -253,9 +270,11 @@ const SupplierSelector = ({
     }, [inputValue, suppliers])
 
     const handleSelect = (supplier: Supplier) => {
+        skipOpenRef.current = true; // Block
         onChange(supplier.id)
         setInputValue(supplier.name)
         setOpen(false)
+        setTimeout(() => { skipOpenRef.current = false; }, 150);
     }
 
     return (
@@ -266,8 +285,15 @@ const SupplierSelector = ({
                         placeholder="Sélectionnez un fournisseur..."
                         value={inputValue}
                         autoComplete="off" 
-                        onFocus={() => setOpen(true)}
-                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+                        onFocus={() => {
+                            if (skipOpenRef.current) return; // CHECK BLOCK
+                            setOpen(true)
+                        }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (skipOpenRef.current) return;
+                            setOpen(true); 
+                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -299,9 +325,12 @@ const SupplierSelector = ({
                 <div className="flex flex-col">
                     {/* FIXED TOP ROW */}
                     <div 
-                        onMouseDown={(e) => { 
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { 
                             e.stopPropagation();
-                            setOpen(false); 
+                            skipOpenRef.current = true;
+                            setOpen(false);
+                            setTimeout(() => { skipOpenRef.current = false; }, 150);
                             onCreateNew(); 
                         }} 
                         className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
@@ -326,7 +355,8 @@ const SupplierSelector = ({
                         {filteredSuppliers.map((supplier) => (
                             <div
                                 key={supplier.id}
-                                onMouseDown={(e) => {
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
                                     e.stopPropagation();
                                     handleSelect(supplier);
                                 }}
@@ -342,9 +372,12 @@ const SupplierSelector = ({
                         <div className="h-px bg-slate-100 my-1" />
 
                         <div 
-                            onMouseDown={(e) => { 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { 
                                 e.stopPropagation();
-                                setOpen(false); 
+                                skipOpenRef.current = true;
+                                setOpen(false);
+                                setTimeout(() => { skipOpenRef.current = false; }, 150);
                                 onOpenAdvanced();
                             }} 
                             className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
@@ -519,7 +552,7 @@ const ArticleSelector = ({
                         <div 
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => { 
-                                e.stopPropagation(); 
+                                e.stopPropagation();
                                 skipOpenRef.current = true;
                                 setOpen(false);
                                 setTimeout(() => { skipOpenRef.current = false; }, 150);
