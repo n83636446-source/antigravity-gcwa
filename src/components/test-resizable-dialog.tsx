@@ -957,6 +957,7 @@ export function TestResizableDialog() {
       items?: boolean;
       receiptNumber?: boolean;
   }>({}) 
+  const [isHoveringDock, setIsHoveringDock] = useState(false) // RESTORED
 
   const { toast } = useToast()
 
