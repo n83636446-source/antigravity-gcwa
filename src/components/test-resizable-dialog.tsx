@@ -1003,7 +1003,7 @@ export function TestResizableDialog() {
     setPaymentMethod("cash")
     setRepresentativeId("")
     setReference("")
-    setRemarks("") // RESET REMARKS
+    setRemarks("")
     setItems([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }])
     setPosition({ x: 0, y: 0 })
     setShowCloseAlert(false)
@@ -1015,7 +1015,7 @@ export function TestResizableDialog() {
   const isFormDirty = () => {
     if (!isSameDay(date, new Date())) return true;
     if (!isSameDay(dueDate, new Date())) return true;
-    if (supplierId !== "" || representativeId !== "" || reference !== "" || remarks !== "") return true; // CHECK REMARKS
+    if (supplierId !== "" || representativeId !== "" || reference !== "" || remarks !== "") return true;
     if (items.length > 1) return true;
     if (items.length === 1 && items[0].articleId !== "") return true;
     return false;
@@ -1146,7 +1146,7 @@ export function TestResizableDialog() {
 
         if (representativeId) receiptData.representativeId = representativeId;
         if (reference) receiptData.reference = reference;
-        if (remarks) receiptData.remarks = remarks; // ADD REMARKS
+        if (remarks) receiptData.remarks = remarks;
 
         console.log("Saving receipt payload:", receiptData);
 
@@ -1533,7 +1533,7 @@ export function TestResizableDialog() {
             >
               {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
               <div className="pr-12 truncate font-semibold text-sm">
-                {isMinimized ? "Bon de réception (En cours...)" : "Créer un bon de réception"}
+                {isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}
               </div>
             </div>
 
