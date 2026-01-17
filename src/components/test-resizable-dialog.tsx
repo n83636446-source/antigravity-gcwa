@@ -512,6 +512,7 @@ const RepresentativeSelector = ({
     )
 }
 
+// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR ---
 const SupplierSelector = ({ 
     value, 
     onChange, 
@@ -670,6 +671,7 @@ const SupplierSelector = ({
     )
 }
 
+// --- COMPONENT: AUTOCOMPLETE ARTICLE SELECTOR ---
 const ArticleSelector = ({ 
     value, 
     onChange, 
@@ -941,7 +943,7 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [size, setSize] = useState({ width: 900, height: 600 }) 
+  const [size, setSize] = useState({ width: 900, height: 600 }) // FIX: Smaller default height
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
@@ -958,7 +960,7 @@ export function TestResizableDialog() {
       items?: boolean;
       receiptNumber?: boolean;
   }>({}) 
-  const [isHoveringDock, setIsHoveringDock] = useState(false) 
+  const [isHoveringDock, setIsHoveringDock] = useState(false)
 
   const { toast } = useToast()
 
@@ -1456,14 +1458,11 @@ export function TestResizableDialog() {
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
-            maxHeight: isMinimized ? "none" : "85vh", // FIX: Constraint height
-            
-            position: isMinimized ? "fixed" : "fixed", 
-            left: isMinimized ? (dockOffset || 0) + 16 : "50%",
+            maxHeight: isMinimized ? "none" : "75vh",
+            transform: isMinimized ? "translate(0px, 0px)" : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
             bottom: isMinimized ? 0 : "auto", 
+            left: isMinimized ? (dockOffset || 0) + 16 : "50%",
             top: isMinimized ? "auto" : "50%",
-            transform: isMinimized ? "none" : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-            
             transition: isDragging ? "none" : "all 0.2s ease-in-out"
           }}
         >
@@ -1561,7 +1560,7 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && !isHoveringDock && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-40">
+              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-6">
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
                   <div className="flex flex-col gap-6">
