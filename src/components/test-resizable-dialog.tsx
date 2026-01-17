@@ -378,6 +378,7 @@ const ArticleSelector = ({
     const [open, setOpen] = useState(false)
     const [inputValue, setInputValue] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
+    const skipOpenRef = useRef(false) // FIX: Ref
 
     useEffect(() => {
         if (autoFocus && inputRef.current) {
@@ -406,9 +407,11 @@ const ArticleSelector = ({
     }, [inputValue, articles])
 
     const handleSelect = (article: Article) => {
+        skipOpenRef.current = true; // Block
         onChange(article.id)
         setInputValue(article.name)
         setOpen(false)
+        setTimeout(() => { skipOpenRef.current = false; }, 150);
     }
 
     return (
@@ -420,8 +423,15 @@ const ArticleSelector = ({
                         placeholder="Saisir un article..."
                         value={inputValue}
                         autoComplete="off" 
-                        onFocus={() => setOpen(true)}
-                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+                        onFocus={() => {
+                            if (skipOpenRef.current) return; // CHECK BLOCK
+                            setOpen(true)
+                        }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (skipOpenRef.current) return;
+                            setOpen(true); 
+                        }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
                             setOpen(true)
@@ -453,9 +463,12 @@ const ArticleSelector = ({
                 <div className="flex flex-col">
                     {/* FIXED TOP ROW */}
                     <div 
-                        onMouseDown={(e) => { 
-                            e.preventDefault(); 
-                            setOpen(false); 
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            skipOpenRef.current = true;
+                            setOpen(false);
+                            setTimeout(() => { skipOpenRef.current = false; }, 150);
                             onCreateNew(); 
                         }} 
                         className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
@@ -481,8 +494,9 @@ const ArticleSelector = ({
                         {filteredArticles.map((article) => (
                             <div
                                 key={article.id}
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                     handleSelect(article);
                                 }}
                                 className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
@@ -503,9 +517,12 @@ const ArticleSelector = ({
                         <div className="h-px bg-slate-100 my-1" />
 
                         <div 
-                            onMouseDown={(e) => { 
-                                e.preventDefault(); 
-                                setOpen(false); 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                skipOpenRef.current = true;
+                                setOpen(false);
+                                setTimeout(() => { skipOpenRef.current = false; }, 150);
                                 onOpenAdvanced();
                             }} 
                             className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
