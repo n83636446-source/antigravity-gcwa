@@ -41,8 +41,7 @@ const RepresentativeSearchDialog = ({ isOpen, onOpenChange, onSelect, representa
   const [term, setTerm] = useState("")
   const filtered = useMemo(() => {
     if (!term) return representatives;
-    const lowerTerm = term.toLowerCase();
-    return representatives.filter((r:any) => r.name.toLowerCase().includes(lowerTerm) || (r.code && r.code.toLowerCase().includes(lowerTerm)));
+    return representatives.filter((r:any) => r.name.toLowerCase().includes(term.toLowerCase()));
   }, [term, representatives]);
 
   useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
@@ -50,7 +49,7 @@ const RepresentativeSearchDialog = ({ isOpen, onOpenChange, onSelect, representa
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
+        <DialogTitle className="sr-only">Rechercher</DialogTitle>
         <div className="p-4 border-b">
              <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -58,24 +57,16 @@ const RepresentativeSearchDialog = ({ isOpen, onOpenChange, onSelect, representa
              </div>
         </div>
         <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
-            <PlusCircle className="h-4 w-4" /> Créer un nouveau représentant
+            <PlusCircle className="h-4 w-4" /> Nouveau Représentant
         </div>
-        <div className="flex-1 overflow-auto p-0 min-h-[300px]">
-            <table className="w-full text-sm caption-bottom">
-                <thead className="bg-slate-50 sticky top-0 z-10 border-b">
-                    <tr><th className="h-10 px-4 text-left font-medium text-muted-foreground">Code</th><th className="h-10 px-4 text-left font-medium text-muted-foreground">Nom</th></tr>
-                </thead>
-                <tbody>
-                    {filtered.map((rep: any) => (
-                        <tr key={rep.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
-                            <td className="p-3 font-mono text-xs">{rep.code || "-"}</td>
-                            <td className="p-3 font-medium">{rep.name}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <div className="flex-1 overflow-auto p-0 max-h-[400px]">
+            {filtered.map((rep: any) => (
+                <div key={rep.id} className="p-3 border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
+                    {rep.name}
+                </div>
+            ))}
         </div>
-        <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
+        <div className="p-2 border-t flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
       </DialogContent>
     </Dialog>
   )
@@ -399,7 +390,7 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 }
 
 // ==========================================
-// 3. MAIN COMPONENT (Restored & Fixed)
+// 3. MAIN COMPONENT (Restored)
 // ==========================================
 
 export function TestResizableDialog() {
@@ -408,7 +399,7 @@ export function TestResizableDialog() {
   const [isHoveringDock, setIsHoveringDock] = useState(false)
   
   // DRAG & SIZE
-  const [size, setSize] = useState({ width: 900, height: 500 }) // FIXED: Smaller default height
+  const [size, setSize] = useState({ width: 900, height: 500 }) // STARTING HEIGHT
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -475,15 +466,6 @@ export function TestResizableDialog() {
       setReceiptNumber(calculateNextNumber(existingReceipts));
   }
 
-  const isFormDirty = () => {
-    if (!isSameDay(date, new Date())) return true;
-    if (!isSameDay(dueDate, new Date())) return true;
-    if (supplierId !== "" || representativeId !== "" || reference !== "" || remarks !== "") return true;
-    if (items.length > 1) return true;
-    if (items.length === 1 && items[0].articleId !== "") return true;
-    return false;
-  }
-
   useEffect(() => {
     if(open && db) {
         const load = async () => {
@@ -509,32 +491,10 @@ export function TestResizableDialog() {
       if(sidebar) setDockOffset(sidebar.getBoundingClientRect().width);
   }, []);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      if (isFormDirty()) {
-        if (isMinimized) setIsMinimized(false)
-        setShowCloseAlert(true)
-        return 
-      }
-      setOpen(false)
-      setTimeout(() => {
-        resetForm() 
-        setIsMinimized(false)
-      }, 200)
-    } else {
-      // RESET POSITION ON OPEN (Critical Fix)
-      setPosition({ x: 0, y: 0 })
-      setOpen(true)
-    }
-  }
-
-  const confirmClose = () => {
-      setShowCloseAlert(false)
-      setOpen(false)
-      setTimeout(() => {
-        resetForm() 
-        setIsMinimized(false)
-      }, 200)
+  const handleOpen = () => {
+      setPosition({ x: 0, y: 0 });
+      setOpen(true);
+      setIsMinimized(false);
   }
 
   // --- DRAG ---
@@ -559,7 +519,7 @@ export function TestResizableDialog() {
       document.removeEventListener('mouseup', onMouseUp);
   }
 
-  // --- RESIZE ---
+  // --- RESIZE (RESTORED!) ---
   const handleResize = (direction: string) => (e: React.MouseEvent) => {
     if (isMinimized) return
     e.preventDefault()
@@ -589,7 +549,7 @@ export function TestResizableDialog() {
   const handleSave = async () => {
       if(!supplierId || !receiptNumber.trim() || !items.find(i=>i.articleId)) {
           setFormErrors({ supplier: !supplierId, receiptNumber: !receiptNumber.trim(), items: !items.find(i=>i.articleId) });
-          return;
+          setIsShaking(true); setTimeout(() => setIsShaking(false), 400); return;
       }
       setIsSubmitting(true);
       try {
@@ -606,97 +566,210 @@ export function TestResizableDialog() {
       setIsSubmitting(false);
   }
 
-  const isMobile = size.width < 800
-
   // --- RENDER ---
   return (
     <>
-      <Button variant="outline" onClick={() => { setPosition({x:0, y:0}); setOpen(true); }}>
-        Open Test Dialog
-      </Button>
+      <Button variant="outline" onClick={handleOpen}>Open Test Dialog</Button>
 
-      <Dialog open={open} onOpenChange={handleOpenChange} modal={!isMinimized}>
+      <Dialog open={open} onOpenChange={setOpen} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => { e.preventDefault(); if (showCloseAlert) setIsShaking(true); }}
+          onInteractOutside={(e) => e.preventDefault()} 
           className={cn(
               "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto [&>button]:!hidden pointer-events-none",
               isMinimized ? "fixed bottom-0 z-[9999]" : "fixed left-[50%] top-[50%] z-50"
           )}
           style={{ 
-            width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
-            height: isMinimized ? (isHoveringDock ? 500 : "auto") : "auto", 
-            maxHeight: isMinimized ? "none" : "85vh", 
-            position: "fixed", 
-            left: isMinimized ? ((dockOffset || 0) + 16) + 'px' : '50%',
-            top: isMinimized ? 'auto' : '50%',
+            // MANUAL POSITIONING: Center start + Drag Delta
+            left: isMinimized 
+                ? ((dockOffset || 0) + 16) + 'px' 
+                : `calc(50% - ${size.width / 2}px + ${position.x}px)`,
+            top: isMinimized 
+                ? 'auto' 
+                : `calc(50% - ${size.height / 2}px + ${position.y}px)`,
             bottom: isMinimized ? '0px' : 'auto',
-            transform: isMinimized ? "none" : `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
+            
+            width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
+            height: isMinimized ? (isHoveringDock ? 500 : "auto") : "auto", // Let Flexbox decide height
+            maxHeight: isMinimized ? "none" : "85vh", // HARD CONSTRAINT
+            
+            position: "fixed", 
+            transform: "none", 
             transition: isDragging ? "none" : "width 0.2s, height 0.2s" 
           }}
         >
-          <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+          {/* ACCESSIBILITY TITLE - REQUIRED */}
+          <DialogTitle className="sr-only">Nouveau Bon de Réception</DialogTitle>
+
+          {/* THE ACTUAL WINDOW BOX */}
           <div 
+            onClick={isMinimized ? () => setIsMinimized(false) : undefined}
             onMouseEnter={() => isMinimized && setIsHoveringDock(true)}
             onMouseLeave={() => setIsHoveringDock(false)}
             className={cn(
-              "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto h-full", 
-              isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
+              "relative bg-white border-2 border-blue-600 rounded-lg shadow-2xl flex flex-col pointer-events-auto h-full", 
+              isMinimized && "rounded-b-none border-b-0",
               isShaking && "animate-shake"
             )}
-            onClick={isMinimized ? () => setIsMinimized(false) : undefined}
           >
             {/* HEADER */}
             <div 
                 onMouseDown={handleDragStart}
-                className={cn("flex-none p-4 select-none flex items-center justify-between", !isMinimized && "cursor-move", isMinimized && "py-3 px-3 border-b-0")}
+                className={cn("bg-slate-100 p-3 border-b flex justify-between items-center select-none", !isMinimized && "cursor-move")}
             >
-              <div className="flex items-center gap-2 pr-12 truncate font-semibold text-sm">
-                {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                {isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}
-              </div>
-              <div className="absolute right-3 top-3 z-50 flex gap-1">
-                {!isMinimized && <button onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }} className="p-1.5 opacity-60 hover:opacity-100"><Minus className="h-3.5 w-3.5" /></button>}
-                <button onClick={(e) => { e.stopPropagation(); handleOpenChange(false); }} className="p-1.5 opacity-60 hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
-              </div>
+                <span className="font-semibold text-sm">{isMinimized ? `Bon ${receiptNumber}` : "Nouveau Bon de Réception"}</span>
+                <div className="flex gap-2">
+                    <Minus className="h-4 w-4 cursor-pointer text-slate-500" onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }} />
+                    <X className="h-4 w-4 cursor-pointer text-red-500" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+                </div>
             </div>
 
-            {/* FLEX SANDWICH */}
-            <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && !isHoveringDock && "hidden")}>
-              {!isMinimized && <div className="px-6 pb-4 border-b -mt-2 text-muted-foreground text-sm">Remplissez les informations.</div>}
-              
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                 {/* FORM CONTENT (Same as before) */}
-              </div>
+            {/* BODY - SCROLLABLE SANDWICH */}
+            <div className={cn("flex-1 flex flex-col min-h-0 bg-white overflow-hidden", isMinimized && !isHoveringDock && "hidden")}>
+                
+                {/* MIDDLE CONTENT - SCROLLS */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    
+                    {/* FORM ROW 1 */}
+                    <div className="flex gap-4">
+                        <div className="w-1/2 space-y-3 p-3 border rounded">
+                            <Label className={formErrors.receiptNumber && "text-red-500"}>Numéro *</Label>
+                            <Input value={receiptNumber} onChange={e=>setReceiptNumber(e.target.value)} className={formErrors.receiptNumber && "border-red-500"} />
+                            <Label>Date</Label>
+                            <DatePickerField selected={date} onSelect={setDate} placeholder="Date" />
+                        </div>
+                        <div className="w-1/2 space-y-3 p-3 border rounded">
+                            <Label className={formErrors.supplier && "text-red-500"}>Fournisseur *</Label>
+                            <SupplierSelector 
+                                value={supplierId} onChange={setSupplierId} suppliers={suppliers} 
+                                onOpenAdvanced={()=>setIsSupplierSearchOpen(true)} onCreateNew={()=>setIsCreateSupplierOpen(true)} 
+                                hasError={formErrors.supplier} 
+                            />
+                        </div>
+                    </div>
 
-              <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
-                <DialogFooter className="sm:justify-between">
-                    <div className="text-right"><span className="font-bold text-lg">{totalTTC.toFixed(2)} €</span> TTC</div>
+                    {/* FORM ROW 2 */}
+                    <div className="flex gap-4">
+                         <div className="w-1/2 space-y-3 p-3 border rounded">
+                            <Label>Paiement</Label>
+                            <Select value={paymentMethod} onValueChange={setPaymentMethod}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent></Select>
+                            <Label>Échéance</Label>
+                            <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Échéance" />
+                         </div>
+                         <div className="w-1/2 space-y-3 p-3 border rounded">
+                            <Label>Représentant / Détails</Label>
+                            <RepresentativeSelector value={representativeId} onChange={setRepresentativeId} representatives={reps} onOpenAdvanced={()=>setIsRepresentativeSearchOpen(true)} onCreateNew={()=>setIsCreateRepOpen(true)} />
+                            <div className="flex gap-2">
+                                <Input placeholder="Ref" value={reference} onChange={e=>setReference(e.target.value)} />
+                                <Input placeholder="Remarque" value={remarks} onChange={e=>setRemarks(e.target.value)} />
+                            </div>
+                         </div>
+                    </div>
+
+                    {/* TABLE */}
+                    <div className={cn("border rounded p-0 overflow-hidden", formErrors.items && "border-red-500")}>
+                        <div className="bg-slate-50 p-2 text-xs font-semibold grid grid-cols-[1fr_80px_80px_80px_40px] gap-2 border-b">
+                            <span>Article</span><span>Qté</span><span>Prix</span><span>Total</span><span></span>
+                        </div>
+                        {items.map(item => (
+                            <div key={item.id} className={cn("p-2 border-b grid grid-cols-[1fr_80px_80px_80px_40px] gap-2 items-center text-sm transition-all duration-300", flashingRowId === item.id && "bg-green-100")}>
+                                <ArticleSelector 
+                                    value={item.articleId} onChange={(v:string) => {
+                                        const art = articles.find(a=>a.id===v);
+                                        const existing = items.find(i=>i.articleId === v && i.id !== item.id);
+                                        if(existing) {
+                                            // Handle merge visual logic or alert
+                                        }
+                                        setItems(prev=>prev.map(i=>i.id===item.id ? {...i, articleId:v, price: art?.price||0, tva: art?.tva||20} : i))
+                                    }} 
+                                    articles={articles} onOpenAdvanced={()=>{setSearchTargetRowId(item.id); setIsSearchOpen(true)}} onCreateNew={()=>{setPendingRowId(item.id); setIsCreateArticleOpen(true)}} 
+                                    autoFocus={item.id === newRowId}
+                                />
+                                <Input type="number" className="h-8" value={item.qty} onChange={e => setItems(prev=>prev.map(i=>i.id===item.id ? {...i, qty: Number(e.target.value)} : i))} />
+                                <Input type="number" className="h-8" value={item.price} onChange={e => setItems(prev=>prev.map(i=>i.id===item.id ? {...i, price: Number(e.target.value)} : i))} />
+                                <div className="text-right content-center">{(item.qty * item.price).toFixed(2)}</div>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setItems(items.filter(i=>i.id!==item.id))}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        ))}
+                        <Button variant="ghost" className="w-full rounded-none h-9 text-xs hover:bg-slate-50" onClick={() => { const id = generateId(); setNewRowId(id); setItems([...items, {id, articleId:"", qty:1, price:0, tva:20}])}}>+ Ajouter une ligne</Button>
+                    </div>
+
+                </div>
+
+                {/* FOOTER - PINNED TO BOTTOM */}
+                <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
+                    <div className="text-sm">
+                        <span className="text-muted-foreground">Total HT: </span>{totalHT.toFixed(2)} € <span className="font-bold ml-4">TTC: {totalTTC.toFixed(2)} €</span>
+                    </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
+                        <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
                         <Button onClick={handleSave} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin h-4 w-4"/> : "Créer"}</Button>
                     </div>
-                </DialogFooter>
-              </div>
+                </div>
+
             </div>
-            
-            {/* RESIZE HANDLES */}
-            {!isMinimized && ( <>
-                <div onMouseDown={handleResize('right')} className="absolute -right-3 top-0 bottom-0 w-3 cursor-ew-resize" />
-                <div onMouseDown={handleResize('bottom')} className="absolute -bottom-3 left-0 right-0 h-3 cursor-ns-resize" />
-                <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-6 w-6 cursor-nwse-resize" />
-            </>)}
+
+            {/* RESIZE HANDLES (RESTORED!) */}
+            {!isMinimized && (
+              <>
+                <div onMouseDown={handleResize('right')} className="absolute -right-2 top-0 bottom-0 w-4 cursor-ew-resize z-50 hover:bg-blue-500/10 transition-colors" />
+                <div onMouseDown={handleResize('bottom')} className="absolute -bottom-2 left-0 right-0 h-4 cursor-ns-resize z-50 hover:bg-blue-500/10 transition-colors" />
+                <div onMouseDown={handleResize('corner')} className="absolute -bottom-2 -right-2 h-6 w-6 cursor-nwse-resize z-50 rounded-full hover:bg-blue-500/20 transition-colors" />
+              </>
+            )}
+
           </div>
         </DialogContent>
       </Dialog>
-      
-      {/* Search & Create Dialogs */}
-      <RepresentativeSearchDialog isOpen={isRepresentativeSearchOpen} onOpenChange={setIsRepresentativeSearchOpen} onSelect={(r:any)=>{setRepresentativeId(r.id); setIsRepresentativeSearchOpen(false)}} representatives={reps} onCreateNew={()=>{setIsRepresentativeSearchOpen(false); setIsCreateRepOpen(true)}} />
-      <SupplierSearchDialog isOpen={isSupplierSearchOpen} onOpenChange={setIsSupplierSearchOpen} onSelect={(s:any)=>{setSupplierId(s.id); setIsSupplierSearchOpen(false)}} suppliers={suppliers} onCreateNew={()=>{setIsSupplierSearchOpen(false); setIsCreateSupplierOpen(true)}} />
-      <ArticleSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} onSelect={(a:any)=>{ if(searchTargetRowId) setItems(prev=>prev.map(i=>i.id===searchTargetRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); setIsSearchOpen(false); }} articles={articles} onCreateNew={()=>{setIsSearchOpen(false); if(searchTargetRowId) { setPendingRowId(searchTargetRowId); setIsCreateArticleOpen(true); } }} />
 
-      <ArticleDialog isOpen={isCreateArticleOpen} onOpenChange={setIsCreateArticleOpen} onArticleCreated={(a:any)=>{ setArticles(prev=>[a,...prev]); if(pendingRowId) setItems(prev=>prev.map(i=>i.id===pendingRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); }} articles={articles} isChild={true} />
-      <RepresentativeDialog isOpen={isCreateRepOpen} onOpenChange={setIsCreateRepOpen} onRepresentativeCreated={(r:any)=>{setReps(prev=>[r,...prev]); setRepresentativeId(r.id)}} representatives={reps} />
-      <SupplierDialog isOpen={isCreateSupplierOpen} onOpenChange={setIsCreateSupplierOpen} onSupplierCreated={(s:any)=>{setSuppliers(prev=>[s,...prev]); setSupplierId(s.id)}} suppliers={suppliers} />
+      {/* --- SEARCH DIALOGS (Wired Up) --- */}
+      <RepresentativeSearchDialog 
+        isOpen={isRepresentativeSearchOpen} 
+        onOpenChange={setIsRepresentativeSearchOpen} 
+        representatives={reps}
+        onSelect={(r:any)=>{setRepresentativeId(r.id); setIsRepresentativeSearchOpen(false)}} 
+        onCreateNew={()=>{setIsRepresentativeSearchOpen(false); setIsCreateRepOpen(true)}} 
+      />
+      <SupplierSearchDialog 
+        isOpen={isSupplierSearchOpen} 
+        onOpenChange={setIsSupplierSearchOpen} 
+        suppliers={suppliers}
+        onSelect={(s:any)=>{setSupplierId(s.id); setIsSupplierSearchOpen(false)}} 
+        onCreateNew={()=>{setIsSupplierSearchOpen(false); setIsCreateSupplierOpen(true)}} 
+      />
+      <ArticleSearchDialog 
+        isOpen={isSearchOpen} 
+        onOpenChange={setIsSearchOpen} 
+        articles={articles}
+        onSelect={(a:any)=>{ 
+            if(searchTargetRowId) setItems(prev=>prev.map(i=>i.id===searchTargetRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i));
+            setIsSearchOpen(false); 
+        }} 
+        onCreateNew={()=>{setIsSearchOpen(false); if(searchTargetRowId) { setPendingRowId(searchTargetRowId); setIsCreateArticleOpen(true); } }} 
+      />
+
+      {/* --- CREATE DIALOGS --- */}
+      <ArticleDialog 
+        isOpen={isCreateArticleOpen} 
+        onOpenChange={setIsCreateArticleOpen} 
+        articles={articles}
+        onArticleCreated={(a:any)=>{ 
+            setArticles(prev=>[a,...prev]); 
+            if(pendingRowId) setItems(prev=>prev.map(i=>i.id===pendingRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); 
+        }} 
+        isChild={true} 
+      />
+      <RepresentativeDialog 
+        isOpen={isCreateRepOpen} 
+        onOpenChange={setIsCreateRepOpen} 
+        representatives={reps}
+        onRepresentativeCreated={(r:any)=>{setReps(prev=>[r,...prev]); setRepresentativeId(r.id)}} 
+      />
+      <SupplierDialog 
+        isOpen={isCreateSupplierOpen} 
+        onOpenChange={setIsCreateSupplierOpen} 
+        suppliers={suppliers}
+        onSupplierCreated={(s:any)=>{setSuppliers(prev=>[s,...prev]); setSupplierId(s.id)}} 
+      />
     </>
   )
 }
