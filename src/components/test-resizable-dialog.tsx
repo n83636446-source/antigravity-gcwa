@@ -353,6 +353,502 @@ const ArticleSearchDialog = ({
   )
 }
 
+// --- SELECTOR COMPONENTS ---
+
+const RepresentativeSelector = ({ 
+    value, 
+    onChange, 
+    representatives, 
+    onOpenAdvanced,
+    onCreateNew,
+    hasError 
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    representatives: Representative[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void,
+    hasError?: boolean
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const skipOpenRef = useRef(false)
+
+    useEffect(() => {
+        const selected = representatives.find(r => r.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, representatives])
+
+    const filteredReps = useMemo(() => {
+        if (!inputValue) return representatives.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return representatives.filter(r => 
+            r.name.toLowerCase().includes(lower) || 
+            (r.code && r.code.toLowerCase().includes(lower))
+        ).slice(0, 20); 
+    }, [inputValue, representatives])
+
+    const handleSelect = (rep: Representative) => {
+        skipOpenRef.current = true;
+        onChange(rep.id)
+        setInputValue(rep.name)
+        setOpen(false)
+        setTimeout(() => { skipOpenRef.current = false; }, 150);
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        placeholder="Sélectionnez un représentant..."
+                        value={inputValue}
+                        autoComplete="off" 
+                        onFocus={() => {
+                            if (skipOpenRef.current) return;
+                            setOpen(true)
+                        }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (skipOpenRef.current) return;
+                            setOpen(true); 
+                        }}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.preventDefault() 
+                            e.stopPropagation() 
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+            
+            <PopoverContent 
+                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="flex flex-col">
+                    <div 
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { 
+                            e.stopPropagation();
+                            skipOpenRef.current = true;
+                            setOpen(false);
+                            setTimeout(() => { skipOpenRef.current = false; }, 150);
+                            onCreateNew(); 
+                        }} 
+                        className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+                    >
+                        <PlusCircle className="ml-1 h-4 w-4" />
+                        Créer un nouveau représentant
+                    </div>
+
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Nom</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        
+                        {filteredReps.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun représentant trouvé.
+                            </div>
+                        )}
+
+                        {filteredReps.map((rep) => (
+                            <div
+                                key={rep.id}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(rep);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_1fr] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{rep.code || "-"}</span>
+                                    <span className="text-left truncate font-medium">{rep.name}</span>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { 
+                                e.stopPropagation();
+                                setTimeout(() => setOpen(false), 0);
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+const SupplierSelector = ({ 
+    value, 
+    onChange, 
+    suppliers, 
+    onOpenAdvanced,
+    onCreateNew,
+    hasError 
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    suppliers: Supplier[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void,
+    hasError?: boolean
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const skipOpenRef = useRef(false)
+
+    useEffect(() => {
+        const selected = suppliers.find(s => s.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, suppliers])
+
+    const filteredSuppliers = useMemo(() => {
+        if (!inputValue) return suppliers.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return suppliers.filter(s => 
+            s.name.toLowerCase().includes(lower) || 
+            s.code.toLowerCase().includes(lower)
+        ).slice(0, 20); 
+    }, [inputValue, suppliers])
+
+    const handleSelect = (supplier: Supplier) => {
+        skipOpenRef.current = true;
+        onChange(supplier.id)
+        setInputValue(supplier.name)
+        setOpen(false)
+        setTimeout(() => { skipOpenRef.current = false; }, 150);
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        placeholder="Sélectionnez un fournisseur..."
+                        value={inputValue}
+                        autoComplete="off" 
+                        onFocus={() => {
+                            if (skipOpenRef.current) return;
+                            setOpen(true)
+                        }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (skipOpenRef.current) return;
+                            setOpen(true); 
+                        }}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.preventDefault() 
+                            e.stopPropagation() 
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+
+            <PopoverContent 
+                className="w-[500px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="flex flex-col">
+                    {/* FIXED TOP ROW */}
+                    <div 
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { 
+                            e.stopPropagation();
+                            skipOpenRef.current = true;
+                            setOpen(false);
+                            setTimeout(() => { skipOpenRef.current = false; }, 150);
+                            onCreateNew(); 
+                        }} 
+                        className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+                    >
+                        <PlusCircle className="ml-1 h-4 w-4" />
+                        Créer un nouveau fournisseur
+                    </div>
+
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Nom</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        
+                        {filteredSuppliers.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun fournisseur trouvé.
+                            </div>
+                        )}
+
+                        {filteredSuppliers.map((supplier) => (
+                            <div
+                                key={supplier.id}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(supplier);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_1fr] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{supplier.code}</span>
+                                    <span className="text-left truncate font-medium">{supplier.name}</span>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { 
+                                e.stopPropagation();
+                                setTimeout(() => setOpen(false), 0);
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+const ArticleSelector = ({ 
+    value, 
+    onChange, 
+    articles, 
+    onOpenAdvanced,
+    onCreateNew,
+    autoFocus = false,
+    hasError 
+}: { 
+    value: string, 
+    onChange: (id: string) => void, 
+    articles: Article[],
+    onOpenAdvanced: () => void,
+    onCreateNew: () => void,
+    autoFocus?: boolean,
+    hasError?: boolean
+}) => {
+    const [open, setOpen] = useState(false)
+    const [inputValue, setInputValue] = useState("")
+    const inputRef = useRef<HTMLInputElement>(null)
+    const skipOpenRef = useRef(false)
+
+    useEffect(() => {
+        if (autoFocus && inputRef.current) {
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+        }
+    }, [autoFocus]);
+
+    useEffect(() => {
+        const selected = articles.find(a => a.id === value)
+        if (selected) {
+            setInputValue(selected.name)
+        } else if (!value) {
+            setInputValue("")
+        }
+    }, [value, articles])
+
+    const filteredArticles = useMemo(() => {
+        if (!inputValue) return articles.slice(0, 10); 
+        const lower = inputValue.toLowerCase()
+        return articles.filter(a => 
+            a.name.toLowerCase().includes(lower) || 
+            a.code.toLowerCase().includes(lower)
+        ).slice(0, 20); 
+    }, [inputValue, articles])
+
+    const handleSelect = (article: Article) => {
+        skipOpenRef.current = true;
+        onChange(article.id)
+        setInputValue(article.name)
+        setOpen(false)
+        setTimeout(() => { skipOpenRef.current = false; }, 150);
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div className="relative w-full">
+                    <Input
+                        ref={inputRef}
+                        placeholder="Saisir un article..."
+                        value={inputValue}
+                        autoComplete="off" 
+                        onFocus={() => {
+                            if (skipOpenRef.current) return;
+                            setOpen(true)
+                        }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (skipOpenRef.current) return;
+                            setOpen(true); 
+                        }}
+                        onChange={(e) => {
+                            setInputValue(e.target.value)
+                            setOpen(true)
+                        }}
+                        className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
+                    />
+                    <Button 
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600"
+                        onClick={(e) => {
+                            e.preventDefault() 
+                            e.stopPropagation() 
+                            onOpenAdvanced()
+                        }}
+                        title="Recherche avancée"
+                    >
+                        <Search className="h-4 w-4" />
+                    </Button>
+                </div>
+            </PopoverTrigger>
+
+            <PopoverContent 
+                className="w-[600px] p-0 overflow-hidden bg-white border border-slate-200 rounded-md shadow-2xl z-[99999] pointer-events-auto" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="flex flex-col">
+                    {/* FIXED TOP ROW */}
+                    <div 
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            skipOpenRef.current = true;
+                            setOpen(false);
+                            setTimeout(() => { skipOpenRef.current = false; }, 150);
+                            onCreateNew(); 
+                        }} 
+                        className="flex items-center gap-2 px-3 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
+                    >
+                        <PlusCircle className="ml-1 h-4 w-4" />
+                        Créer un nouvel article
+                    </div>
+
+                    <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
+                        <span className="text-left pl-2">Code</span>
+                        <span className="text-left">Désignation</span>
+                        <span className="text-right pr-2">Stock</span>
+                    </div>
+
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        
+                        {filteredArticles.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                Aucun article trouvé.
+                            </div>
+                        )}
+
+                        {filteredArticles.map((article) => (
+                            <div
+                                key={article.id}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelect(article);
+                                }}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-slate-100 transition-colors"
+                            >
+                                <div className="grid grid-cols-[100px_300px_100px] items-center gap-4 w-full">
+                                    <span className="text-left font-mono text-xs text-muted-foreground pl-2">{article.code}</span>
+                                    <span className="text-left truncate font-medium">{article.name}</span>
+                                    <span className={cn(
+                                        "text-right font-medium text-xs pr-2",
+                                        (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600 font-bold" : "text-muted-foreground"
+                                    )}>
+                                        {article.stockLevel ?? 0}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <div 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                skipOpenRef.current = true;
+                                setOpen(false);
+                                setTimeout(() => { skipOpenRef.current = false; }, 150);
+                                onOpenAdvanced();
+                            }} 
+                            className="flex items-center justify-center gap-2 px-2 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-100 rounded-sm cursor-pointer transition-colors"
+                        >
+                            <Search className="h-4 w-4" />
+                            Ouvrir la liste complète...
+                        </div>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -445,7 +941,7 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [size, setSize] = useState({ width: 900, height: 550 }) // FIX: Smaller default height
+  const [size, setSize] = useState({ width: 900, height: 550 }) // FIX: Safer default height
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
@@ -952,27 +1448,27 @@ export function TestResizableDialog() {
             if (isMinimized) return; 
           }}
           className={cn(
-              "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto ease-in-out [&>button]:!hidden pointer-events-none",
-              "transition-[width,height]", // Use specific transitions
+              "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-[width,height] duration-200 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
-                : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50"
+                : "fixed left-[50%] top-[50%] z-50",
+              !isMinimized && "translate-x-[-50%] translate-y-[-50%]"
           )}
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
-            maxHeight: isMinimized ? "none" : "80vh", // VIEWPORT CONSTRAINT
+            maxHeight: isMinimized ? "none" : "80vh",
             
             position: "fixed",
             left: isMinimized ? (dockOffset || 0) + 16 : "50%",
-            bottom: isMinimized ? 0 : "auto", 
             top: isMinimized ? "auto" : "50%",
-
-            transform: isMinimized 
-                ? 'none' 
-                : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`, // CORRECT CENTERING
+            bottom: isMinimized ? 0 : "auto", 
             
-            transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out, left 0.2s ease-in-out" 
+            transform: isMinimized 
+                ? "none" 
+                : `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
+            
+            transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out"
           }}
         >
           <div 
@@ -982,7 +1478,7 @@ export function TestResizableDialog() {
             className={cn(
               "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
-              "transition-all duration-100 ease-in-out"
+              isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
             )}
             style={{ 
                 width: "100%", 
@@ -1317,4 +1813,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-```
