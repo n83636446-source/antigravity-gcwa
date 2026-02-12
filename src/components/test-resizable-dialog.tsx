@@ -57,16 +57,24 @@ const RepresentativeSearchDialog = ({ isOpen, onOpenChange, onSelect, representa
              </div>
         </div>
         <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
-            <PlusCircle className="h-4 w-4" /> Nouveau Représentant
+            <PlusCircle className="h-4 w-4" /> Créer un nouveau représentant
         </div>
-        <div className="flex-1 overflow-auto p-0 max-h-[400px]">
-            {filtered.map((rep: any) => (
-                <div key={rep.id} className="p-3 border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
-                    {rep.name}
-                </div>
-            ))}
+        <div className="flex-1 overflow-auto p-0 min-h-[300px]">
+            <table className="w-full text-sm caption-bottom">
+                <thead className="bg-slate-50 sticky top-0 z-10 border-b">
+                    <tr><th className="h-10 px-4 text-left font-medium text-muted-foreground">Code</th><th className="h-10 px-4 text-left font-medium text-muted-foreground">Nom</th></tr>
+                </thead>
+                <tbody>
+                    {filtered.map((rep: any) => (
+                        <tr key={rep.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
+                            <td className="p-3 font-mono text-xs">{rep.code || "-"}</td>
+                            <td className="p-3 font-medium">{rep.name}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
-        <div className="p-2 border-t flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
+        <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
       </DialogContent>
     </Dialog>
   )
@@ -399,7 +407,7 @@ export function TestResizableDialog() {
   const [isHoveringDock, setIsHoveringDock] = useState(false)
   
   // DRAG & SIZE
-  const [size, setSize] = useState({ width: 900, height: 500 }) // STARTING HEIGHT
+  const [size, setSize] = useState({ width: 900, height: 500 }) 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -440,6 +448,8 @@ export function TestResizableDialog() {
   const [isShaking, setIsShaking] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [flashingRowId, setFlashingRowId] = useState<string|null>(null)
+  
+  const [newRowId, setNewRowId] = useState<string | null>(null)
 
   const db = useFirestore()
   const { toast } = useToast()
@@ -589,8 +599,8 @@ export function TestResizableDialog() {
             bottom: isMinimized ? '0px' : 'auto',
             
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
-            height: isMinimized ? (isHoveringDock ? 500 : "auto") : "auto", // Let Flexbox decide height
-            maxHeight: isMinimized ? "none" : "85vh", // HARD CONSTRAINT
+            height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
+            maxHeight: isMinimized ? "none" : "80vh", // HARD CONSTRAINT
             
             position: "fixed", 
             transform: "none", 
