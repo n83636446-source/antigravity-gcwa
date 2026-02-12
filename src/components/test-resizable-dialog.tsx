@@ -75,7 +75,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- SUB-COMPONENTS (DEFINED BEFORE USAGE) ---
+// --- SUB-COMPONENTS ---
 
 // 1. Representative Search Dialog
 const RepresentativeSearchDialog = ({ 
@@ -512,7 +512,6 @@ const RepresentativeSelector = ({
     )
 }
 
-// --- COMPONENT: AUTOCOMPLETE SUPPLIER SELECTOR ---
 const SupplierSelector = ({ 
     value, 
     onChange, 
@@ -943,7 +942,7 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [size, setSize] = useState({ width: 900, height: 550 }) 
+  const [size, setSize] = useState({ width: 900, height: 500 }) // SMALLER DEFAULT HEIGHT
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
@@ -1455,21 +1454,23 @@ export function TestResizableDialog() {
               "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
-                : "fixed left-[50%] top-[50%] z-50",
-              isDragging ? "transition-none" : "transition-[width,height]"
+                : "fixed left-[50%] top-[50%] z-50"
           )}
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : "auto", 
-            maxHeight: isMinimized ? "none" : "85vh", 
+            maxHeight: isMinimized ? "none" : "85vh",
             
+            position: "fixed",
             left: isMinimized ? (dockOffset || 0) + 16 : "50%",
-            bottom: isMinimized ? 0 : "auto", 
             top: isMinimized ? "auto" : "50%",
+            bottom: isMinimized ? 0 : "auto", 
             
             transform: isMinimized 
                 ? "none" 
                 : `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`, 
+            
+            transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out" 
           }}
         >
           <div 
@@ -1477,10 +1478,14 @@ export function TestResizableDialog() {
             onMouseEnter={() => isMinimized && setIsHoveringDock(true)}
             onMouseLeave={() => setIsHoveringDock(false)}
             className={cn(
-              "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto w-full h-full",
+              "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
               isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
             )}
+            style={{ 
+                width: "100%", 
+                height: "100%"
+            }}
           >
             {/* --- CUSTOM ALERT OVERLAY --- */}
             {showCloseAlert && (
@@ -1562,7 +1567,7 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && !isHoveringDock && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6">
+              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-6 min-h-0"> {/* SCROLLABLE MIDDLE */}
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
                   <div className="flex flex-col gap-6">
