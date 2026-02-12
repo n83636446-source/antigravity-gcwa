@@ -75,7 +75,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- SUB-COMPONENTS ---
+// --- SUB-COMPONENTS (DEFINED BEFORE USAGE) ---
 
 // 1. Representative Search Dialog
 const RepresentativeSearchDialog = ({ 
@@ -1459,17 +1459,14 @@ export function TestResizableDialog() {
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : "auto", 
-            maxHeight: isMinimized ? "none" : "85vh",
-            
-            position: "fixed",
+            maxHeight: isMinimized ? "none" : "75vh", 
+            position: "fixed", 
             left: isMinimized ? (dockOffset || 0) + 16 : "50%",
             top: isMinimized ? "auto" : "50%",
             bottom: isMinimized ? 0 : "auto", 
-            
             transform: isMinimized 
                 ? "none" 
                 : `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`, 
-            
             transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out" 
           }}
         >
@@ -1480,7 +1477,7 @@ export function TestResizableDialog() {
             className={cn(
               "relative bg-white border rounded-t-lg shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "rounded-b-none border-b-0 shadow-md hover:bg-slate-50 cursor-pointer" : "rounded-lg",
-              isDragging ? "transition-none" : "transition-all duration-100 ease-in-out"
+              isDragging ? "transition-none" : "transition-[width,height] duration-200 ease-in-out" // FIXED TRANSITION
             )}
             style={{ 
                 width: "100%", 
@@ -1567,7 +1564,7 @@ export function TestResizableDialog() {
             <div className={cn("flex flex-col flex-1 min-h-0", isMinimized && !isHoveringDock && "hidden")}>
               <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
               
-              <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-10 pb-6 min-h-0"> {/* SCROLLABLE MIDDLE */}
+              <div className="flex-1 w-full overflow-y-auto min-h-0 p-6 pt-10 pb-6"> {/* REDUCED PADDING & SCROLLABLE */}
                 <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   {/* --- TOP ZONES LAYOUT --- */}
                   <div className="flex flex-col gap-6">
