@@ -75,7 +75,7 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-// --- SUB-COMPONENTS (DEFINED BEFORE USAGE) ---
+// --- SUB-COMPONENTS ---
 
 // 1. Representative Search Dialog
 const RepresentativeSearchDialog = ({ 
@@ -941,7 +941,7 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [size, setSize] = useState({ width: 900, height: 550 }) // FIX: Safer default height
+  const [size, setSize] = useState({ width: 900, height: 550 }) // Default safe size
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
@@ -1452,7 +1452,7 @@ export function TestResizableDialog() {
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999]"
                 : "fixed left-[50%] top-[50%] z-50",
-              !isMinimized && "translate-x-[-50%] translate-y-[-50%]"
+               !isMinimized && "translate-x-[-50%] translate-y-[-50%]"
           )}
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
@@ -1466,9 +1466,9 @@ export function TestResizableDialog() {
             
             transform: isMinimized 
                 ? "none" 
-                : `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
+                : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`, 
             
-            transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out"
+            transition: isDragging ? "none" : "width 0.2s ease-in-out, height 0.2s ease-in-out" 
           }}
         >
           <div 
