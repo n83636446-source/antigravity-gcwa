@@ -1,14 +1,10 @@
 /**
  * ============================================================================
  * Title: Resizable & Dockable Purchase Receipt Dialog
- * Version: 2.0 (Hover Preview)
+ * Version: 2.1 (Compact Hover)
  * Description: 
- * This component provides a draggable, resizable window for creating 
- * "Bons de Réception" (Purchase Receipts). It features a "Flexbox Sandwich" 
- * layout to ensure the header and footer always remain visible while the 
- * inner form scrolls. It supports minimizing to a bottom dock (with a hover
- * preview), includes advanced search/create popups, and integrates with 
- * Firebase Firestore for data fetching and saving.
+ * This version reduces the hover preview size for a more compact appearance
+ * when peeking at a minimized dialog.
  * ============================================================================
  */
 
@@ -48,176 +44,148 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
 };
 
 // ==========================================
-// 1. SEARCH DIALOGS (Defined First)
+// SEARCH DIALOG COMPONENTS
 // ==========================================
 
 const RepresentativeSearchDialog = ({ isOpen, onOpenChange, onSelect, representatives, onCreateNew }: any) => {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [term, setTerm] = useState("")
+  const filtered = useMemo(() => {
+    if (!term) return representatives;
+    return representatives.filter((r:any) => r.name.toLowerCase().includes(term.toLowerCase()));
+  }, [term, representatives]);
 
-  const filteredReps = useMemo(() => {
-    if (!searchTerm) return representatives;
-    const lowerTerm = searchTerm.toLowerCase();
-    return representatives.filter((r:any) => r.name.toLowerCase().includes(lowerTerm) || (r.code && r.code.toLowerCase().includes(lowerTerm)));
-  }, [searchTerm, representatives]);
-
-  useEffect(() => { if (isOpen) setSearchTerm("") }, [isOpen])
+  useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
+        <DialogTitle className="sr-only">Rechercher</DialogTitle>
         <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
-            <div className="relative">
+             <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Filtrer par code, nom..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" autoFocus />
-            </div>
+                <Input className="pl-9" placeholder="Rechercher code, nom..." value={term} onChange={e => setTerm(e.target.value)} autoFocus />
+             </div>
         </div>
-        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b">
+        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
             <PlusCircle className="h-4 w-4" /> Créer un nouveau représentant
         </div>
-        <div className="flex-1 overflow-auto p-0">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                    </tr>
+        <div className="flex-1 overflow-auto p-0 min-h-[300px]">
+            <table className="w-full text-sm caption-bottom">
+                <thead className="bg-slate-50 sticky top-0 z-10 border-b">
+                    <tr><th className="h-10 px-4 text-left font-medium text-muted-foreground">Code</th><th className="h-10 px-4 text-left font-medium text-muted-foreground">Nom</th></tr>
                 </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {filteredReps.length === 0 ? (
-                        <tr className="border-b transition-colors"><td colSpan={3} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun représentant trouvé.</td></tr>
-                    ) : (
-                        filteredReps.map((rep:any) => (
-                            <tr key={rep.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
-                                <td className="p-4 align-middle font-mono text-xs">{rep.code || "-"}</td>
-                                <td className="p-4 align-middle font-medium">{rep.name}</td>
-                                <td className="p-4 align-middle text-muted-foreground">{rep.email || "-"}</td>
-                            </tr>
-                        ))
-                    )}
+                <tbody>
+                    {filtered.map((rep: any) => (
+                        <tr key={rep.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
+                            <td className="p-3 font-mono text-xs">{rep.code || "-"}</td>
+                            <td className="p-3 font-medium">{rep.name}</td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
         </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button></div>
+        <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
       </DialogContent>
     </Dialog>
   )
 }
 
 const SupplierSearchDialog = ({ isOpen, onOpenChange, onSelect, suppliers, onCreateNew }: any) => {
-  const [searchTerm, setSearchTerm] = useState("")
+    const [term, setTerm] = useState("")
+    const filtered = useMemo(() => {
+        if (!term) return suppliers;
+        return suppliers.filter((s:any) => s.name.toLowerCase().includes(term.toLowerCase()) || s.code?.toLowerCase().includes(term.toLowerCase()));
+    }, [term, suppliers]);
 
-  const filteredSuppliers = useMemo(() => {
-    if (!searchTerm) return suppliers;
-    const lowerTerm = searchTerm.toLowerCase();
-    return suppliers.filter((s:any) => s.name.toLowerCase().includes(lowerTerm) || s.code.toLowerCase().includes(lowerTerm));
-  }, [searchTerm, suppliers]);
+    useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
 
-  useEffect(() => { if (isOpen) setSearchTerm("") }, [isOpen])
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un fournisseur</h2>
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Filtrer par code, nom..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" autoFocus />
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+            <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
+            <div className="p-4 border-b">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input className="pl-9" placeholder="Rechercher code, nom..." value={term} onChange={e => setTerm(e.target.value)} autoFocus />
+                </div>
             </div>
-        </div>
-        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b">
-            <PlusCircle className="h-4 w-4" /> Créer un nouveau fournisseur
-        </div>
-        <div className="flex-1 overflow-auto p-0">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Contact</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                    </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {filteredSuppliers.length === 0 ? (
-                        <tr className="border-b transition-colors"><td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun fournisseur trouvé.</td></tr>
-                    ) : (
-                        filteredSuppliers.map((supplier:any) => (
-                            <tr key={supplier.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(supplier)}>
-                                <td className="p-4 align-middle font-mono text-xs">{supplier.code}</td>
-                                <td className="p-4 align-middle font-medium">{supplier.name}</td>
-                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactName || "-"}</td>
-                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactEmail || "-"}</td>
+            <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
+                <PlusCircle className="h-4 w-4" /> Créer un nouveau fournisseur
+            </div>
+            <div className="flex-1 overflow-auto p-0 min-h-[300px]">
+                <table className="w-full text-sm caption-bottom">
+                    <thead className="bg-slate-50 sticky top-0 z-10 border-b">
+                        <tr>
+                            <th className="h-10 px-4 text-left font-medium text-muted-foreground w-[100px]">Code</th>
+                            <th className="h-10 px-4 text-left font-medium text-muted-foreground">Nom</th>
+                            <th className="h-10 px-4 text-left font-medium text-muted-foreground">Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.map((s: any) => (
+                            <tr key={s.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(s)}>
+                                <td className="p-3 font-mono text-xs">{s.code}</td>
+                                <td className="p-3 font-medium">{s.name}</td>
+                                <td className="p-3 text-muted-foreground">{s.contactName}</td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-        </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button></div>
-      </DialogContent>
-    </Dialog>
-  )
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
+        </DialogContent>
+        </Dialog>
+    )
 }
 
 const ArticleSearchDialog = ({ isOpen, onOpenChange, onSelect, articles, onCreateNew }: any) => {
-  const [searchTerm, setSearchTerm] = useState("")
+    const [term, setTerm] = useState("")
+    const filtered = useMemo(() => {
+        if (!term) return articles;
+        return articles.filter((a:any) => a.name.toLowerCase().includes(term.toLowerCase()) || a.code?.toLowerCase().includes(term.toLowerCase()));
+    }, [term, articles]);
 
-  const filteredArticles = useMemo(() => {
-    if (!searchTerm) return articles;
-    const lowerTerm = searchTerm.toLowerCase();
-    return articles.filter((a:any) => a.name.toLowerCase().includes(lowerTerm) || a.code.toLowerCase().includes(lowerTerm));
-  }, [searchTerm, articles]);
+    useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
 
-  useEffect(() => { if (isOpen) setSearchTerm("") }, [isOpen])
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
-        <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Filtrer par code ou désignation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" autoFocus />
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+            <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
+            <div className="p-4 border-b">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input className="pl-9" placeholder="Rechercher article..." value={term} onChange={e => setTerm(e.target.value)} autoFocus />
+                </div>
             </div>
-        </div>
-        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b">
-            <PlusCircle className="h-4 w-4" /> Créer un nouvel article
-        </div>
-        <div className="flex-1 overflow-auto p-0">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Désignation</th>
-                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[100px] text-right">Prix</th>
-                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px] text-right">Stock</th>
-                    </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {filteredArticles.length === 0 ? (
-                        <tr className="border-b transition-colors"><td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun article trouvé.</td></tr>
-                    ) : (
-                        filteredArticles.map((article:any) => (
-                            <tr key={article.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(article)}>
-                                <td className="p-4 align-middle font-mono text-xs">{article.code}</td>
-                                <td className="p-4 align-middle font-medium">{article.name}</td>
-                                <td className="p-4 align-middle text-right">{article.price.toFixed(2)} €</td>
-                                <td className={cn("p-4 align-middle text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>{article.stockLevel ?? 0}</td>
+            <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
+                <PlusCircle className="h-4 w-4" /> Créer un nouvel article
+            </div>
+            <div className="flex-1 overflow-auto p-0 min-h-[400px]">
+                <table className="w-full text-sm caption-bottom">
+                    <thead className="bg-slate-50 sticky top-0 z-10 border-b">
+                        <tr>
+                            <th className="h-10 px-4 text-left font-medium text-muted-foreground w-[120px]">Code</th>
+                            <th className="h-10 px-4 text-left font-medium text-muted-foreground">Désignation</th>
+                            <th className="h-10 px-4 text-right font-medium text-muted-foreground w-[100px]">Prix</th>
+                            <th className="h-10 px-4 text-right font-medium text-muted-foreground w-[80px]">Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.map((a: any) => (
+                            <tr key={a.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(a)}>
+                                <td className="p-3 font-mono text-xs">{a.code}</td>
+                                <td className="p-3 font-medium">{a.name}</td>
+                                <td className="p-3 text-right">{a.price.toFixed(2)} €</td>
+                                <td className="p-3 text-right">{a.stockLevel || 0}</td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-        </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button></div>
-      </DialogContent>
-    </Dialog>
-  )
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
+        </DialogContent>
+        </Dialog>
+    )
 }
 
 // ==========================================
@@ -444,7 +412,7 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 }
 
 // ==========================================
-// 4. MAIN COMPONENT
+// 4. MAIN COMPONENT (V1 RESTORED)
 // ==========================================
 
 export function TestResizableDialog() {
@@ -453,7 +421,7 @@ export function TestResizableDialog() {
   const [isHoveringDock, setIsHoveringDock] = useState(false)
   
   // DRAG & SIZE
-  const [size, setSize] = useState({ width: 900, height: 600 }) 
+  const [size, setSize] = useState({ width: 1000, height: 800 }) 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -470,7 +438,6 @@ export function TestResizableDialog() {
   const [paymentMethod, setPaymentMethod] = useState<string>("cash")
   const [representativeId, setRepresentativeId] = useState<string>("")
   const [reference, setReference] = useState<string>("")
-  
   const [items, setItems] = useState<InvoiceItem[]>([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }])
   
   // DB DATA
@@ -585,7 +552,7 @@ export function TestResizableDialog() {
     const startHeight = size.height
     const onMouseMove = (moveEvent: MouseEvent) => {
       if (direction === 'right' || direction === 'corner') {
-        const newWidth = Math.max(400, startWidth + (moveEvent.clientX - startX))
+        const newWidth = Math.max(350, startWidth + (moveEvent.clientX - startX))
         setSize(s => ({ ...s, width: newWidth }))
       }
       if (direction === 'bottom' || direction === 'corner') {
@@ -628,47 +595,59 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={setOpen} modal={!isMinimized}>
         <DialogContent 
-          onInteractOutside={(e) => e.preventDefault()} 
+          onInteractOutside={(e) => {
+            e.preventDefault(); 
+            if (showCloseAlert) { /* Shake */ return; }
+            if (isMinimized) return; 
+          }}
           className={cn(
-              "p-0 overflow-hidden flex flex-col bg-transparent border-none shadow-none max-w-none w-auto h-auto [&>button]:!hidden pointer-events-none",
-              isMinimized ? "fixed bottom-0 z-[9999]" : "fixed left-[50%] top-[50%] z-50",
-              isShaking && "animate-shake"
+              "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto [&>button]:!hidden pointer-events-none",
+              isMinimized ? "fixed bottom-0 z-[9999]" : "fixed left-[50%] top-[50%] z-50"
           )}
           style={{ 
-            left: isMinimized ? (dockOffset || 0) + 16 : `calc(50% + ${position.x}px)`,
-            top: isMinimized ? 'auto' : `calc(50% + ${position.y}px)`,
-            bottom: isMinimized ? '0px' : 'auto',
-            transform: 'translate(-50%, -50%)',
+            // RESTORED V1 STYLING
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
-            maxHeight: '85vh',
-            transition: isDragging ? "none" : "all 0.2s ease-out" 
+            position: isMinimized ? "fixed" : "relative", 
+            left: isMinimized ? ((dockOffset || 0) + 16) + 'px' : "auto",
+            bottom: isMinimized ? 0 : "auto", 
+            transform: isMinimized ? "none" : `translate(${position.x}px, ${position.y}px)`, 
+            transition: isDragging ? "none" : "all 0.2s ease-in-out"
           }}
-          onMouseEnter={() => isMinimized && setIsHoveringDock(true)}
-          onMouseLeave={() => setIsHoveringDock(false)}
         >
-          <DialogTitle className="sr-only">Nouveau Bon de Réception</DialogTitle>
-
-          {/* THE ACTUAL WINDOW BOX */}
-          <div className="relative bg-white border rounded-lg shadow-2xl flex flex-col pointer-events-auto h-full w-full">
-            {/* HEADER */}
-            <div 
-                onMouseDown={handleDragStart}
-                className={cn("bg-slate-100 p-3 border-b flex justify-between items-center select-none shrink-0", !isMinimized && "cursor-move", isMinimized && "rounded-t-lg")}
-            >
+          {/* Main content wrapper */}
+          <div 
+            onClick={isMinimized ? ()=>setIsMinimized(false) : undefined}
+            onMouseEnter={() => isMinimized && setIsHoveringDock(true)}
+            onMouseLeave={() => isMinimized && setIsHoveringDock(false)}
+            className={cn(
+              "relative bg-white border rounded-lg shadow-2xl flex flex-col pointer-events-auto h-full", 
+              isMinimized && "rounded-b-none border-b-0"
+            )}
+          >
+            <DialogTitle className="sr-only">Nouveau Bon de Réception</DialogTitle>
+            
+            {/* Header */}
+            <div onMouseDown={handleDragStart} className={cn("bg-slate-100 p-3 border-b flex justify-between items-center select-none shrink-0", !isMinimized && "cursor-move")}>
                 <span className="font-semibold text-sm">{isMinimized ? `Bon ${receiptNumber}` : "Nouveau Bon de Réception"}</span>
                 <div className="flex gap-2">
-                    <Minus className="h-4 w-4 cursor-pointer text-slate-500" onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }} />
+                    <Minus className="h-4 w-4 cursor-pointer" onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }} />
                     <X className="h-4 w-4 cursor-pointer text-red-500" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
                 </div>
             </div>
 
-            {/* BODY - SCROLLABLE SANDWICH */}
-            <div className={cn("flex-1 flex flex-col min-h-0 bg-white overflow-hidden", isMinimized && !isHoveringDock && "hidden")}>
-                {/* ... (Your form content here) ... */}
+            {/* Scrollable Body */}
+            <div className={cn("flex-1 overflow-y-auto p-6 space-y-6", isMinimized && !isHoveringDock && "hidden")}>
+                {/* Form Content Here */}
             </div>
 
-            {/* RESIZE HANDLES */}
+            {/* Footer */}
+            <div className={cn("p-4 border-t bg-slate-50 flex justify-between items-center shrink-0", isMinimized && !isHoveringDock && "hidden")}>
+                <div className="text-sm"><span className="font-bold">TTC: {totalTTC.toFixed(2)} €</span></div>
+                <div className="flex gap-2"><Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button><Button onClick={handleSave} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin h-4 w-4"/> : "Créer"}</Button></div>
+            </div>
+
+            {/* Resize Handles */}
             {!isMinimized && (
               <>
                 <div onMouseDown={handleResize('right')} className="absolute -right-2 top-0 bottom-0 w-4 cursor-ew-resize z-50" />
@@ -680,12 +659,11 @@ export function TestResizableDialog() {
         </DialogContent>
       </Dialog>
 
-      {/* --- SEARCH DIALOGS (Wired Up) --- */}
+      {/* --- SEARCH & CREATE DIALOGS --- */}
       <RepresentativeSearchDialog isOpen={isRepresentativeSearchOpen} onOpenChange={setIsRepresentativeSearchOpen} representatives={reps} onSelect={(r:any)=>{setRepresentativeId(r.id); setIsRepresentativeSearchOpen(false)}} onCreateNew={()=>{setIsRepresentativeSearchOpen(false); setIsCreateRepOpen(true)}} />
       <SupplierSearchDialog isOpen={isSupplierSearchOpen} onOpenChange={setIsSupplierSearchOpen} suppliers={suppliers} onSelect={(s:any)=>{setSupplierId(s.id); setIsSupplierSearchOpen(false)}} onCreateNew={()=>{setIsSupplierSearchOpen(false); setIsCreateSupplierOpen(true)}} />
       <ArticleSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} articles={articles} onSelect={(a:any)=>{ if(searchTargetRowId) setItems(prev=>prev.map(i=>i.id===searchTargetRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); setIsSearchOpen(false); }} onCreateNew={()=>{setIsSearchOpen(false); if(searchTargetRowId) { setPendingRowId(searchTargetRowId); setIsCreateArticleOpen(true); } }} />
 
-      {/* --- CREATE DIALOGS --- */}
       <ArticleDialog isOpen={isCreateArticleOpen} onOpenChange={setIsCreateArticleOpen} articles={articles} onArticleCreated={(a:any)=>{ setArticles(prev=>[a,...prev]); if(pendingRowId) setItems(prev=>prev.map(i=>i.id===pendingRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); }} isChild={true} />
       <RepresentativeDialog isOpen={isCreateRepOpen} onOpenChange={setIsCreateRepOpen} representatives={reps} onRepresentativeCreated={(r:any)=>{setReps(prev=>[r,...prev]); setRepresentativeId(r.id)}} />
       <SupplierDialog isOpen={isCreateSupplierOpen} onOpenChange={setIsCreateSupplierOpen} suppliers={suppliers} onSupplierCreated={(s:any)=>{setSuppliers(prev=>[s,...prev]); setSupplierId(s.id)}} />
