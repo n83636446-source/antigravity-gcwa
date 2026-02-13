@@ -1,20 +1,34 @@
+/**
+ * ============================================================================
+ * Title: Resizable & Dockable Purchase Receipt Dialog
+ * Version: 1.0 (Stable Baseline)
+ * Description: 
+ * This component provides a draggable, resizable window for creating 
+ * "Bons de Réception" (Purchase Receipts). It features a "Flexbox Sandwich" 
+ * layout to ensure the header and footer always remain visible while the 
+ * inner form scrolls. It supports minimizing to a bottom dock, includes 
+ * advanced search/create popups for Suppliers, Articles, and Representatives, 
+ * and integrates with Firebase Firestore for data fetching and saving.
+ * ============================================================================
+ */
+
 import React, { useState, useEffect, useMemo, useRef } from "react"
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2, Eraser } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, AlertTriangle, Loader2 } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
-import { collection, getDocs, doc, deleteDoc } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 import { useFirestore } from "@/hooks/use-firestore" 
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
-import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
+import type { PurchaseReceipt } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
 import { ArticleDialog } from "@/components/article-dialog"
@@ -22,8 +36,8 @@ import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
 
 // --- TYPES ---
-type Article = { id: string; code: string; name: string; description?: string; price: number; stockLevel?: number; reorderThreshold?: number; familyId?: string; tva?: number }
-type Supplier = { id: string; code: string; name: string; contactName?: string; contactEmail?: string; contactPhone?: string; street?: string; city?: string; country?: string; ice?: string }
+type Article = { id: string; code: string; name: string; price: number; stockLevel?: number; reorderThreshold?: number; tva?: number }
+type Supplier = { id: string; code: string; name: string; contactName?: string; contactEmail?: string }
 type Representative = { id: string; code?: string; name: string; email?: string }
 type InvoiceItem = { id: string; articleId: string; qty: number; price: number; tva: number }
 
@@ -84,7 +98,7 @@ const SupplierSearchDialog = ({ isOpen, onOpenChange, onSelect, suppliers, onCre
     const [term, setTerm] = useState("")
     const filtered = useMemo(() => {
         if (!term) return suppliers;
-        return suppliers.filter((s:any) => s.name.toLowerCase().includes(term.toLowerCase()) || s.code?.toLowerCase().includes(term.toLowerCase()));
+        return suppliers.filter((s:any) => s.name.toLowerCase().includes(term.toLowerCase()) || s.code.toLowerCase().includes(term.toLowerCase()));
     }, [term, suppliers]);
 
     useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
@@ -132,7 +146,7 @@ const ArticleSearchDialog = ({ isOpen, onOpenChange, onSelect, articles, onCreat
     const [term, setTerm] = useState("")
     const filtered = useMemo(() => {
         if (!term) return articles;
-        return articles.filter((a:any) => a.name.toLowerCase().includes(term.toLowerCase()) || a.code?.toLowerCase().includes(term.toLowerCase()));
+        return articles.filter((a:any) => a.name.toLowerCase().includes(term.toLowerCase()) || a.code.toLowerCase().includes(term.toLowerCase()));
     }, [term, articles]);
 
     useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
@@ -179,7 +193,7 @@ const ArticleSearchDialog = ({ isOpen, onOpenChange, onSelect, articles, onCreat
 }
 
 // ==========================================
-// 2. ADVANCED SELECTORS
+// 2. AUTOCOMPLETE SELECTORS
 // ==========================================
 
 const RepresentativeSelector = ({ value, onChange, representatives, onOpenAdvanced, onCreateNew, hasError }: any) => {
@@ -298,7 +312,7 @@ const ArticleSelector = ({ value, onChange, articles, onOpenAdvanced, onCreateNe
 
     const filtered = useMemo(() => {
         if (!inputValue) return articles.slice(0, 10);
-        return articles.filter((a:any) => a.name.toLowerCase().includes(inputValue.toLowerCase()) || a.code?.toLowerCase().includes(inputValue.toLowerCase())).slice(0, 20);
+        return articles.filter((a:any) => a.name.toLowerCase().includes(inputValue.toLowerCase()) || a.code.toLowerCase().includes(inputValue.toLowerCase())).slice(0, 20);
     }, [inputValue, articles])
 
     return (
@@ -340,6 +354,10 @@ const ArticleSelector = ({ value, onChange, articles, onOpenAdvanced, onCreateNe
         </Popover>
     )
 }
+
+// ==========================================
+// DATE PICKERS
+// ==========================================
 
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
@@ -398,7 +416,7 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 }
 
 // ==========================================
-// 3. MAIN COMPONENT (Restored)
+// 3. MAIN COMPONENT (V1)
 // ==========================================
 
 export function TestResizableDialog() {
@@ -407,14 +425,14 @@ export function TestResizableDialog() {
   const [isHoveringDock, setIsHoveringDock] = useState(false)
   
   // DRAG & SIZE
-  const [size, setSize] = useState({ width: 900, height: 500 }) 
+  const [size, setSize] = useState({ width: 900, height: 600 }) 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
   const startPos = useRef({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
 
-  // DATA
+  // DATA STATE
   const [receiptNumber, setReceiptNumber] = useState("BR-0001")
   const [remarks, setRemarks] = useState("") 
   const [formErrors, setFormErrors] = useState<any>({}) 
@@ -424,27 +442,26 @@ export function TestResizableDialog() {
   const [paymentMethod, setPaymentMethod] = useState<string>("cash")
   const [representativeId, setRepresentativeId] = useState<string>("")
   const [reference, setReference] = useState<string>("")
-  
   const [items, setItems] = useState<InvoiceItem[]>([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }])
   
-  // CACHE LISTS
+  // DB DATA
   const [articles, setArticles] = useState<Article[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [reps, setReps] = useState<Representative[]>([])
   const [existingReceipts, setExistingReceipts] = useState<PurchaseReceipt[]>([])
 
-  // DIALOG STATES
+  // SUB-DIALOG STATES
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTargetRowId, setSearchTargetRowId] = useState<string | null>(null)
   const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false) 
   const [isRepresentativeSearchOpen, setIsRepresentativeSearchOpen] = useState(false) 
-  
   const [isCreateArticleOpen, setIsCreateArticleOpen] = useState(false)
   const [isCreateRepOpen, setIsCreateRepOpen] = useState(false)
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
   const [newRowId, setNewRowId] = useState<string | null>(null)
 
+  // ALERT STATES
   const [showCloseAlert, setShowCloseAlert] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -453,8 +470,7 @@ export function TestResizableDialog() {
   const db = useFirestore()
   const { toast } = useToast()
 
-  // --- LOGIC ---
-
+  // --- DERIVED STATE ---
   const { totalHT, totalTTC } = items.reduce((acc, item) => {
       const lineHT = item.price * item.qty;
       const lineTVA = lineHT * (item.tva / 100);
@@ -467,6 +483,7 @@ export function TestResizableDialog() {
       return `BR-${(max+1).toString().padStart(4, '0')}`;
   }
 
+  // --- ACTIONS ---
   const resetForm = () => {
       setDate(new Date()); setDueDate(new Date()); setSupplierId(""); setPaymentMethod("cash");
       setRepresentativeId(""); setReference(""); setRemarks("");
@@ -506,7 +523,7 @@ export function TestResizableDialog() {
       setIsMinimized(false);
   }
 
-  // --- DRAG ---
+  // --- DRAG LOGIC ---
   const handleDragStart = (e: React.MouseEvent) => {
       if (isMinimized || e.target !== e.currentTarget) return;
       e.preventDefault();
@@ -528,7 +545,7 @@ export function TestResizableDialog() {
       document.removeEventListener('mouseup', onMouseUp);
   }
 
-  // --- RESIZE (RESTORED!) ---
+  // --- RESIZE LOGIC ---
   const handleResize = (direction: string) => (e: React.MouseEvent) => {
     if (isMinimized) return
     e.preventDefault()
@@ -590,14 +607,14 @@ export function TestResizableDialog() {
           )}
           style={{ 
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
-            height: isMinimized ? (isHoveringDock ? 500 : "auto") : "auto", 
+            height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
             maxHeight: '85vh', 
             
             left: isMinimized ? ((dockOffset || 0) + 16) + 'px' : `calc(50% + ${position.x}px)`,
             top: isMinimized ? 'auto' : `calc(50% + ${position.y}px)`,
             bottom: isMinimized ? '0px' : 'auto',
             
-            transform: `translate(-50%, -50%)`, 
+            transform: isMinimized ? "none" : "translate(-50%, -50%)", 
             transition: isDragging ? "none" : "width 0.2s, height 0.2s" 
           }}
           onMouseEnter={() => isMinimized && setIsHoveringDock(true)}
@@ -634,7 +651,6 @@ export function TestResizableDialog() {
           </div>
 
           <div className={cn("flex-1 overflow-y-auto p-6 space-y-6", isMinimized && !isHoveringDock && "hidden")}>
-              {/* FORM ROW 1 */}
               <div className="flex flex-col md:flex-row gap-4">
                   <div className="w-full md:w-1/2 space-y-3 p-3 border rounded">
                       <Label className={formErrors.receiptNumber && "text-red-500"}>Numéro *</Label>
@@ -648,7 +664,6 @@ export function TestResizableDialog() {
                   </div>
               </div>
 
-              {/* FORM ROW 2 */}
               <div className="flex flex-col md:flex-row gap-4">
                     <div className="w-full md:w-1/2 space-y-3 p-3 border rounded">
                       <Label>Paiement</Label>
@@ -666,7 +681,6 @@ export function TestResizableDialog() {
                     </div>
               </div>
 
-              {/* TABLE */}
               <div className={cn("border rounded p-0 overflow-hidden", formErrors.items && "border-red-500")}>
                   <div className="bg-slate-50 p-2 text-xs font-semibold grid grid-cols-[1fr_80px_80px_80px_40px] gap-2 border-b">
                       <span>Article</span><span>Qté</span><span>Prix</span><span>Total</span><span></span>
@@ -693,7 +707,6 @@ export function TestResizableDialog() {
               </div>
           </div>
 
-          {/* FOOTER - PINNED TO BOTTOM */}
           <div className={cn("p-4 border-t bg-slate-50 flex justify-between items-center shrink-0", isMinimized && !isHoveringDock && "hidden")}>
               <div className="text-sm">
                   <span className="text-muted-foreground">Total HT: </span>{totalHT.toFixed(2)} € <span className="font-bold ml-4">TTC: {totalTTC.toFixed(2)} €</span>
@@ -703,19 +716,17 @@ export function TestResizableDialog() {
                   <Button onClick={handleSave} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin h-4 w-4"/> : "Créer"}</Button>
               </div>
           </div>
-          
+
           {!isMinimized && (
             <>
               <div onMouseDown={handleResize('right')} className="absolute -right-2 top-0 bottom-0 w-4 cursor-ew-resize z-50" />
               <div onMouseDown={handleResize('bottom')} className="absolute -bottom-2 left-0 right-0 h-4 cursor-ns-resize z-50" />
-              <div onMouseDown={handleResize('corner')} className="absolute -bottom-2 -right-2 h-6 w-6 cursor-nwse-resize z-50" />
+              <div onMouseDown={handleResize('corner')} className="absolute -bottom-2 -right-2 h-6 w-6 cursor-nwse-resize z-50 rounded-full" />
             </>
           )}
-
         </DialogContent>
       </Dialog>
 
-      {/* --- WIRING DIALOGS --- */}
       <RepresentativeSearchDialog isOpen={isRepresentativeSearchOpen} onOpenChange={setIsRepresentativeSearchOpen} representatives={reps} onSelect={(r:any)=>{setRepresentativeId(r.id); setIsRepresentativeSearchOpen(false)}} onCreateNew={()=>{setIsRepresentativeSearchOpen(false); setIsCreateRepOpen(true)}} />
       <SupplierSearchDialog isOpen={isSupplierSearchOpen} onOpenChange={setIsSupplierSearchOpen} suppliers={suppliers} onSelect={(s:any)=>{setSupplierId(s.id); setIsSupplierSearchOpen(false)}} onCreateNew={()=>{setIsSupplierSearchOpen(false); setIsCreateSupplierOpen(true)}} />
       <ArticleSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} articles={articles} onSelect={(a:any)=>{ if(searchTargetRowId) setItems(prev=>prev.map(i=>i.id===searchTargetRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); setIsSearchOpen(false); }} onCreateNew={()=>{setIsSearchOpen(false); if(searchTargetRowId) { setPendingRowId(searchTargetRowId); setIsCreateArticleOpen(true); } }} />
@@ -726,10 +737,3 @@ export function TestResizableDialog() {
     </>
   )
 }
-We are using Shadcn's Dialog component but with a custom layout to implement a "floating" and resizable window. The main changes are:
-
-1.  **Flexbox Structure:** The entire dialog is built with a flex column layout (`flex`, `flex-col`) to ensure the header and footer are always visible.
-2.  **Scrollable Middle:** The main form content is wrapped in a `div` with `flex-1` and `overflow-y-auto`, which makes it the only scrollable section.
-3.  **Positioning:** The dialog is manually centered using `left: 50%`, `top: 50%`, and a `translate` transform. The drag-and-drop logic updates the `position` state, which is then added to the transform to move the dialog.
-4.  **Height Constraint:** A strict `maxHeight: 85vh` is applied to the main container to prevent it from ever growing larger than the viewport.
-5.  **Resize Handles:** Simple `div` elements are positioned absolutely on the borders to act as resize handles. They use `onMouseDown` to initiate the resizing logic.
