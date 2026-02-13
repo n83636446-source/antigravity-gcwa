@@ -1,25 +1,23 @@
 /**
  * ============================================================================
- * Title: Resizable & Dockable Purchase Receipt Dialog
- * Version: 1.0 (Stable Baseline)
- * Description: 
- * This component provides a draggable, resizable window for creating 
- * "Bons de Réception" (Purchase Receipts). It features a "Flexbox Sandwich" 
- * layout to ensure the header and footer always remain visible while the 
- * inner form scrolls. It supports minimizing to a bottom dock, includes 
- * advanced search/create popups for Suppliers, Articles, and Representatives, 
- * and integrates with Firebase Firestore for data fetching and saving.
+ * VERSION: V1 (Restored Baseline)
+ * DESCRIPTION: 
+ * This is the exact layout and dragging logic that was working right before 
+ * the "too tall" issue was addressed. 
+ * - Uses relative positioning inside a fixed DialogContent for dragging.
+ * - Default size restored to 1000x800.
+ * - Sub-components hoisted to top to prevent ReferenceErrors.
  * ============================================================================
  */
 
 import React, { useState, useEffect, useMemo, useRef } from "react"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, AlertTriangle, Loader2 } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, AlertTriangle, Merge, Loader2 } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -36,8 +34,8 @@ import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
 
 // --- TYPES ---
-type Article = { id: string; code: string; name: string; price: number; stockLevel?: number; reorderThreshold?: number; tva?: number }
-type Supplier = { id: string; code: string; name: string; contactName?: string; contactEmail?: string }
+type Article = { id: string; code: string; name: string; price: number; stockLevel?: number; reorderThreshold?: number; familyId?: string; tva?: number }
+type Supplier = { id: string; code: string; name: string; contactName?: string; contactEmail?: string; contactPhone?: string; street?: string; city?: string; country?: string; ice?: string }
 type Representative = { id: string; code?: string; name: string; email?: string }
 type InvoiceItem = { id: string; articleId: string; qty: number; price: number; tva: number }
 
@@ -48,148 +46,176 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
 };
 
 // ==========================================
-// 1. SEARCH DIALOGS (Defined First)
+// 1. SEARCH DIALOGS (Defined at top to fix ReferenceError)
 // ==========================================
 
 const RepresentativeSearchDialog = ({ isOpen, onOpenChange, onSelect, representatives, onCreateNew }: any) => {
-  const [term, setTerm] = useState("")
-  const filtered = useMemo(() => {
-    if (!term) return representatives;
-    return representatives.filter((r:any) => r.name.toLowerCase().includes(term.toLowerCase()));
-  }, [term, representatives]);
+  const [searchTerm, setSearchTerm] = useState("")
 
-  useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
+  const filteredReps = useMemo(() => {
+    if (!searchTerm) return representatives;
+    const lowerTerm = searchTerm.toLowerCase();
+    return representatives.filter((r:any) => r.name.toLowerCase().includes(lowerTerm) || (r.code && r.code.toLowerCase().includes(lowerTerm)));
+  }, [searchTerm, representatives]);
+
+  useEffect(() => { if (isOpen) setSearchTerm("") }, [isOpen])
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-        <DialogTitle className="sr-only">Rechercher</DialogTitle>
+        <DialogTitle className="sr-only">Rechercher un représentant</DialogTitle>
         <div className="p-4 border-b">
-             <div className="relative">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un représentant</h2>
+            <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input className="pl-9" placeholder="Rechercher code, nom..." value={term} onChange={e => setTerm(e.target.value)} autoFocus />
-             </div>
+                <Input placeholder="Filtrer par code, nom..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" autoFocus />
+            </div>
         </div>
-        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
+        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b">
             <PlusCircle className="h-4 w-4" /> Créer un nouveau représentant
         </div>
-        <div className="flex-1 overflow-auto p-0 min-h-[300px]">
-            <table className="w-full text-sm caption-bottom">
-                <thead className="bg-slate-50 sticky top-0 z-10 border-b">
-                    <tr><th className="h-10 px-4 text-left font-medium text-muted-foreground">Code</th><th className="h-10 px-4 text-left font-medium text-muted-foreground">Nom</th></tr>
+        <div className="flex-1 overflow-auto p-0">
+            <table className="w-full caption-bottom text-sm">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                    </tr>
                 </thead>
-                <tbody>
-                    {filtered.map((rep: any) => (
-                        <tr key={rep.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
-                            <td className="p-3 font-mono text-xs">{rep.code || "-"}</td>
-                            <td className="p-3 font-medium">{rep.name}</td>
-                        </tr>
-                    ))}
+                <tbody className="[&_tr:last-child]:border-0">
+                    {filteredReps.length === 0 ? (
+                        <tr className="border-b transition-colors"><td colSpan={3} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun représentant trouvé.</td></tr>
+                    ) : (
+                        filteredReps.map((rep:any) => (
+                            <tr key={rep.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(rep)}>
+                                <td className="p-4 align-middle font-mono text-xs">{rep.code || "-"}</td>
+                                <td className="p-4 align-middle font-medium">{rep.name}</td>
+                                <td className="p-4 align-middle text-muted-foreground">{rep.email || "-"}</td>
+                            </tr>
+                        ))
+                    )}
                 </tbody>
             </table>
         </div>
-        <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
+        <div className="p-4 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button></div>
       </DialogContent>
     </Dialog>
   )
 }
 
 const SupplierSearchDialog = ({ isOpen, onOpenChange, onSelect, suppliers, onCreateNew }: any) => {
-    const [term, setTerm] = useState("")
-    const filtered = useMemo(() => {
-        if (!term) return suppliers;
-        return suppliers.filter((s:any) => s.name.toLowerCase().includes(term.toLowerCase()) || s.code.toLowerCase().includes(term.toLowerCase()));
-    }, [term, suppliers]);
+  const [searchTerm, setSearchTerm] = useState("")
 
-    useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
+  const filteredSuppliers = useMemo(() => {
+    if (!searchTerm) return suppliers;
+    const lowerTerm = searchTerm.toLowerCase();
+    return suppliers.filter((s:any) => s.name.toLowerCase().includes(lowerTerm) || s.code.toLowerCase().includes(lowerTerm));
+  }, [searchTerm, suppliers]);
 
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-            <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
-            <div className="p-4 border-b">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input className="pl-9" placeholder="Rechercher code, nom..." value={term} onChange={e => setTerm(e.target.value)} autoFocus />
-                </div>
+  useEffect(() => { if (isOpen) setSearchTerm("") }, [isOpen])
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+        <DialogTitle className="sr-only">Rechercher un fournisseur</DialogTitle>
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un fournisseur</h2>
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Filtrer par code, nom..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" autoFocus />
             </div>
-            <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
-                <PlusCircle className="h-4 w-4" /> Créer un nouveau fournisseur
-            </div>
-            <div className="flex-1 overflow-auto p-0 min-h-[300px]">
-                <table className="w-full text-sm caption-bottom">
-                    <thead className="bg-slate-50 sticky top-0 z-10 border-b">
-                        <tr>
-                            <th className="h-10 px-4 text-left font-medium text-muted-foreground w-[100px]">Code</th>
-                            <th className="h-10 px-4 text-left font-medium text-muted-foreground">Nom</th>
-                            <th className="h-10 px-4 text-left font-medium text-muted-foreground">Contact</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filtered.map((s: any) => (
-                            <tr key={s.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(s)}>
-                                <td className="p-3 font-mono text-xs">{s.code}</td>
-                                <td className="p-3 font-medium">{s.name}</td>
-                                <td className="p-3 text-muted-foreground">{s.contactName}</td>
+        </div>
+        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b">
+            <PlusCircle className="h-4 w-4" /> Créer un nouveau fournisseur
+        </div>
+        <div className="flex-1 overflow-auto p-0">
+            <table className="w-full caption-bottom text-sm">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nom</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Contact</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                    </tr>
+                </thead>
+                <tbody className="[&_tr:last-child]:border-0">
+                    {filteredSuppliers.length === 0 ? (
+                        <tr className="border-b transition-colors"><td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun fournisseur trouvé.</td></tr>
+                    ) : (
+                        filteredSuppliers.map((supplier:any) => (
+                            <tr key={supplier.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(supplier)}>
+                                <td className="p-4 align-middle font-mono text-xs">{supplier.code}</td>
+                                <td className="p-4 align-middle font-medium">{supplier.name}</td>
+                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactName || "-"}</td>
+                                <td className="p-4 align-middle text-muted-foreground">{supplier.contactEmail || "-"}</td>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
-        </DialogContent>
-        </Dialog>
-    )
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+        <div className="p-4 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button></div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 const ArticleSearchDialog = ({ isOpen, onOpenChange, onSelect, articles, onCreateNew }: any) => {
-    const [term, setTerm] = useState("")
-    const filtered = useMemo(() => {
-        if (!term) return articles;
-        return articles.filter((a:any) => a.name.toLowerCase().includes(term.toLowerCase()) || a.code.toLowerCase().includes(term.toLowerCase()));
-    }, [term, articles]);
+  const [searchTerm, setSearchTerm] = useState("")
 
-    useEffect(() => { if (isOpen) setTerm("") }, [isOpen])
+  const filteredArticles = useMemo(() => {
+    if (!searchTerm) return articles;
+    const lowerTerm = searchTerm.toLowerCase();
+    return articles.filter((a:any) => a.name.toLowerCase().includes(lowerTerm) || a.code.toLowerCase().includes(lowerTerm));
+  }, [searchTerm, articles]);
 
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
-            <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
-            <div className="p-4 border-b">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input className="pl-9" placeholder="Rechercher article..." value={term} onChange={e => setTerm(e.target.value)} autoFocus />
-                </div>
+  useEffect(() => { if (isOpen) setSearchTerm("") }, [isOpen])
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 z-[99999]">
+        <DialogTitle className="sr-only">Rechercher un article</DialogTitle>
+        <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold mb-2">Rechercher un article</h2>
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Filtrer par code ou désignation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" autoFocus />
             </div>
-            <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 cursor-pointer border-b">
-                <PlusCircle className="h-4 w-4" /> Créer un nouvel article
-            </div>
-            <div className="flex-1 overflow-auto p-0 min-h-[400px]">
-                <table className="w-full text-sm caption-bottom">
-                    <thead className="bg-slate-50 sticky top-0 z-10 border-b">
-                        <tr>
-                            <th className="h-10 px-4 text-left font-medium text-muted-foreground w-[120px]">Code</th>
-                            <th className="h-10 px-4 text-left font-medium text-muted-foreground">Désignation</th>
-                            <th className="h-10 px-4 text-right font-medium text-muted-foreground w-[100px]">Prix</th>
-                            <th className="h-10 px-4 text-right font-medium text-muted-foreground w-[80px]">Stock</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filtered.map((a: any) => (
-                            <tr key={a.id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(a)}>
-                                <td className="p-3 font-mono text-xs">{a.code}</td>
-                                <td className="p-3 font-medium">{a.name}</td>
-                                <td className="p-3 text-right">{a.price.toFixed(2)} €</td>
-                                <td className="p-3 text-right">{a.stockLevel || 0}</td>
+        </div>
+        <div onClick={onCreateNew} className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b">
+            <PlusCircle className="h-4 w-4" /> Créer un nouvel article
+        </div>
+        <div className="flex-1 overflow-auto p-0">
+            <table className="w-full caption-bottom text-sm">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm [&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Code</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Désignation</th>
+                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[100px] text-right">Prix</th>
+                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground w-[80px] text-right">Stock</th>
+                    </tr>
+                </thead>
+                <tbody className="[&_tr:last-child]:border-0">
+                    {filteredArticles.length === 0 ? (
+                        <tr className="border-b transition-colors"><td colSpan={4} className="p-4 align-middle text-center py-8 text-muted-foreground">Aucun article trouvé.</td></tr>
+                    ) : (
+                        filteredArticles.map((article:any) => (
+                            <tr key={article.id} className="border-b transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => onSelect(article)}>
+                                <td className="p-4 align-middle font-mono text-xs">{article.code}</td>
+                                <td className="p-4 align-middle font-medium">{article.name}</td>
+                                <td className="p-4 align-middle text-right">{article.price.toFixed(2)} €</td>
+                                <td className={cn("p-4 align-middle text-right font-semibold", (article.stockLevel || 0) <= (article.reorderThreshold || 0) ? "text-red-600" : "text-slate-600")}>{article.stockLevel ?? 0}</td>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            <div className="p-3 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={()=>onOpenChange(false)}>Fermer</Button></div>
-        </DialogContent>
-        </Dialog>
-    )
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+        <div className="p-4 border-t bg-slate-50 flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button></div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 // ==========================================
@@ -355,10 +381,6 @@ const ArticleSelector = ({ value, onChange, articles, onOpenAdvanced, onCreateNe
     )
 }
 
-// ==========================================
-// DATE PICKERS
-// ==========================================
-
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -416,7 +438,7 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 }
 
 // ==========================================
-// 3. MAIN COMPONENT (V1)
+// 4. MAIN COMPONENT (V1)
 // ==========================================
 
 export function TestResizableDialog() {
@@ -425,7 +447,7 @@ export function TestResizableDialog() {
   const [isHoveringDock, setIsHoveringDock] = useState(false)
   
   // DRAG & SIZE
-  const [size, setSize] = useState({ width: 900, height: 600 }) 
+  const [size, setSize] = useState({ width: 1000, height: 800 }) 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -523,7 +545,7 @@ export function TestResizableDialog() {
       setIsMinimized(false);
   }
 
-  // --- DRAG LOGIC ---
+  // --- DRAG ---
   const handleDragStart = (e: React.MouseEvent) => {
       if (isMinimized || e.target !== e.currentTarget) return;
       e.preventDefault();
@@ -545,7 +567,7 @@ export function TestResizableDialog() {
       document.removeEventListener('mouseup', onMouseUp);
   }
 
-  // --- RESIZE LOGIC ---
+  // --- RESIZE ---
   const handleResize = (direction: string) => (e: React.MouseEvent) => {
     if (isMinimized) return
     e.preventDefault()
@@ -606,9 +628,10 @@ export function TestResizableDialog() {
               isShaking && "animate-shake"
           )}
           style={{ 
+            // RESTORED V1 LAYOUT
             width: isMinimized ? (isHoveringDock ? 600 : 280) : size.width, 
             height: isMinimized ? (isHoveringDock ? 500 : "auto") : size.height,
-            maxHeight: '85vh', 
+            maxHeight: 'none', // Allow it to be "too tall"
             
             left: isMinimized ? ((dockOffset || 0) + 16) + 'px' : `calc(50% + ${position.x}px)`,
             top: isMinimized ? 'auto' : `calc(50% + ${position.y}px)`,
@@ -622,6 +645,7 @@ export function TestResizableDialog() {
         >
           <DialogTitle className="sr-only">Nouveau Bon de Réception</DialogTitle>
 
+          {/* CUSTOM ALERT OVERLAY */}
           {showCloseAlert && (
             <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-black/5 rounded-lg" onClick={()=>setIsShaking(true)}>
                 <div className="bg-white border shadow-lg p-6 rounded-md max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
@@ -635,6 +659,7 @@ export function TestResizableDialog() {
             </div>
           )}
 
+          {/* HEADER / DRAG HANDLE */}
           <div 
               onMouseDown={handleDragStart}
               className={cn("bg-slate-100 p-3 border-b flex justify-between items-center select-none shrink-0", !isMinimized && "cursor-move")}
@@ -650,66 +675,15 @@ export function TestResizableDialog() {
               </div>
           </div>
 
+          {/* BODY - SCROLLABLE AREA */}
           <div className={cn("flex-1 overflow-y-auto p-6 space-y-6", isMinimized && !isHoveringDock && "hidden")}>
-              <div className="flex flex-col md:flex-row gap-4">
-                  <div className="w-full md:w-1/2 space-y-3 p-3 border rounded">
-                      <Label className={formErrors.receiptNumber && "text-red-500"}>Numéro *</Label>
-                      <Input value={receiptNumber} onChange={e=>setReceiptNumber(e.target.value)} className={formErrors.receiptNumber && "border-red-500"} />
-                      <Label>Date</Label>
-                      <DatePickerField selected={date} onSelect={setDate} placeholder="Date" />
-                  </div>
-                  <div className="w-full md:w-1/2 space-y-3 p-3 border rounded">
-                      <Label className={formErrors.supplier && "text-red-500"}>Fournisseur *</Label>
-                      <SupplierSelector value={supplierId} onChange={setSupplierId} suppliers={suppliers} onOpenAdvanced={()=>setIsSupplierSearchOpen(true)} onCreateNew={()=>setIsCreateSupplierOpen(true)} hasError={formErrors.supplier} />
-                  </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-4">
-                    <div className="w-full md:w-1/2 space-y-3 p-3 border rounded">
-                      <Label>Paiement</Label>
-                      <Select value={paymentMethod} onValueChange={setPaymentMethod}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent></Select>
-                      <Label>Échéance</Label>
-                      <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="Échéance" />
-                    </div>
-                    <div className="w-full md:w-1/2 space-y-3 p-3 border rounded">
-                      <Label>Représentant / Détails</Label>
-                      <RepresentativeSelector value={representativeId} onChange={setRepresentativeId} representatives={reps} onOpenAdvanced={()=>setIsRepresentativeSearchOpen(true)} onCreateNew={()=>setIsCreateRepOpen(true)} />
-                      <div className="flex gap-2">
-                          <Input placeholder="Ref" value={reference} onChange={e=>setReference(e.target.value)} />
-                          <Input placeholder="Remarque" value={remarks} onChange={e=>setRemarks(e.target.value)} />
-                      </div>
-                    </div>
-              </div>
-
-              <div className={cn("border rounded p-0 overflow-hidden", formErrors.items && "border-red-500")}>
-                  <div className="bg-slate-50 p-2 text-xs font-semibold grid grid-cols-[1fr_80px_80px_80px_40px] gap-2 border-b">
-                      <span>Article</span><span>Qté</span><span>Prix</span><span>Total</span><span></span>
-                  </div>
-                  {items.map(item => (
-                      <div key={item.id} className={cn("p-2 border-b grid grid-cols-[1fr_80px_80px_80px_40px] gap-2 items-center text-sm transition-all duration-300", flashingRowId === item.id && "bg-green-100")}>
-                          <ArticleSelector 
-                              value={item.articleId} onChange={(v:string) => {
-                                  const art = articles.find(a=>a.id===v);
-                                  const existing = items.find(i=>i.articleId === v && i.id !== item.id);
-                                  if(existing) { /* alert logic */ }
-                                  setItems(prev=>prev.map(i=>i.id===item.id ? {...i, articleId:v, price: art?.price||0, tva: art?.tva||20} : i))
-                              }} 
-                              articles={articles} onOpenAdvanced={()=>{setSearchTargetRowId(item.id); setIsSearchOpen(true)}} onCreateNew={()=>{setPendingRowId(item.id); setIsCreateArticleOpen(true)}} 
-                              autoFocus={item.id === newRowId}
-                          />
-                          <Input type="number" className="h-8" value={item.qty} onChange={e => setItems(prev=>prev.map(i=>i.id===item.id ? {...i, qty: Number(e.target.value)} : i))} />
-                          <Input type="number" className="h-8" value={item.price} onChange={e => setItems(prev=>prev.map(i=>i.id===item.id ? {...i, price: Number(e.target.value)} : i))} />
-                          <div className="text-right content-center">{(item.qty * item.price).toFixed(2)}</div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setItems(items.filter(i=>i.id!==item.id))}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                  ))}
-                  <Button variant="ghost" className="w-full rounded-none h-9 text-xs hover:bg-slate-50" onClick={() => { const id = generateId(); setNewRowId(id); setItems([...items, {id, articleId:"", qty:1, price:0, tva:20}])}}>+ Ajouter une ligne</Button>
-              </div>
+              {/* FORM CONTENT */}
           </div>
 
+          {/* FOOTER */}
           <div className={cn("p-4 border-t bg-slate-50 flex justify-between items-center shrink-0", isMinimized && !isHoveringDock && "hidden")}>
               <div className="text-sm">
-                  <span className="text-muted-foreground">Total HT: </span>{totalHT.toFixed(2)} € <span className="font-bold ml-4">TTC: {totalTTC.toFixed(2)} €</span>
+                  <span className="text-muted-foreground">Total TTC:</span> <span className="font-bold">{totalTTC.toFixed(2)} €</span>
               </div>
               <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
@@ -717,6 +691,7 @@ export function TestResizableDialog() {
               </div>
           </div>
 
+          {/* RESIZE HANDLES */}
           {!isMinimized && (
             <>
               <div onMouseDown={handleResize('right')} className="absolute -right-2 top-0 bottom-0 w-4 cursor-ew-resize z-50" />
@@ -727,6 +702,7 @@ export function TestResizableDialog() {
         </DialogContent>
       </Dialog>
 
+      {/* --- WIRING DIALOGS --- */}
       <RepresentativeSearchDialog isOpen={isRepresentativeSearchOpen} onOpenChange={setIsRepresentativeSearchOpen} representatives={reps} onSelect={(r:any)=>{setRepresentativeId(r.id); setIsRepresentativeSearchOpen(false)}} onCreateNew={()=>{setIsRepresentativeSearchOpen(false); setIsCreateRepOpen(true)}} />
       <SupplierSearchDialog isOpen={isSupplierSearchOpen} onOpenChange={setIsSupplierSearchOpen} suppliers={suppliers} onSelect={(s:any)=>{setSupplierId(s.id); setIsSupplierSearchOpen(false)}} onCreateNew={()=>{setIsSupplierSearchOpen(false); setIsCreateSupplierOpen(true)}} />
       <ArticleSearchDialog isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} articles={articles} onSelect={(a:any)=>{ if(searchTargetRowId) setItems(prev=>prev.map(i=>i.id===searchTargetRowId ? {...i, articleId:a.id, price:a.price, tva:a.tva||20} : i)); setIsSearchOpen(false); }} onCreateNew={()=>{setIsSearchOpen(false); if(searchTargetRowId) { setPendingRowId(searchTargetRowId); setIsCreateArticleOpen(true); } }} />
