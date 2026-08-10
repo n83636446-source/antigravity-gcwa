@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -6,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import {
   SidebarHeader,
   SidebarContent,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -24,7 +26,6 @@ import {
   Contact,
   UserCheck,
   UserPlus,
-  FileWarning,
   FlaskConical,
 } from 'lucide-react';
 import {
@@ -33,6 +34,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Button } from './ui/button';
+import { ThemeToggle } from './theme-toggle';
 
 const menuItems = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -202,6 +204,10 @@ export function AppSidebar() {
             </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
+      <SidebarFooter className="flex items-center justify-between p-4">
+        <span className="text-xs text-sidebar-foreground opacity-50 group-data-[collapsible=icon]:hidden">Thème</span>
+        <ThemeToggle />
+      </SidebarFooter>
     </>
   );
 }

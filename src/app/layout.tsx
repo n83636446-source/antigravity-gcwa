@@ -1,3 +1,4 @@
+
 'use client';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
@@ -6,6 +7,7 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/app-sidebar';
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase';
+import { ThemeProvider } from '@/components/theme-provider';
 
 
 const inter = Inter({
@@ -27,15 +29,22 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          <SidebarProvider>
-            <Sidebar collapsible="icon">
-              <AppSidebar />
-            </Sidebar>
-            <SidebarInset>
-              {children}
-            </SidebarInset>
-            <Toaster />
-          </SidebarProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SidebarProvider>
+              <Sidebar collapsible="icon">
+                <AppSidebar />
+              </Sidebar>
+              <SidebarInset>
+                {children}
+              </SidebarInset>
+              <Toaster />
+            </SidebarProvider>
+          </ThemeProvider>
         </FirebaseClientProvider>
       </body>
     </html>
