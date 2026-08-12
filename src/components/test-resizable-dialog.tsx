@@ -1000,8 +1000,6 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [size, setSize] = useState({ width: 1000, height: 800 })
   const [dockOffset, setDockOffset] = useState(0) 
   
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -1462,47 +1460,12 @@ export function TestResizableDialog() {
     }, 250);
   };
 
-  const handleResize = (direction: string) => (e: React.MouseEvent) => {
-    if (isMinimized) return
-    e.preventDefault()
-    e.stopPropagation()
-    setIsResizing(true)
-    
-    const startX = e.clientX
-    const startY = e.clientY
-    let currentWidth = size.width
-    let currentHeight = size.height
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (direction === 'right' || direction === 'corner') {
-        currentWidth = Math.max(350, size.width + (moveEvent.clientX - startX))
-        // Directly manipulate DOM for 60FPS smoothness, skipping React Render cycle
-        if (dialogRef.current) dialogRef.current.style.width = `${currentWidth}px`
-      }
-      if (direction === 'bottom' || direction === 'corner') {
-        currentHeight = Math.max(400, size.height + (moveEvent.clientY - startY))
-        // Directly manipulate DOM for 60FPS smoothness, skipping React Render cycle
-        if (dialogRef.current) dialogRef.current.style.height = `${currentHeight}px`
-      }
-    }
-    
-    const onMouseUp = () => {
-      setIsResizing(false)
-      setSize({ width: currentWidth, height: currentHeight }) // Save final size to React state
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
-    
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }
-
-  const isMobile = size.width < 800
+  const isMobile = 1000 < 800 // Fallback based on original fixed size
 
   // We extract the exact content of the form and footer into a variable. 
   // This allows us to render it normally, and also render it a second time inside our mini-view hover card.
   const formAndFooterJSX = (
-    <>
+    <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6 pb-40">
         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-col gap-6">
@@ -1643,7 +1606,7 @@ export function TestResizableDialog() {
           </Button>
         </DialogFooter>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -1666,9 +1629,16 @@ export function TestResizableDialog() {
               "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-300 ease-in-out [&>button]:!hidden pointer-events-none",
               isMinimized 
                 ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999] w-fit max-w-fit"
-                : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 w-auto"
+                : "fixed top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 w-auto"
           )}
-          style={isMinimized ? { left: (dockOffset || 0) + 16, transition: "left 0.3s ease-out" } : {}}
+          style={
+            isMinimized 
+            ? { left: (dockOffset || 0) + 16, transition: "left 0.3s ease-out" } 
+            : { 
+                left: `calc(${(dockOffset || 0)}px + (100vw - ${(dockOffset || 0)}px) / 2)`,
+                transition: "all 0.3s ease-in-out"
+              }
+          }
         >
           <div 
             ref={dialogRef}
@@ -1678,14 +1648,15 @@ export function TestResizableDialog() {
             className={cn(
               "relative bg-white border rounded shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "shadow-md cursor-pointer overflow-visible px-0" : "rounded-lg",
-              isResizing ? "transition-none" : "transition-all duration-300 ease-in-out"
+              "transition-all duration-300 ease-in-out"
             )}
             style={{ 
-              width: isMinimized ? "max-content" : "96vw", 
+              width: isMinimized ? "max-content" : `calc((100vw - ${(dockOffset || 0)}px) * 0.96)`, 
               height: isMinimized ? 40 : "96vh",
               transformOrigin: isMinimized ? "bottom left" : "center", 
               transform: isMinimized ? "translate(0px, 0px)" : "none",
-              bottom: isMinimized ? 6 : "auto" 
+              bottom: isMinimized ? 6 : "auto",
+              transition: "all 0.3s ease-in-out" 
             }}
           >
             {/* --- CUSTOM ALERT OVERLAY --- */}
