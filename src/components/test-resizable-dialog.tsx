@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ArticleDialog } from "@/components/article-dialog"
 import { RepresentativeDialog } from "@/components/representative-dialog"
 import { SupplierDialog } from "@/components/supplier-dialog"
+import { useSidebar } from "@/components/ui/sidebar"
 
 // --- TYPES ---
 type Article = {
@@ -1001,7 +1002,13 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [dockOffset, setDockOffset] = useState(0) 
+  
+  // Get Sidebar state for animation sync
+  const { state, isMobile } = useSidebar();
+  
+  // Calculate dockOffset based on Sidebar state to avoid polling lag
+  // Sidebar standard widths: expanded = 256px (16rem), collapsed = 48px (3rem)
+  const dockOffset = isMobile ? 0 : (state === 'expanded' ? 256 : 48);
   
   const dialogRef = useRef<HTMLDivElement>(null)
   
@@ -1375,29 +1382,6 @@ export function TestResizableDialog() {
       setSupplierId(supplierWithType.id)
   }
 
-  useEffect(() => {
-    const getSidebarWidth = () => {
-      const sidebar = document.querySelector('aside') || 
-                      document.querySelector('[data-sidebar]') ||
-                      document.querySelector('nav[class*="sidebar"]') ||
-                      document.querySelector('.sidebar');
-      
-      if (!sidebar) return 0;
-      
-      const rect = sidebar.getBoundingClientRect();
-      return rect.width > 10 ? rect.width : 0;
-    }
-
-    setDockOffset(getSidebarWidth());
-
-    const interval = setInterval(() => {
-       const w = getSidebarWidth();
-       setDockOffset(w);
-    }, 100); 
-
-    return () => clearInterval(interval);
-  }, [])
-
   const handleMainButtonClick = () => {
     if (open) {
       if (isMinimized) setIsMinimized(false)
@@ -1461,7 +1445,7 @@ export function TestResizableDialog() {
     }, 250);
   };
 
-  const isMobile = 1000 < 800 // Fallback based on original fixed size
+  const isMobileSize = 1000 < 800 // Fallback based on original fixed size
 
   // We extract the exact content of the form and footer into a variable. 
   const formAndFooterJSX = (
@@ -1469,25 +1453,25 @@ export function TestResizableDialog() {
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6 pb-40">
         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-col gap-6">
-             <div className={cn("flex w-full gap-6", isMobile && "flex-col")}>
-                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[40%]")}>
+             <div className={cn("flex w-full gap-6", isMobileSize && "flex-col")}>
+                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
-                       <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={cn(isMobile ? "text-left" : "text-right", formErrors.receiptNumber && "text-red-500")}>Numéro *</Label>
+                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                          <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.receiptNumber && "text-red-500")}>Numéro *</Label>
                           <Input value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} className={cn("w-full min-w-0 font-mono", formErrors.receiptNumber && "border-red-500 focus-visible:ring-red-500")} />
                        </div>
-                       <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={isMobile ? "text-left" : "text-right"}>Date de la pièce</Label>
+                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                          <Label className={isMobileSize ? "text-left" : "text-right"}>Date de la pièce</Label>
                           <DatePickerField selected={date} onSelect={setDate} placeholder="JJ/MM/AAAA" />
                        </div>
                     </div>
                  </div>
-                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
+                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[60%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Fournisseur</h3>
                      <div className="space-y-4 pt-2">
-                        <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                           <Label className={cn(isMobile ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
+                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
                            <div className="w-full">
                                <SupplierSelector value={supplierId} onChange={handleSupplierChange} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} onCreateNew={() => setIsCreateSupplierOpen(true)} hasError={formErrors.supplier} />
                                {formErrors.supplier && <span className="text-xs text-red-500 mt-1 block">Le fournisseur est obligatoire.</span>}
@@ -1497,12 +1481,12 @@ export function TestResizableDialog() {
                  </div>
              </div>
 
-             <div className={cn("flex w-full gap-6", isMobile && "flex-col")}>
-                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[40%]")}>
+             <div className={cn("flex w-full gap-6", isMobileSize && "flex-col")}>
+                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
                     <div className="space-y-4 pt-2">
-                       <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={isMobile ? "text-left" : "text-right"}>Mode de paiement</Label>
+                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                          <Label className={isMobileSize ? "text-left" : "text-right"}>Mode de paiement</Label>
                           <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                               <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                   <SelectValue placeholder="Espèces" />
@@ -1510,26 +1494,26 @@ export function TestResizableDialog() {
                               <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
                            </Select>
                        </div>
-                       <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={isMobile ? "text-left" : "text-right"}>Date d'échéance</Label>
+                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                          <Label className={isMobileSize ? "text-left" : "text-right"}>Date d'échéance</Label>
                           <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" />
                        </div>
                     </div>
                  </div>
-                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobile ? "w-full" : "w-[60%]")}>
+                 <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[60%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Détails</h3>
                     <div className="space-y-4 pt-2">
-                       <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={isMobile ? "text-left" : "text-right"}>Représentant</Label>
+                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                          <Label className={isMobileSize ? "text-left" : "text-right"}>Représentant</Label>
                           <RepresentativeSelector value={representativeId} onChange={handleRepresentativeChange} representatives={availableRepresentatives} onOpenAdvanced={() => setIsRepresentativeSearchOpen(true)} onCreateNew={() => setIsCreateRepOpen(true)} />
                         </div>
                        <div className="space-y-4 pt-2">
-                          <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                             <Label className={isMobile ? "text-left" : "text-right"}>Référence</Label>
+                          <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                             <Label className={isMobileSize ? "text-left" : "text-right"}>Référence</Label>
                              <Input placeholder="Référence" className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
                           </div>
-                          <div className={cn("grid items-center gap-4", isMobile ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                             <Label className={isMobile ? "text-left" : "text-right"}>Remarque</Label>
+                          <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                             <Label className={isMobileSize ? "text-left" : "text-right"}>Remarque</Label>
                              <Input placeholder="Remarque" className="w-full min-w-0" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
                           </div>
                        </div>
@@ -1617,7 +1601,7 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
         <DialogPortal>
-          {/* Confined Backdrop Overlay: only covers the right main window area */}
+          {/* Confined Backdrop Overlay: stays inside the right window area with sync transition */}
           {open && !isMinimized && (
             <div 
               className="fixed inset-0 z-40 bg-black/80 transition-[left] duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
@@ -1646,7 +1630,7 @@ export function TestResizableDialog() {
             )}
             style={
               isMinimized 
-              ? { left: (dockOffset || 0) + 16, transition: "left 0.3s ease-out" } 
+              ? { left: (dockOffset || 0) + 16, transition: "left 0.3s ease-in-out" } 
               : { 
                   left: `calc(${(dockOffset || 0)}px + (100vw - ${(dockOffset || 0)}px) / 2)`,
                   transition: "all 0.3s ease-in-out"
