@@ -1715,10 +1715,10 @@ export function TestResizableDialog() {
               (isDragging || isResizing) ? "transition-none" : "transition-all duration-300 ease-in-out"
             )}
             style={{ 
-              width: isMinimized ? "max-content" : size.width, 
-              height: isMinimized ? 40 : size.height,
-              transformOrigin: isMinimized ? "bottom left" : "bottom center", 
-              transform: isMinimized ? "translate(0px, 0px)" : `translate(${position.x}px, ${position.y}px)`,
+              width: isMinimized ? "max-content" : "96vw", 
+              height: isMinimized ? 40 : "96vh",
+              transformOrigin: isMinimized ? "bottom left" : "center", 
+              transform: isMinimized ? "translate(0px, 0px)" : "none",
               bottom: isMinimized ? 6 : "auto" 
             }}
           >
@@ -1768,7 +1768,7 @@ export function TestResizableDialog() {
               >
                 <div
                     className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative"
-                    style={{ width: size.width * 0.25, height: size.height * 0.25 }}
+                    style={{ width: 1000 * 0.25, height: 800 * 0.25 }}
                     onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
                 >
                     {/* Location A: The 'X' Button, visible only on group-hover */}
@@ -1782,7 +1782,7 @@ export function TestResizableDialog() {
 
                     <div
                         className="pointer-events-none origin-top-left bg-white flex flex-col"
-                        style={{ width: size.width, height: size.height, transform: 'scale(0.25)' }}
+                        style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}
                     >
                         {/* Replicate the header for the clone so it looks like a full screenshot */}
                         <div className="flex-none p-4 flex items-center gap-2">
@@ -1825,10 +1825,10 @@ export function TestResizableDialog() {
 
             {/* HEADER */}
             <div 
-              onMouseDown={handleDragStart}
+              onMouseDown={isMinimized ? undefined : handleDragStart}
               className={cn(
                 "flex-none p-4 select-none flex items-center gap-2",
-                !isMinimized && "cursor-move",
+                !isMinimized && "cursor-default",
                 isMinimized && "py-0 px-3 h-10"
               )}
             >
@@ -1855,9 +1855,9 @@ export function TestResizableDialog() {
 
             {!isMinimized && (
               <>
-                <div onMouseDown={handleResize('right')} className="absolute -right-3 top-0 bottom-0 w-3 cursor-ew-resize z-50 transition-colors" />
-                <div onMouseDown={handleResize('bottom')} className="absolute -bottom-3 left-0 right-0 h-3 cursor-ns-resize z-50 transition-colors" />
-                <div onMouseDown={handleResize('corner')} className="absolute -bottom-3 -right-3 h-6 w-6 cursor-nwse-resize z-50 rounded-tl-md" />
+                <div className="absolute -right-3 top-0 bottom-0 w-3 z-50 transition-colors" />
+                <div className="absolute -bottom-3 left-0 right-0 h-3 z-50 transition-colors" />
+                <div className="absolute -bottom-3 -right-3 h-6 w-6 z-50 rounded-tl-md" />
               </>
             )}
           </div>
