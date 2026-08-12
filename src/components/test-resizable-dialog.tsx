@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { Dialog, DialogFooter, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
