@@ -1000,10 +1000,8 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
 export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [size, setSize] = useState({ width: 1000, height: 800 })
-  const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dockOffset, setDockOffset] = useState(0) 
   
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -1072,7 +1070,6 @@ export function TestResizableDialog() {
     setReference("")
     setRemarks("")
     setItems([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }]); 
-    setPosition({ x: 0, y: 0 }); 
     setShowCloseAlert(false); 
     setIsShaking(false); 
     setFormErrors({}); 
@@ -1465,37 +1462,6 @@ export function TestResizableDialog() {
     }, 250);
   };
 
-  const handleDragStart = (e: React.MouseEvent) => {
-    if (isMinimized) return
-    if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return
-    e.preventDefault()
-    setIsDragging(true)
-    
-    const startX = e.clientX
-    const startY = e.clientY
-    let currentX = position.x
-    let currentY = position.y
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      currentX = position.x + (moveEvent.clientX - startX)
-      currentY = position.y + (moveEvent.clientY - startY)
-      // Directly manipulate DOM for 60FPS smoothness, skipping React Render cycle
-      if (dialogRef.current) {
-        dialogRef.current.style.transform = `translate(${currentX}px, ${currentY}px)`
-      }
-    }
-    
-    const onMouseUp = () => {
-      setIsDragging(false)
-      setPosition({ x: currentX, y: currentY }) // Save the final position to React state
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
-    
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }
-
   const handleResize = (direction: string) => (e: React.MouseEvent) => {
     if (isMinimized) return
     e.preventDefault()
@@ -1712,7 +1678,7 @@ export function TestResizableDialog() {
             className={cn(
               "relative bg-white border rounded shadow-xl flex flex-col pointer-events-auto",
               isMinimized ? "shadow-md cursor-pointer overflow-visible px-0" : "rounded-lg",
-              (isDragging || isResizing) ? "transition-none" : "transition-all duration-300 ease-in-out"
+              isResizing ? "transition-none" : "transition-all duration-300 ease-in-out"
             )}
             style={{ 
               width: isMinimized ? "max-content" : "96vw", 
@@ -1825,7 +1791,6 @@ export function TestResizableDialog() {
 
             {/* HEADER */}
             <div 
-              onMouseDown={isMinimized ? undefined : handleDragStart}
               className={cn(
                 "flex-none p-4 select-none flex items-center gap-2",
                 !isMinimized && "cursor-default",
