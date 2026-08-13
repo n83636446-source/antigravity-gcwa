@@ -993,8 +993,8 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
             onKeyDown={handleManualKeyDown}
             placeholder="JJ/MM/AAAA"
             className={cn(
-                "h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 focus-visible:ring-blue-500",
-                isInputInvalid && "border-red-500 focus-visible:ring-red-500 text-red-600"
+                "h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 outline-none focus-visible:ring-0 focus-visible:border-blue-500",
+                isInputInvalid && "border-red-500 focus-visible:border-red-500 text-red-600"
             )}
          />
          <Button size="sm" variant="outline" className="h-8 text-xs font-medium px-2" onClick={(e) => { e.preventDefault(); handleToday() }}>Aujourd'hui</Button>
