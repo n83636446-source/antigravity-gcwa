@@ -844,14 +844,42 @@ const ArticleSearchDialog = ({
 // --- DATE PICKER FIELD ---
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
+  const [manualInput, setManualInput] = useState(selected ? format(selected, "dd/MM/yyyy") : "")
+
+  useEffect(() => {
+    if (selected) {
+      setManualInput(format(selected, "dd/MM/yyyy"))
+      setCurrentMonth(selected)
+    }
+  }, [selected])
+
+  const handleManualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setManualInput(val)
+    
+    // Tentative de parsing immédiat du format JJ/MM/AAAA
+    const match = val.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
+    if (match) {
+        const day = parseInt(match[1], 10)
+        const month = parseInt(match[2], 10) - 1 
+        const year = parseInt(match[3], 10)
+        const d = new Date(year, month, day)
+        if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+            onSelect(d)
+        }
+    }
+  }
+
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
+  
   const handleToday = () => {
     const today = new Date()
     onSelect(today)
     setCurrentMonth(today)
-    onClose()
+    onClose() // Fermeture immédiate
   }
+
   const daysInMonth = () => {
     const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
     const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
@@ -863,6 +891,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     }
     return days
   }
+
   return (
     <div className="p-3 w-[300px]">
       <div className="flex items-center justify-between mb-4">
@@ -896,7 +925,12 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
         })}
       </div>
       <div className="border-t pt-3 flex items-center gap-2">
-         <div className="bg-slate-100 text-slate-700 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border truncate">{selected ? format(selected, "dd/MM/yyyy") : "--/--/----"}</div>
+         <Input 
+            value={manualInput} 
+            onChange={handleManualInputChange}
+            placeholder="JJ/MM/AAAA"
+            className="h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 focus-visible:ring-blue-500"
+         />
          <Button size="sm" variant="outline" className="h-8 text-xs font-medium px-2" onClick={(e) => { e.preventDefault(); handleToday() }}>Aujourd'hui</Button>
          <Button size="sm" className="h-8 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white px-3" onClick={(e) => { e.preventDefault(); onClose() }}>OK</Button>
       </div>
