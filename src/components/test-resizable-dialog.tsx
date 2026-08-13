@@ -845,19 +845,19 @@ const ArticleSearchDialog = ({
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const [manualInput, setManualInput] = useState(selected ? format(selected, "dd/MM/yyyy") : "")
+  const localInputRef = useRef<HTMLInputElement>(null)
 
+  // Sync internal state with external 'selected' prop, 
+  // but ONLY if the user isn't currently typing in the field to avoid focus/cursor issues.
   useEffect(() => {
-    if (selected) {
+    if (selected && document.activeElement !== localInputRef.current) {
       setManualInput(format(selected, "dd/MM/yyyy"))
       setCurrentMonth(selected)
     }
   }, [selected])
 
-  const handleManualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setManualInput(val)
-    
-    // Tentative de parsing immédiat du format JJ/MM/AAAA
+  const tryUpdateDate = (val: string) => {
+    // Attempt to parse JJ/MM/AAAA format
     const match = val.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
     if (match) {
         const day = parseInt(match[1], 10)
@@ -866,7 +866,32 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
         const d = new Date(year, month, day)
         if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
             onSelect(d)
+            setCurrentMonth(d)
+            return true
         }
+    }
+    return false
+  }
+
+  const handleManualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setManualInput(val)
+    
+    // We only trigger the parent update if a full valid string is reached
+    // to prevent heavy re-renders during typing.
+    if (val.length >= 10) {
+        tryUpdateDate(val)
+    }
+  }
+
+  const handleManualBlur = () => {
+    tryUpdateDate(manualInput)
+  }
+
+  const handleManualKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+        e.preventDefault()
+        tryUpdateDate(manualInput)
     }
   }
 
@@ -877,7 +902,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     const today = new Date()
     onSelect(today)
     setCurrentMonth(today)
-    onClose() // Fermeture immédiate
+    onClose() 
   }
 
   const daysInMonth = () => {
@@ -926,8 +951,11 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
       </div>
       <div className="border-t pt-3 flex items-center gap-2">
          <Input 
+            ref={localInputRef}
             value={manualInput} 
             onChange={handleManualInputChange}
+            onBlur={handleManualBlur}
+            onKeyDown={handleManualKeyDown}
             placeholder="JJ/MM/AAAA"
             className="h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 focus-visible:ring-blue-500"
          />
@@ -1423,7 +1451,7 @@ export function TestResizableDialog() {
 
   const formAndFooterJSX = (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6">
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6 text-left">
         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-col gap-6">
              <div className={cn("flex w-full gap-6", isMobileSize && "flex-col")}>
@@ -1542,13 +1570,13 @@ export function TestResizableDialog() {
           </div>
         </form>
       </div>
-      <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
-        <div className="space-y-2 text-right mb-4">
+      <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg text-right">
+        <div className="space-y-2 mb-4">
             <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
             <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>{totalTVA.toFixed(2)} €</span></div>
             <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>TOTAL TTC:</span> <span>{totalTTC.toFixed(2)} €</span></div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
           <Button className="bg-slate-900 text-white" disabled={isSubmitting} onClick={handleCreateReceipt}>
             {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enregistrement...</> : "Créer"}
@@ -1681,7 +1709,7 @@ export function TestResizableDialog() {
                             {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
                             <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}</div>
                         </div>
-                        {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>)}
+                        {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm text-left">Remplissez les informations ci-dessous.</div>)}
                         <div className={cn("flex-col flex-1 min-h-0 transition-opacity duration-300", isMinimized ? "hidden" : "flex")}>
                             <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
                             {formAndFooterJSX}
