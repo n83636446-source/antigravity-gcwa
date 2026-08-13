@@ -994,10 +994,10 @@ export function TestResizableDialog() {
   const [open, setOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   
-  // Get Sidebar state for animation sync
+  // Get Sidebar state for exact layout synchronization
   const { state, isMobile } = useSidebar();
   
-  // Calculate dockOffset based on Sidebar state to avoid polling lag
+  // Logical offset for JavaScript calculations
   const dockOffset = isMobile ? 0 : (state === 'expanded' ? 256 : 48);
   
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -1388,7 +1388,7 @@ export function TestResizableDialog() {
 
   const formAndFooterJSX = (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6 pb-40">
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6">
         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-col gap-6">
              <div className={cn("flex w-full gap-6", isMobileSize && "flex-col")}>
@@ -1458,7 +1458,7 @@ export function TestResizableDialog() {
                  </div>
              </div>
           </div>
-          <div className={cn("border border-blue-800 rounded-md min-h-[500px] overflow-visible", formErrors.items && "border-red-500 shadow-[0_0_0_1px_rgba(239,68,68,1)]")}>
+          <div className={cn("border border-blue-800 rounded-md min-h-[400px] overflow-visible mb-20", formErrors.items && "border-red-500 shadow-[0_0_0_1px_rgba(239,68,68,1)]")}>
             {formErrors.items && <div className="bg-red-50 text-red-600 text-xs px-4 py-2 border-b border-red-100 font-medium">Veuillez ajouter au moins un article valide.</div>}
             <table className="w-full caption-bottom text-sm">
               <thead className="bg-slate-50 [&_tr]:border-b">
@@ -1531,109 +1531,130 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
         <DialogPortal>
-          {open && !isMinimized && (
-            <div 
-              className="fixed inset-0 z-40 bg-black/80 transition-[left] duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-              style={{ left: dockOffset }}
-              onClick={(e) => { e.stopPropagation(); handleOverlayClick(); }}
-            />
-          )}
-
-          <DialogPrimitive.Content 
-            onInteractOutside={(e) => {
-              // Empecher la fermeture automatique par Radix pour garder le controle total (notamment quand réduit)
-              e.preventDefault(); 
-              if (!isMinimized && showCloseAlert) {
-                  handleOverlayClick();
-              }
-            }}
-            className={cn(
-                "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-300 ease-in-out [&>button]:!hidden pointer-events-none outline-none focus:outline-none",
-                isMinimized 
-                  ? "fixed bottom-0 top-auto right-auto translate-x-0 translate-y-0 z-[9999] w-fit max-w-fit"
-                  : "fixed top-[50%] translate-x-[-50%] translate-y-[-50%] z-50 w-auto"
-            )}
-            style={
-              isMinimized 
-              ? { left: (dockOffset || 0) + 16, transition: "left 0.3s ease-in-out" } 
-              : { 
-                  left: `calc(${(dockOffset || 0)}px + (100vw - ${(dockOffset || 0)}px) / 2)`,
-                  transition: "all 0.3s ease-in-out"
-                }
-            }
+          {/* 
+            STRICT FLEXBOX SYNC WRAPPER
+            We mirror the layout structure (Sidebar + Content) using a fixed flex container.
+            The spacer matches the sidebar's width exactly, ensuring the content area 
+            is 'pushed' synchronously during transitions.
+          */}
+          <div 
+            className="fixed inset-0 z-40 flex pointer-events-none transition-all duration-300 ease-in-out"
           >
-            <div 
-              ref={dialogRef}
-              onClick={isMinimized ? toggleMinimize : undefined}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              className={cn(
-                "relative bg-white border rounded shadow-xl flex flex-col pointer-events-auto",
-                isMinimized ? "shadow-md cursor-pointer overflow-visible px-0" : "rounded-lg",
-                "transition-all duration-300 ease-in-out"
-              )}
-              style={{ 
-                width: isMinimized ? "max-content" : `calc((100vw - ${(dockOffset || 0)}px) * 0.96)`, 
-                height: isMinimized ? 40 : "96vh",
-                transformOrigin: isMinimized ? "bottom left" : "center", 
-                transform: isMinimized ? "translate(0px, 0px)" : "none",
-                bottom: isMinimized ? 6 : "auto",
-                transition: "all 0.3s ease-in-out" 
-              }}
-            >
-              {showCloseAlert && (
+             {/* Layout Spacer: Mirrors the Sidebar width */}
+             {!isMobile && (
                 <div 
-                  className="absolute inset-0 z-[10000] flex items-center justify-center rounded-lg p-4 bg-black/5"
-                  onClick={handleOverlayClick}
-                >
-                  <div 
-                      className={cn("bg-white border shadow-lg p-6 rounded-md max-w-sm text-center", isShaking && "animate-shake")}
-                      onClick={(e) => e.stopPropagation()}
-                  >
-                      <h3 className="font-semibold text-lg mb-2">Attention</h3>
-                      <p className="text-sm text-muted-foreground mb-6">Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?</p>
-                      <div className="flex justify-center gap-3">
-                          <Button variant="outline" size="sm" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
-                          <Button variant="destructive" size="sm" onClick={confirmClose}>Fermer</Button>
-                      </div>
-                  </div>
-                  <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } } .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }`}</style>
-                </div>
-              )}
+                    className="flex-none transition-all duration-300 ease-in-out" 
+                    style={{ width: dockOffset }} 
+                />
+             )}
 
-              {isMinimized && (
-                <div className={cn("absolute bottom-full left-1/2 -translate-x-1/2 pb-3 z-[10000] origin-bottom transition-all duration-300 ease-out", isHoveringDock ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none")}>
-                  <div className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative" style={{ width: 1000 * 0.25, height: 800 * 0.25 }} onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}>
-                      <button onClick={(e) => { e.stopPropagation(); handleOpenChange(false); setIsHoveringDock(false); }} className="absolute top-2 right-2 z-50 p-1.5 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 rounded-md transition-opacity duration-200 shadow-sm pointer-events-auto opacity-0 group-hover:opacity-100" title="Fermer"><X className="h-4 w-4" /></button>
-                      <div className="pointer-events-none origin-top-left bg-white flex flex-col" style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}>
-                          <div className="flex-none p-4 flex items-center gap-2"><div className="font-semibold text-sm">Créer un bon de réception</div></div>
-                          <div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>
-                          <div className="flex-col flex-1 min-h-0 flex">{formAndFooterJSX}</div>
-                      </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="absolute right-3 top-3 z-50 flex gap-1">
-                {!isMinimized && (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); toggleMinimize(); }} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer" title="Réduire"><Minus className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => handleOpenChange(false)} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer" title="Fermer"><X className="h-3.5 w-3.5" /></button>
-                  </>
+             {/* Right Main Window Anchor: All dialog elements are relative to this pushed area */}
+             <div className="flex-1 relative pointer-events-none h-full w-full">
+                
+                {/* Backdrop - Strictly confined to the content area */}
+                {open && !isMinimized && (
+                    <div 
+                        className="absolute inset-0 z-40 bg-black/80 pointer-events-auto transition-all duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                        onClick={(e) => { e.stopPropagation(); handleOverlayClick(); }}
+                    />
                 )}
-              </div>
 
-              <div className={cn("flex-none p-4 select-none flex items-center gap-2", !isMinimized && "cursor-default", isMinimized && "py-0 px-3 h-10")}>
-                {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
-                <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}</div>
-              </div>
-              {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>)}
-              <div className={cn("flex-col flex-1 min-h-0 transition-opacity duration-300", isMinimized ? "hidden" : "flex")}>
-                <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
-                {formAndFooterJSX}
-              </div>
-            </div>
-          </DialogPrimitive.Content>
+                <DialogPrimitive.Content 
+                    onInteractOutside={(e) => {
+                        // Prevent automatic closing by Radix to keep control (especially when minimized)
+                        e.preventDefault(); 
+                        if (!isMinimized && showCloseAlert) {
+                            handleOverlayClick();
+                        }
+                    }}
+                    className={cn(
+                        "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-300 ease-in-out [&>button]:!hidden pointer-events-none outline-none focus:outline-none",
+                        isMinimized 
+                        ? "absolute bottom-6 left-4 z-[9999] w-fit max-w-fit translate-x-0 translate-y-0"
+                        : "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-auto"
+                    )}
+                    style={
+                        isMinimized 
+                        ? { transition: "all 0.3s ease-in-out" } 
+                        : { 
+                            width: "96%", 
+                            height: "96%",
+                            transition: "all 0.3s ease-in-out"
+                            }
+                    }
+                >
+                    <div 
+                        ref={dialogRef}
+                        onClick={isMinimized ? toggleMinimize : undefined}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                        className={cn(
+                            "relative bg-white border rounded shadow-xl flex flex-col pointer-events-auto",
+                            isMinimized ? "shadow-md cursor-pointer overflow-visible px-0 h-10" : "rounded-lg h-full",
+                            "transition-all duration-300 ease-in-out"
+                        )}
+                        style={{ 
+                            width: "100%",
+                            height: isMinimized ? 40 : "100%",
+                            transformOrigin: isMinimized ? "bottom left" : "center", 
+                            transition: "all 0.3s ease-in-out" 
+                        }}
+                    >
+                        {showCloseAlert && (
+                            <div 
+                            className="absolute inset-0 z-[10000] flex items-center justify-center rounded-lg p-4 bg-black/5"
+                            onClick={handleOverlayClick}
+                            >
+                            <div 
+                                className={cn("bg-white border shadow-lg p-6 rounded-md max-w-sm text-center", isShaking && "animate-shake")}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <h3 className="font-semibold text-lg mb-2">Attention</h3>
+                                <p className="text-sm text-muted-foreground mb-6">Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?</p>
+                                <div className="flex justify-center gap-3">
+                                    <Button variant="outline" size="sm" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
+                                    <Button variant="destructive" size="sm" onClick={confirmClose}>Fermer</Button>
+                                </div>
+                            </div>
+                            <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } } .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }`}</style>
+                            </div>
+                        )}
+
+                        {isMinimized && (
+                            <div className={cn("absolute bottom-full left-1/2 -translate-x-1/2 pb-3 z-[10000] origin-bottom transition-all duration-300 ease-out", isHoveringDock ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none")}>
+                            <div className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative" style={{ width: 1000 * 0.25, height: 800 * 0.25 }} onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}>
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenChange(false); setIsHoveringDock(false); }} className="absolute top-2 right-2 z-50 p-1.5 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 rounded-md transition-opacity duration-200 shadow-sm pointer-events-auto opacity-0 group-hover:opacity-100" title="Fermer"><X className="h-4 w-4" /></button>
+                                <div className="pointer-events-none origin-top-left bg-white flex flex-col" style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}>
+                                    <div className="flex-none p-4 flex items-center gap-2 font-semibold text-sm">Créer un bon de réception</div>
+                                    <div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>
+                                    <div className="flex-1 min-h-0 flex flex-col">{formAndFooterJSX}</div>
+                                </div>
+                            </div>
+                            </div>
+                        )}
+
+                        <div className="absolute right-3 top-3 z-50 flex gap-1">
+                            {!isMinimized && (
+                            <>
+                                <button onClick={(e) => { e.stopPropagation(); toggleMinimize(); }} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer" title="Réduire"><Minus className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => handleOpenChange(false)} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer" title="Fermer"><X className="h-3.5 w-3.5" /></button>
+                            </>
+                            )}
+                        </div>
+
+                        <div className={cn("flex-none p-4 select-none flex items-center gap-2", !isMinimized && "cursor-default", isMinimized && "py-0 px-3 h-10")}>
+                            {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
+                            <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}</div>
+                        </div>
+                        {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>)}
+                        <div className={cn("flex-col flex-1 min-h-0 transition-opacity duration-300", isMinimized ? "hidden" : "flex")}>
+                            <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
+                            {formAndFooterJSX}
+                        </div>
+                    </div>
+                </DialogPrimitive.Content>
+             </div>
+          </div>
         </DialogPortal>
       </Dialog>
 
