@@ -1570,7 +1570,7 @@ export function TestResizableDialog() {
                     className={cn(
                         "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-300 ease-in-out [&>button]:!hidden pointer-events-none outline-none focus:outline-none",
                         isMinimized 
-                        ? "absolute bottom-6 left-4 z-[9999] w-fit max-w-fit translate-x-0 translate-y-0"
+                        ? "absolute bottom-[10px] left-4 z-[9999] w-fit max-w-fit translate-x-0 translate-y-0"
                         : "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-auto"
                     )}
                     style={
