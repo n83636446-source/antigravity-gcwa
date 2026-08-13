@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useMemo, useRef } from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogPortal } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Check, Building2, User, Phone, Mail, Plus, AlertTriangle, Merge, Loader2, Eraser } from "lucide-react"
+import { CalendarIcon, Trash2, ChevronLeft, ChevronRight, X, Minus, PlusCircle, Search, Merge, Loader2, AlertTriangle } from "lucide-react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from "date-fns"
 import { fr } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 // --- FIREBASE IMPORTS ---
-import { collection, getDocs, doc, deleteDoc } from "firebase/firestore"
-import { useFirestore } from "@/hooks/use-firestore" 
+import { collection, getDocs } from "firebase/firestore"
+import { useFirestore } from "@/firebase" 
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates" 
-import type { PurchaseReceipt, PurchaseReceiptItem } from "@/lib/types" 
+import type { PurchaseReceipt } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
 import { ArticleDialog } from "@/components/article-dialog"
@@ -190,7 +190,6 @@ const RepresentativeSelector = ({
                     </div>
 
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                        
                         {filteredReps.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                                 Aucun représentant trouvé.
@@ -348,7 +347,6 @@ const SupplierSelector = ({
                     </div>
 
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                        
                         {filteredSuppliers.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                                 Aucun fournisseur trouvé.
@@ -519,7 +517,6 @@ const ArticleSelector = ({
                     </div>
 
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                        
                         {filteredArticles.length === 0 && (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                                 Aucun article trouvé.
@@ -844,6 +841,7 @@ const ArticleSearchDialog = ({
   )
 }
 
+// --- DATE PICKER FIELD ---
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -905,13 +903,11 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
   )
 }
 
-// --- NEW COMPONENT: WRITABLE DATE PICKER ---
 const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Only sync external date changes if the user is NOT actively typing in the field
   useEffect(() => {
     if (document.activeElement !== inputRef.current) {
         if (selected) {
@@ -929,8 +925,6 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
         const month = parseInt(match[2], 10) - 1 
         const year = parseInt(match[3], 10)
         const d = new Date(year, month, day)
-        
-        // Ensure strictly valid dates (e.g. rejects 31/02/2026)
         if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
             onSelect(d)
             setInputValue(format(d, "dd/MM/yyyy"))
@@ -941,15 +935,12 @@ const DatePickerField = ({ selected, onSelect, placeholder }: any) => {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Just update the text state freely without triggering saves or jumping the cursor
     setInputValue(e.target.value)
   }
 
   const handleBlur = () => {
-    // When the user clicks away, attempt to save the date
     const isValid = processDate(inputValue)
     if (!isValid) {
-        // If they typed something invalid like "15/10", revert to the last safely known date
         if (selected) {
            setInputValue(format(selected, "dd/MM/yyyy"))
         } else {
@@ -1007,7 +998,6 @@ export function TestResizableDialog() {
   const { state, isMobile } = useSidebar();
   
   // Calculate dockOffset based on Sidebar state to avoid polling lag
-  // Sidebar standard widths: expanded = 256px (16rem), collapsed = 48px (3rem)
   const dockOffset = isMobile ? 0 : (state === 'expanded' ? 256 : 48);
   
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -1126,9 +1116,7 @@ export function TestResizableDialog() {
         setAvailableSuppliers(deduplicate(suppliers));
         setAvailableRepresentatives(deduplicate(reps));
         setExistingReceipts(receipts);
-        
         setReceiptNumber(calculateNextNumber(receipts));
-
       } catch (error) {
         console.error("Error fetching data:", error)
       }
@@ -1140,10 +1128,8 @@ export function TestResizableDialog() {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContext) return;
-      
       const ctx = new AudioContext();
       const t = ctx.currentTime;
-
       const createOsc = (freq: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -1156,10 +1142,8 @@ export function TestResizableDialog() {
         osc.start();
         osc.stop(t + 0.3);
       }
-
       createOsc(100); 
       createOsc(106); 
-
     } catch (e) {
       console.error("Audio play failed", e);
     }
@@ -1167,25 +1151,12 @@ export function TestResizableDialog() {
 
   const handleCreateReceipt = async () => {
     if (!db) return;
-    
-    // --- VALIDATION START ---
     const newErrors: typeof formErrors = {};
     let hasError = false;
-
-    if (!supplierId) {
-        newErrors.supplier = true;
-        hasError = true;
-    }
-    if (!receiptNumber.trim()) {
-        newErrors.receiptNumber = true;
-        hasError = true;
-    }
+    if (!supplierId) { newErrors.supplier = true; hasError = true; }
+    if (!receiptNumber.trim()) { newErrors.receiptNumber = true; hasError = true; }
     const validItems = items.filter(i => i.articleId && i.qty > 0);
-    if (validItems.length === 0) {
-        newErrors.items = true;
-        hasError = true;
-    }
-
+    if (validItems.length === 0) { newErrors.items = true; hasError = true; }
     if (hasError) {
         setFormErrors(newErrors);
         setIsShaking(true);
@@ -1193,11 +1164,8 @@ export function TestResizableDialog() {
         playWarningSound(); 
         return;
     }
-    // --- VALIDATION END ---
-
     setFormErrors({});
     setIsSubmitting(true);
-
     try {
         const receiptData: any = {
             receiptNumber: receiptNumber, 
@@ -1215,22 +1183,15 @@ export function TestResizableDialog() {
             paymentMode: paymentMethod,
             dueDate: dueDate instanceof Date ? dueDate.toISOString() : new Date().toISOString(),
         };
-
         if (representativeId) receiptData.representativeId = representativeId;
         if (reference) receiptData.reference = reference;
         if (remarks) receiptData.remarks = remarks;
-
         const docRef = await addDocumentNonBlocking(collection(db, "purchaseReceipts"), receiptData);
-        
         if (docRef) {
             toast({ title: "Succès", description: `Bon de réception ${receiptNumber} créé avec succès.` });
             setOpen(false);
-            setTimeout(() => {
-                resetForm();
-                setIsSubmitting(false);
-            }, 300);
+            setTimeout(() => { resetForm(); setIsSubmitting(false); }, 300);
         }
-
     } catch (error) {
         console.error("Failed to save receipt", error);
         toast({ title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
@@ -1248,11 +1209,9 @@ export function TestResizableDialog() {
   const insertItemAfter = (currentId: string) => {
     const newId = generateId()
     const newItem = { id: newId, articleId: "", qty: 1, price: 0, tva: 20 }
-
     setItems(prevItems => {
         const index = prevItems.findIndex(item => item.id === currentId)
         if (index === -1) return prevItems
-        
         const newItems = [...prevItems]
         newItems.splice(index + 1, 0, newItem)
         return newItems
@@ -1287,7 +1246,6 @@ export function TestResizableDialog() {
   const handleMerge = (originalId: string, duplicateId: string) => {
     const duplicateItem = items.find(i => i.id === duplicateId);
     if (!duplicateItem) return;
-
     setItems(prev => {
         const updatedItems = prev.map(item => {
             if (item.id === originalId) {
@@ -1297,7 +1255,6 @@ export function TestResizableDialog() {
         });
         return updatedItems.filter(item => item.id !== duplicateId);
     });
-
     setFlashingRowId(originalId);
     setTimeout(() => setFlashingRowId(null), 1000);
   }
@@ -1345,16 +1302,12 @@ export function TestResizableDialog() {
   }
 
   const handleRepresentativeChange = (value: string) => {
-      if (value === "create_new_rep") {
-          setIsCreateRepOpen(true)
-          return
-      }
+      if (value === "create_new_rep") { setIsCreateRepOpen(true); return; }
       setRepresentativeId(value)
   }
 
   const handleRepresentativeSearchSelect = (rep: Representative) => {
-      setRepresentativeId(rep.id)
-      setIsRepresentativeSearchOpen(false)
+      setRepresentativeId(rep.id); setIsRepresentativeSearchOpen(false);
   }
 
   const handleRepresentativeCreated = (newRep: any) => {
@@ -1364,16 +1317,12 @@ export function TestResizableDialog() {
   }
 
   const handleSupplierChange = (value: string) => {
-      if (value === "create_new_supplier") {
-          setIsCreateSupplierOpen(true)
-          return
-      }
+      if (value === "create_new_supplier") { setIsCreateSupplierOpen(true); return; }
       setSupplierId(value)
   }
 
   const handleSupplierSearchSelect = (supplier: Supplier) => {
-      setSupplierId(supplier.id)
-      setIsSupplierSearchOpen(false)
+      setSupplierId(supplier.id); setIsSupplierSearchOpen(false);
   }
 
   const handleSupplierCreated = (newSupplier: any) => {
@@ -1410,10 +1359,7 @@ export function TestResizableDialog() {
   const confirmClose = () => {
       setShowCloseAlert(false)
       setOpen(false)
-      setTimeout(() => {
-        resetForm() 
-        setIsMinimized(false)
-      }, 300)
+      setTimeout(() => { resetForm(); setIsMinimized(false); }, 300)
   }
 
   const handleOverlayClick = () => {
@@ -1424,30 +1370,22 @@ export function TestResizableDialog() {
 
   const toggleMinimize = () => {
     setIsMinimized(!isMinimized)
-    if (isMinimized) {
-        setIsHoveringDock(false)
-    }
+    if (isMinimized) { setIsHoveringDock(false); }
   }
 
   const handleMouseEnter = () => {
     if (!isMinimized) return;
-    if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-        hoverTimeoutRef.current = null;
-    }
+    if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null; }
     setIsHoveringDock(true);
   };
 
   const handleMouseLeave = () => {
     if (!isMinimized) return;
-    hoverTimeoutRef.current = setTimeout(() => {
-        setIsHoveringDock(false);
-    }, 250);
+    hoverTimeoutRef.current = setTimeout(() => { setIsHoveringDock(false); }, 250);
   };
 
-  const isMobileSize = 1000 < 800 // Fallback based on original fixed size
+  const isMobileSize = isMobile;
 
-  // We extract the exact content of the form and footer into a variable. 
   const formAndFooterJSX = (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6 pb-40">
@@ -1480,7 +1418,6 @@ export function TestResizableDialog() {
                      </div>
                  </div>
              </div>
-
              <div className={cn("flex w-full gap-6", isMobileSize && "flex-col")}>
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Règlement</h3>
@@ -1521,7 +1458,6 @@ export function TestResizableDialog() {
                  </div>
              </div>
           </div>
-
           <div className={cn("border border-blue-800 rounded-md min-h-[500px] overflow-visible", formErrors.items && "border-red-500 shadow-[0_0_0_1px_rgba(239,68,68,1)]")}>
             {formErrors.items && <div className="bg-red-50 text-red-600 text-xs px-4 py-2 border-b border-red-100 font-medium">Veuillez ajouter au moins un article valide.</div>}
             <table className="w-full caption-bottom text-sm">
@@ -1571,7 +1507,6 @@ export function TestResizableDialog() {
           </div>
         </form>
       </div>
-
       <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg">
         <div className="space-y-2 text-right mb-4">
             <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
@@ -1581,12 +1516,7 @@ export function TestResizableDialog() {
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
           <Button className="bg-slate-900 text-white" disabled={isSubmitting} onClick={handleCreateReceipt}>
-            {isSubmitting ? (
-                <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enregistrement...
-                </>
-            ) : "Créer"}
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enregistrement...</> : "Créer"}
           </Button>
         </DialogFooter>
       </div>
@@ -1601,25 +1531,20 @@ export function TestResizableDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
         <DialogPortal>
-          {/* Confined Backdrop Overlay: stays inside the right window area with sync transition */}
           {open && !isMinimized && (
             <div 
               className="fixed inset-0 z-40 bg-black/80 transition-[left] duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
               style={{ left: dockOffset }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOverlayClick();
-              }}
+              onClick={(e) => { e.stopPropagation(); handleOverlayClick(); }}
             />
           )}
 
           <DialogPrimitive.Content 
             onInteractOutside={(e) => {
-              if (isMinimized) return;
+              // Empecher la fermeture automatique par Radix pour garder le controle total (notamment quand réduit)
               e.preventDefault(); 
-              if (showCloseAlert) {
+              if (!isMinimized && showCloseAlert) {
                   handleOverlayClick();
-                  return;
               }
             }}
             className={cn(
@@ -1656,143 +1581,57 @@ export function TestResizableDialog() {
                 transition: "all 0.3s ease-in-out" 
               }}
             >
-              {/* --- CUSTOM ALERT OVERLAY --- */}
               {showCloseAlert && (
                 <div 
                   className="absolute inset-0 z-[10000] flex items-center justify-center rounded-lg p-4 bg-black/5"
                   onClick={handleOverlayClick}
                 >
                   <div 
-                      className={cn(
-                          "bg-white border shadow-lg p-6 rounded-md max-w-sm text-center",
-                          isShaking && "animate-shake"
-                      )}
+                      className={cn("bg-white border shadow-lg p-6 rounded-md max-w-sm text-center", isShaking && "animate-shake")}
                       onClick={(e) => e.stopPropagation()}
                   >
                       <h3 className="font-semibold text-lg mb-2">Attention</h3>
-                      <p className="text-sm text-muted-foreground mb-6">
-                          Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?
-                      </p>
+                      <p className="text-sm text-muted-foreground mb-6">Vous avez des modifications non enregistrées. Voulez-vous vraiment fermer ?</p>
                       <div className="flex justify-center gap-3">
                           <Button variant="outline" size="sm" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
                           <Button variant="destructive" size="sm" onClick={confirmClose}>Fermer</Button>
                       </div>
                   </div>
-                  {/* --- CSS SHAKE ANIMATION BLOCK --- */}
-                  <style>{`
-                    @keyframes shake {
-                      0%, 100% { transform: translateX(0); }
-                      25% { transform: translateX(-4px); }
-                      75% { transform: translateX(4px); }
-                    }
-                    .animate-shake {
-                      animation: shake 0.2s ease-in-out 0s 2;
-                    }
-                  `}</style>
+                  <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } } .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }`}</style>
                 </div>
               )}
 
-              {/* --- THE HOVER CLONE POP-UP (MINI-VIEW) --- */}
               {isMinimized && (
-                <div
-                  className={cn(
-                    "absolute bottom-full left-1/2 -translate-x-1/2 pb-3 z-[10000] origin-bottom transition-all duration-300 ease-out",
-                    isHoveringDock ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none"
-                  )}
-                >
-                  <div
-                      className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative"
-                      style={{ width: 1000 * 0.25, height: 800 * 0.25 }}
-                      onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
-                  >
-                      {/* Location A: The 'X' Button, visible only on group-hover */}
-                      <button
-                          onClick={(e) => { e.stopPropagation(); handleOpenChange(false); setIsHoveringDock(false); }}
-                          className="absolute top-2 right-2 z-50 p-1.5 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 rounded-md transition-opacity duration-200 shadow-sm pointer-events-auto opacity-0 group-hover:opacity-100"
-                          title="Fermer la boîte de dialogue"
-                      >
-                          <X className="h-4 w-4" />
-                      </button>
-
-                      <div
-                          className="pointer-events-none origin-top-left bg-white flex flex-col"
-                          style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}
-                      >
-                          {/* Replicate the header for the clone so it looks like a full screenshot */}
-                          <div className="flex-none p-4 flex items-center gap-2">
-                              <div className="font-semibold text-sm">Créer un bon de réception</div>
-                          </div>
-                          <div className="px-6 pb-4 border-b text-muted-foreground text-sm">
-                              Remplissez les informations ci-dessous.
-                          </div>
-                          <div className="flex-col flex-1 min-h-0 flex">
-                              {formAndFooterJSX}
-                          </div>
+                <div className={cn("absolute bottom-full left-1/2 -translate-x-1/2 pb-3 z-[10000] origin-bottom transition-all duration-300 ease-out", isHoveringDock ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none")}>
+                  <div className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative" style={{ width: 1000 * 0.25, height: 800 * 0.25 }} onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}>
+                      <button onClick={(e) => { e.stopPropagation(); handleOpenChange(false); setIsHoveringDock(false); }} className="absolute top-2 right-2 z-50 p-1.5 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 rounded-md transition-opacity duration-200 shadow-sm pointer-events-auto opacity-0 group-hover:opacity-100" title="Fermer"><X className="h-4 w-4" /></button>
+                      <div className="pointer-events-none origin-top-left bg-white flex flex-col" style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}>
+                          <div className="flex-none p-4 flex items-center gap-2"><div className="font-semibold text-sm">Créer un bon de réception</div></div>
+                          <div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>
+                          <div className="flex-col flex-1 min-h-0 flex">{formAndFooterJSX}</div>
                       </div>
                   </div>
                 </div>
               )}
 
-              {/* THE EXPANDED VIEW BUTTONS */}
               <div className="absolute right-3 top-3 z-50 flex gap-1">
                 {!isMinimized && (
                   <>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
-                      title="Réduire"
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <button 
-                      onClick={() => handleOpenChange(false)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer"
-                      title="Fermer"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); toggleMinimize(); }} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer" title="Réduire"><Minus className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => handleOpenChange(false)} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer" title="Fermer"><X className="h-3.5 w-3.5" /></button>
                   </>
                 )}
               </div>
 
-              {/* HEADER */}
-              <div 
-                className={cn(
-                  "flex-none p-4 select-none flex items-center gap-2",
-                  !isMinimized && "cursor-default",
-                  isMinimized && "py-0 px-3 h-10"
-                )}
-              >
+              <div className={cn("flex-none p-4 select-none flex items-center gap-2", !isMinimized && "cursor-default", isMinimized && "py-0 px-3 h-10")}>
                 {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
-                <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>
-                  {isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}
-                </div>
+                <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Bon de réception - ${receiptNumber}` : "Créer un bon de réception"}</div>
               </div>
-
-              {!isMinimized && (
-                 <div className="px-6 pb-4 border-b text-muted-foreground text-sm">
-                    Remplissez les informations ci-dessous.
-                 </div>
-              )}
-
-              {/* MAIN FORM RENDER */}
-              <div className={cn(
-                  "flex-col flex-1 min-h-0 transition-opacity duration-300", 
-                  isMinimized ? "hidden" : "flex"
-              )}>
+              {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>)}
+              <div className={cn("flex-col flex-1 min-h-0 transition-opacity duration-300", isMinimized ? "hidden" : "flex")}>
                 <DialogTitle className="sr-only">Créer un bon de réception</DialogTitle>
                 {formAndFooterJSX}
               </div>
-
-              {!isMinimized && (
-                <>
-                  <div className="absolute -right-3 top-0 bottom-0 w-3 z-50 transition-colors" />
-                  <div className="absolute -bottom-3 left-0 right-0 h-3 z-50 transition-colors" />
-                  <div className="absolute -bottom-3 -right-3 h-6 w-6 z-50 rounded-tl-md" />
-                </>
-              )}
             </div>
           </DialogPrimitive.Content>
         </DialogPortal>
