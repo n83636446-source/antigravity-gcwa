@@ -850,6 +850,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     const today = new Date()
     onSelect(today)
     setCurrentMonth(today)
+    onClose()
   }
   const daysInMonth = () => {
     const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 })
