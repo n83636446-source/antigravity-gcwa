@@ -435,8 +435,8 @@ const ArticleSelector = ({
         if (!inputValue) return articles.slice(0, 10); 
         const lower = inputValue.toLowerCase()
         return articles.filter(a => 
-            a.name.toLowerCase().includes(lower) || 
-            (a.code && a.code.toLowerCase().includes(lower))
+            r.name.toLowerCase().includes(lower) || 
+            (r.code && r.code.toLowerCase().includes(lower))
         ).slice(0, 20); 
     }, [inputValue, articles])
 
@@ -993,8 +993,13 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
             onKeyDown={handleManualKeyDown}
             placeholder="JJ/MM/AAAA"
             className={cn(
-                "h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 outline-none focus-visible:ring-0 focus-visible:border-blue-500",
-                isInputInvalid && "border-red-500 focus-visible:border-red-500 text-red-600"
+                "h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium bg-slate-50 transition-colors",
+                "outline-none focus:outline-none focus-visible:outline-none",
+                "ring-0 focus:ring-0 focus-visible:ring-0",
+                "ring-offset-0 focus:ring-offset-0 focus-visible:ring-offset-0",
+                "shadow-none focus:shadow-none focus-visible:shadow-none",
+                "border border-slate-200 focus:border-blue-500",
+                isInputInvalid && "border-red-500 focus:border-red-500 text-red-600"
             )}
          />
          <Button size="sm" variant="outline" className="h-8 text-xs font-medium px-2" onClick={(e) => { e.preventDefault(); handleToday() }}>Aujourd'hui</Button>
@@ -1160,7 +1165,9 @@ export function TestResizableDialog() {
     if (!receipts || receipts.length === 0) return "BR0001";
     const maxId = receipts.reduce((max, r) => {
         const num = parseInt(r.receiptNumber.replace("BR", "") || "0", 10);
-        return num > max ? num : max;
+        const codeDigits = r.receiptNumber.replace("BR", "").trim();
+        const numVal = parseInt(codeDigits, 10);
+        return isNaN(numVal) ? max : (numVal > max ? numVal : max);
     }, 0);
     return `BR${(maxId + 1).toString().padStart(4, '0')}`;
   };
