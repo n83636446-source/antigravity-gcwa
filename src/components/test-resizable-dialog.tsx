@@ -845,6 +845,7 @@ const ArticleSearchDialog = ({
 const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | undefined, onSelect: (d: Date) => void, onClose: () => void }) => {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date())
   const [manualInput, setManualInput] = useState(selected ? format(selected, "dd/MM/yyyy") : "")
+  const [isInputInvalid, setIsInputInvalid] = useState(false)
   const localInputRef = useRef<HTMLInputElement>(null)
 
   // Sync internal state with external 'selected' prop, 
@@ -853,6 +854,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     if (selected && document.activeElement !== localInputRef.current) {
       setManualInput(format(selected, "dd/MM/yyyy"))
       setCurrentMonth(selected)
+      setIsInputInvalid(false)
     }
   }, [selected])
 
@@ -877,21 +879,49 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     const val = e.target.value
     setManualInput(val)
     
-    // We only trigger the parent update if a full valid string is reached
-    // to prevent heavy re-renders during typing.
-    if (val.length >= 10) {
-        tryUpdateDate(val)
+    // VALIDATION CHECK
+    const parts = val.split(/[\/\-\.]/)
+    const dStr = parts[0]
+    const mStr = parts[1]
+    const yStr = parts[2]
+
+    let invalid = false
+
+    // 1. Basic out-of-bounds check for day and month
+    if (dStr && parseInt(dStr, 10) > 31) invalid = true
+    if (mStr && parseInt(mStr, 10) > 12) invalid = true
+    
+    // 2. Full string check (for things like Feb 30th)
+    if (!invalid && val.length === 10) {
+        const isValidDate = tryUpdateDate(val)
+        if (!isValidDate) invalid = true
     }
+
+    setIsInputInvalid(invalid)
   }
 
   const handleManualBlur = () => {
-    tryUpdateDate(manualInput)
+    const isValid = tryUpdateDate(manualInput)
+    if (!isValid) {
+        if (selected) {
+           setManualInput(format(selected, "dd/MM/yyyy"))
+        } else {
+           setManualInput("")
+        }
+        setIsInputInvalid(false)
+    }
   }
 
   const handleManualKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
         e.preventDefault()
-        tryUpdateDate(manualInput)
+        const isValid = tryUpdateDate(manualInput)
+        if (isValid) {
+            setIsInputInvalid(false)
+            localInputRef.current?.blur()
+        } else {
+            setIsInputInvalid(true)
+        }
     }
   }
 
@@ -902,6 +932,7 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
     const today = new Date()
     onSelect(today)
     setCurrentMonth(today)
+    setIsInputInvalid(false)
     onClose() 
   }
 
@@ -935,7 +966,11 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
            return (
              <button
                key={i}
-               onClick={(e) => { e.preventDefault(); onSelect(d); }}
+               onClick={(e) => { 
+                  e.preventDefault(); 
+                  onSelect(d); 
+                  setIsInputInvalid(false);
+               }}
                className={cn(
                  "h-8 w-8 rounded-md flex items-center justify-center text-sm transition-colors",
                  !isCurrentMonth && "text-gray-300",
@@ -957,10 +992,20 @@ const SimpleCalendar = ({ selected, onSelect, onClose }: { selected: Date | unde
             onBlur={handleManualBlur}
             onKeyDown={handleManualKeyDown}
             placeholder="JJ/MM/AAAA"
-            className="h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 focus-visible:ring-blue-500"
+            className={cn(
+                "h-8 text-sm px-3 py-1.5 rounded-md flex-1 text-center font-medium border bg-slate-50 focus-visible:ring-blue-500",
+                isInputInvalid && "border-red-500 focus-visible:ring-red-500 text-red-600"
+            )}
          />
          <Button size="sm" variant="outline" className="h-8 text-xs font-medium px-2" onClick={(e) => { e.preventDefault(); handleToday() }}>Aujourd'hui</Button>
-         <Button size="sm" className="h-8 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white px-3" onClick={(e) => { e.preventDefault(); onClose() }}>OK</Button>
+         <Button 
+            size="sm" 
+            className="h-8 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white px-3" 
+            onClick={(e) => { e.preventDefault(); onClose() }}
+            disabled={isInputInvalid}
+         >
+            OK
+         </Button>
       </div>
     </div>
   )
