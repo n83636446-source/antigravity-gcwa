@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "command(npm *)",
+      "command(npx *)",
+      "command(node *)",
+      "command(git *)",
+      "write_file(*)"
+    ],
+    "ask": [
+      "command(*)"
+    ]
+  }
+}

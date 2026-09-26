@@ -24,15 +24,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Representative } from '@/lib/types';
-import { useFirestore } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import {
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
+import { api } from '@/lib/api';
 
 const representativeSchema = z.object({
-  code: z.string().min(1, "Le code est requis"),
+  code: z.string().optional(),
   name: z
     .string()
     .min(2, 'Le nom du représentant doit contenir au moins 2 caractères.'),
@@ -57,7 +52,6 @@ export function RepresentativeDialog({
   representatives = [],
 }: RepresentativeDialogProps) {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const isEditMode = !!representative;
 
   const form = useForm<RepresentativeFormValues>({
@@ -73,10 +67,9 @@ export function RepresentativeDialog({
   const nextCode = useMemo(() => {
     if (!representatives || representatives.length === 0) return "REP001";
     
-    // Find highest number
     const maxId = representatives.reduce((max, rep) => {
-      if (!rep.code) return max;
-      const digits = String(rep.code).replace(/\D/g, '');
+      if (!(rep as any).code) return max;
+      const digits = String((rep as any).code).replace(/\D/g, '');
       const num = digits ? parseInt(digits, 10) : 0;
       return num > max ? num : max;
     }, 0);
@@ -84,18 +77,17 @@ export function RepresentativeDialog({
     return `REP${(maxId + 1).toString().padStart(3, '0')}`;
   }, [representatives]);
 
-  // 2. Reset form on open
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && representative) {
         form.reset({
-            code: representative.code || '',
+            code: (representative as any).code || '',
             name: representative.name,
             email: representative.email || '',
         });
       } else {
         form.reset({
-          code: nextCode, // Pre-fill suggestion
+          code: nextCode,
           name: '',
           email: '',
         });
@@ -104,30 +96,24 @@ export function RepresentativeDialog({
   }, [isOpen, isEditMode, representative, nextCode, form]);
 
   const onSubmit = async (data: RepresentativeFormValues) => {
-    if (!firestore) return;
-
-    // --- DUPLICATE CHECKS ---
-    
-    // 1. Check Code
+    // Check Email
     const codeExists = representatives.some(existingRep => {
-      if (isEditMode && existingRep.id === representative.id) return false;
-      return existingRep.code?.toLowerCase() === data.code.toLowerCase();
+      if (isEditMode && existingRep.id === representative?.id) return false;
+      if (!data.code || !(existingRep as any).code) return false;
+      return (existingRep as any).code.toLowerCase() === data.code.toLowerCase();
     });
 
     if (codeExists) {
       form.setError("code", { 
         type: "manual", 
-        message: "Ce code existe déjà." 
+        message: "Ce code est déjà utilisé par un autre représentant." 
       });
       return; 
     }
 
-    // 2. Check Email
     const emailExists = representatives.some(existingRep => {
-      if (isEditMode && existingRep.id === representative.id) return false;
-      // Only check if an email was actually entered (ignore empty emails)
+      if (isEditMode && existingRep.id === representative?.id) return false;
       if (!data.email || !existingRep.email) return false;
-      
       return existingRep.email.toLowerCase() === data.email.toLowerCase();
     });
 
@@ -138,26 +124,39 @@ export function RepresentativeDialog({
       });
       return; 
     }
-    // -------------------------------------
 
-    if (isEditMode && representative) {
-      const representativeDocRef = doc(firestore, 'representatives', representative.id);
-      updateDocumentNonBlocking(representativeDocRef, data);
-      toast({
-        title: 'Représentant modifié',
-        description: `Le représentant "${data.name}" a été mis à jour.`,
-      });
-    } else {
-      const representativesRef = collection(firestore, 'representatives');
-      const docRef = await addDocumentNonBlocking(representativesRef, data);
-      
-      if (docRef) {
-        toast({
-            title: 'Représentant ajouté',
-            description: `Le représentant "${data.name}" (${data.code}) a été ajouté avec succès.`,
+    try {
+      if (isEditMode && representative) {
+        await api.updateRepresentative(representative.id, {
+          name: data.name,
+          email: data.email || null,
+          code: data.code || null,
         });
-        onRepresentativeCreated?.({ ...data, id: docRef.id });
+        toast({
+          title: 'Représentant modifié',
+          description: `Le représentant "${data.name}" a été mis à jour.`,
+        });
+        onRepresentativeCreated?.({ ...representative, name: data.name, email: data.email, code: data.code });
+      } else {
+        const newId = `rep-${Date.now()}`;
+        const created = await api.createRepresentative({
+          id: newId,
+          name: data.name,
+          email: data.email || null,
+          code: data.code || null,
+        });
+        toast({
+          title: 'Représentant ajouté',
+          description: `Le représentant "${data.name}" a été ajouté avec succès.`,
+        });
+        onRepresentativeCreated?.({ id: created.id, name: created.name, email: created.email ?? undefined });
       }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'enregistrement du représentant.',
+      });
     }
 
     onOpenChange(false);
@@ -165,7 +164,7 @@ export function RepresentativeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-md">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             

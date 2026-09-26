@@ -10,11 +10,11 @@ type StatsCardsProps = {
 export function StatsCards({ articles }: StatsCardsProps) {
   const stats = useMemo(() => {
     const totalValue = articles.reduce(
-      (acc, article) => acc + article.price * article.stockLevel,
+      (acc, article) => acc + article.price * (article.stockLevel || 0),
       0
     );
     const lowStockItems = articles.filter(
-      (p) => p.stockLevel <= p.reorderThreshold && p.stockLevel > 0
+      (p) => (p.stockLevel || 0) <= (p.reorderThreshold || 0) && (p.stockLevel || 0) > 0
     ).length;
     const totalArticles = articles.length;
     return { totalValue, lowStockItems, totalArticles };

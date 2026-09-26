@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,12 +25,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
 import type { Client } from '@/lib/types';
-import { useFirestore } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import {
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
+import { api } from '@/lib/api';
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Le nom du client doit contenir au moins 2 caractères.'),
@@ -53,7 +48,6 @@ export function ClientDialog({
   client,
 }: ClientDialogProps) {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const isEditMode = !!client;
 
   const form = useForm<ClientFormValues>({
@@ -81,22 +75,38 @@ export function ClientDialog({
     }
   }, [client, isEditMode, isOpen, form]);
 
-  const onSubmit = (data: ClientFormValues) => {
-    if (!firestore) return;
-
-    if (isEditMode && client) {
-      const clientDocRef = doc(firestore, 'clients', client.id);
-      updateDocumentNonBlocking(clientDocRef, data);
+  const onSubmit = async (data: ClientFormValues) => {
+    try {
+      if (isEditMode && client) {
+        await api.updateClient(client.id, {
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone || null,
+          address: data.address || null,
+        });
+        toast({
+          title: 'Client modifié',
+          description: `Le client "${data.name}" a été mis à jour.`,
+        });
+      } else {
+        const newId = `cli-${Date.now()}`;
+        await api.createClient({
+          id: newId,
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone || null,
+          address: data.address || null,
+        });
+        toast({
+          title: 'Client ajouté',
+          description: `Le client "${data.name}" a été ajouté avec succès.`,
+        });
+      }
+    } catch {
       toast({
-        title: 'Client modifié',
-        description: `Le client "${data.name}" a été mis à jour.`,
-      });
-    } else {
-      const clientsRef = collection(firestore, 'clients');
-      addDocumentNonBlocking(clientsRef, data);
-      toast({
-        title: 'Client ajouté',
-        description: `Le client "${data.name}" a été ajouté avec succès.`,
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'enregistrement du client.',
       });
     }
 
@@ -105,7 +115,7 @@ export function ClientDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[80vw]">
+      <DialogContent className="sm:max-w-[80vw]" onInteractOutside={(e) => e.preventDefault()}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>

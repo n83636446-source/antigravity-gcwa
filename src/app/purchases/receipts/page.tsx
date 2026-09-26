@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { api } from "@/lib/api";
+import { productFromApi, supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseInvoiceFromApi } from "@/lib/types";
+import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice } from '@/lib/types';
-import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, runTransaction, getDocs, where, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { FileText, Pencil, Trash2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowRightCircle, Pencil, Trash2, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -21,74 +21,43 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { PurchaseInvoiceDialog } from '@/components/purchase-invoice-dialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { FaTestDialog } from '@/components/fa-test-dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { BrTestDialog } from '@/components/br-test-dialog';
+import { hasDownstreamDocument } from "@/lib/purchase-document-guards";
 
-export default function PurchaseReceiptsPage() {
-  const firestore = useFirestore();
-  const { toast } = useToast();
+export default function BRTestPage() {
+    const { toast } = useToast();
   
   // --- STATES ---
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingReceipt, setEditingReceipt] = useState<PurchaseReceipt | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<PurchaseReceipt | null>(null);
+  const [receiptToEdit, setReceiptToEdit] = useState<PurchaseReceipt | null>(null);
+  
+  // Token pour forcer le re-rendu du BrTestDialog lors de l'ouverture
+  const [dialogToken, setDialogToken] = useState(0);
   
   // Standard Delete States
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<PurchaseReceipt | null>(null);
   
-  // Force Delete States (Cleanup)
-  const [forceDeleteReceipt, setForceDeleteReceipt] = useState<PurchaseReceipt | null>(null);
-  
-  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [receiptToTransfer, setReceiptToTransfer] = useState<PurchaseReceipt | null>(null);
+  const [receiptAlreadyInvoiced, setReceiptAlreadyInvoiced] = useState(false);
 
   // --- DATA FETCHING ---
-  const receiptsRef = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'purchaseReceipts'),) : null),
-    [firestore]
-  );
-  const { data: receipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(receiptsRef);
+    const { data: receipts, isLoading: isLoadingReceipts, refetch: refetchReceipts } = useApiCollection(() => api.getPurchaseReceipts().then(r => r.map(purchaseReceiptFromApi)));
   
-  const allOrdersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
-    [firestore]
-  );
-  const { data: allOrders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(allOrdersRef);
+    const { data: allOrders, isLoading: isLoadingOrders } = useApiCollection(() => api.getPurchaseOrders().then(r => r.map(purchaseOrderFromApi)));
   
-  const invoicesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
-    [firestore]
-  );
-  const { data: invoices, isLoading: isLoadingInvoices } = useCollection<PurchaseInvoice>(invoicesRef);
+    const { data: invoices, isLoading: isLoadingInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
 
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
-  );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
+    const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useApiCollection(() => api.getProducts().then(r => r.map(productFromApi)));
 
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
-  );
-  const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
+    const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
   
   const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingProducts || isLoadingSuppliers || isLoadingInvoices;
 
-  const lastReceiptNumber = useMemo(() => {
-    if (!receipts || receipts.length === 0) {
-      return 0;
-    }
-    return receipts.reduce((max, rec) => {
-      const codeNumber = parseInt((rec.receiptNumber || 'BR-0000').replace('BR-', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [receipts]);
-  
   const lastInvoiceNumber = useMemo(() => {
     if (!invoices || invoices.length === 0) {
       return 0;
@@ -99,7 +68,26 @@ export default function PurchaseReceiptsPage() {
     }, 0);
   }, [invoices]);
 
+  // --- GUARDS ---
+  useEffect(() => {
+    if (!selectedReceipt) return;
+    const alreadyInvoiced = (invoices || []).some(
+      inv => inv.purchaseReceiptId === selectedReceipt.id
+    );
+    setReceiptAlreadyInvoiced(alreadyInvoiced);
+  }, [selectedReceipt, invoices]);
+
   // --- HANDLERS ---
+
+  const handleOpenNewReceipt = () => {
+    // Reset edit and transfer state before opening
+    setReceiptToEdit(null);
+    setReceiptToTransfer(null);
+    // On utilise la persistence sessionStorage pour forcer l'ouverture du nouveau dialogue
+    sessionStorage.setItem('brTestDialogState', 'true');
+    // On incrémente le token pour forcer le composant à se remonter et lire le sessionStorage
+    setDialogToken(prev => prev + 1);
+  };
 
   const handleRowClick = (receipt: PurchaseReceipt) => {
     if (selectedReceipt?.id === receipt.id) {
@@ -110,33 +98,12 @@ export default function PurchaseReceiptsPage() {
   };
 
   const handleRowDoubleClick = (receipt: PurchaseReceipt) => {
-    if (receipt.status === 'Validé') {
-        toast({
-            variant: 'destructive',
-            title: 'Action impossible',
-            description: 'Vous ne pouvez pas modifier un bon de réception qui est déjà validé.',
-        });
-        return;
-    }
-    setEditingReceipt(receipt);
-    setDialogOpen(true);
+    setReceiptToEdit(receipt);
+    setReceiptToTransfer(null);
+    sessionStorage.setItem('brTestDialogState', 'true');
+    setDialogToken(prev => prev + 1);
   };
   
-  const handleEditClick = () => {
-    if (selectedReceipt) {
-      if (selectedReceipt.status === 'Validé') {
-        toast({
-            variant: 'destructive',
-            title: 'Action impossible',
-            description: 'Vous ne pouvez pas modifier un bon de réception qui est déjà validé.',
-        });
-        return;
-      }
-      setEditingReceipt(selectedReceipt);
-      setDialogOpen(true);
-    }
-  };
-
   const handleDeleteRequest = () => {
     if (selectedReceipt) {
       if (selectedReceipt.status === 'Validé') {
@@ -152,10 +119,9 @@ export default function PurchaseReceiptsPage() {
     }
   };
   
-  const handleDeleteConfirm = () => {
-    if (!firestore || !receiptToDelete) return;
-    const receiptDocRef = doc(firestore, 'purchaseReceipts', receiptToDelete.id);
-    deleteDocumentNonBlocking(receiptDocRef);
+  const handleDeleteConfirm = async () => {
+    if (!receiptToDelete) return;
+    await api.deletePurchaseReceipt(receiptToDelete.id); refetchReceipts();
     toast({
       title: 'Bon de réception supprimé',
       description: `Le bon de réception "${receiptToDelete.receiptNumber}" a été supprimé.`,
@@ -165,197 +131,106 @@ export default function PurchaseReceiptsPage() {
     setSelectedReceipt(null);
   };
 
-  // --- FORCE DELETE LOGIC (Maintenance) ---
-  const requestForceDelete = (receipt: PurchaseReceipt) => {
-      console.log("Requesting force delete for:", receipt.id);
-      setForceDeleteReceipt(receipt);
-  };
-
-  const confirmForceDelete = async () => {
-      if(!firestore || !forceDeleteReceipt) {
-          console.error("Missing firestore or receipt to delete");
-          return;
-      }
-
-      console.log("Executing force delete on:", forceDeleteReceipt.id);
-      
-      try {
-          await deleteDoc(doc(firestore, "purchaseReceipts", forceDeleteReceipt.id));
-          toast({ title: "Suppression forcée réussie", description: `Le bon ${forceDeleteReceipt.receiptNumber} a été supprimé.` });
-          
-          if (selectedReceipt?.id === forceDeleteReceipt.id) setSelectedReceipt(null);
-          setForceDeleteReceipt(null); // Close dialog
-      } catch (e) {
-          console.error("Force delete failed", e);
-          toast({ title: "Erreur", description: "Impossible de supprimer le document.", variant: "destructive" });
-      }
-  }
-  
-  const handleTransferToInvoice = () => {
-    if (selectedReceipt) {
-       if (selectedReceipt.status !== 'Validé') {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: 'Vous ne pouvez transférer qu\'un bon de réception validé.',
-        });
-        return;
-      }
-      setInvoiceDialogOpen(true);
+const handleTransferToInvoice = () => {
+    if (!selectedReceipt) return;
+    if (selectedReceipt.status !== 'Validé') {
+      toast({
+        variant: 'destructive',
+        title: 'Action impossible',
+        description: 'Vous ne pouvez transférer qu\'un bon de réception validé.',
+      });
+      return;
     }
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) {
-      setEditingReceipt(null);
+    if (receiptAlreadyInvoiced) {
+      toast({
+        variant: 'destructive',
+        title: 'Action impossible',
+        description: 'Ce bon de réception a déjà été transféré en facture.',
+      });
+      return;
     }
-  }
-  
-  const selectedOrderForInvoice = useMemo(() => {
-    if (!selectedReceipt || !allOrders) return undefined;
-    return allOrders.find(o => o.id === selectedReceipt.purchaseOrderId);
-  }, [selectedReceipt, allOrders]);
+    setReceiptToTransfer(selectedReceipt);
+    sessionStorage.setItem('faTransferDialogState', 'true');
+    setDialogToken(prev => prev + 1);
+  };
 
   const handleValidateReceipt = async () => {
-    if (!firestore || !selectedReceipt || selectedReceipt.status === 'Validé') return;
-    
+    if (!selectedReceipt || selectedReceipt.status === 'Validé') return;
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
-        
-        for (const item of selectedReceipt.items) {
-          if (item.quantityReceived > 0) {
-            const productRef = doc(firestore, 'products', item.productId);
-            const productDoc = await transaction.get(productRef);
-            if (!productDoc.exists()) {
-              console.warn(`L'article ID "${item.productId}" est introuvable et sera ignoré.`);
-              continue;
-            }
-            const newStock = (productDoc.data().stockLevel || 0) + item.quantityReceived;
-            transaction.update(productRef, { stockLevel: newStock });
-          }
-        }
-        
-        transaction.update(receiptRef, { status: 'Validé' });
-      });
-
-      toast({
-        title: 'Bon de réception validé',
-        description: 'Le stock a été mis à jour avec succès.',
-      });
-      const updatedReceipt = { ...selectedReceipt, status: 'Validé' as const };
-      setSelectedReceipt(updatedReceipt);
-
+      await api.validatePurchaseReceipt(selectedReceipt.id);
+      refetchReceipts();
+      refetchProducts();
+      toast({ title: 'Bon de réception validé', description: 'Le statut a été mis à jour avec succès et le stock a été modifié.' });
+      setSelectedReceipt({ ...selectedReceipt, status: 'Validé' as const });
     } catch (error) {
-      console.error("Validation transaction failed: ", error);
       toast({
         variant: 'destructive',
         title: 'Erreur de validation',
-        description: (error instanceof Error ? error.message : "La transaction a échoué. Veuillez réessayer."),
+        description: (error instanceof Error ? error.message : "La transaction a échoué."),
       });
     }
   };
-  
+
   const handleCancelValidation = async () => {
-    if (!firestore || !selectedReceipt || selectedReceipt.status !== 'Validé') {
-      return;
-    }
-  
-    // Check for associated invoices before starting the transaction
-    if (selectedReceipt.purchaseOrderId) {
-      const q = query(collection(firestore, 'purchaseInvoices'), where('purchaseOrderId', '==', selectedReceipt.purchaseOrderId));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
-        });
-        return;
-      }
-    }
-  
-    try {
-      await runTransaction(firestore, async (transaction) => {
-        const receiptRef = doc(firestore, 'purchaseReceipts', selectedReceipt.id);
-  
-        // Read all necessary product documents first
-        const productRefs = selectedReceipt.items.map(item => doc(firestore, 'products', item.productId));
-        const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
-  
-        // Perform checks and prepare updates
-        const updates: { ref: any, data: any }[] = [];
-        
-        for (let i = 0; i < selectedReceipt.items.length; i++) {
-          const item = selectedReceipt.items[i];
-          const productDoc = productDocs[i];
-  
-          if (!productDoc.exists()) {
-            console.warn(`L'article avec l'ID "${item.productId}" est introuvable. Il sera ignoré lors de l'annulation.`);
-            continue; // Skip this item if the product doesn't exist
-          }
-  
-          const productData = productDoc.data() as Product;
-          if (productData.stockLevel < item.quantityReceived) {
-            throw new Error(`Stock insuffisant pour "${productData.name}" (Actuel: ${productData.stockLevel}, Reçu: ${item.quantityReceived})`);
-          }
-  
-          const newStock = productData.stockLevel - item.quantityReceived;
-          updates.push({ ref: productDoc.ref, data: { stockLevel: newStock } });
-        }
-  
-        // Execute all updates
-        transaction.update(receiptRef, { status: 'Brouillon' });
-        updates.forEach(u => transaction.update(u.ref, u.data));
-      });
-  
-      toast({
-        title: 'Validation annulée',
-        description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.',
-      });
-      // Optimistically update the UI
-      setSelectedReceipt(prev => prev ? { ...prev, status: 'Brouillon' } : null);
-  
-    } catch (error: any) {
+    if (!selectedReceipt || selectedReceipt.status !== 'Validé') return;
+
+    const receiptAlreadyInvoiced = (invoices || []).some(
+      inv => inv.purchaseReceiptId === selectedReceipt.id
+    );
+
+    if (receiptAlreadyInvoiced) {
       toast({
         variant: 'destructive',
-        title: "Erreur d'annulation",
-        description: error.message || "L'annulation a échoué. Veuillez réessayer.",
-        duration: 7000,
+        title: 'Action impossible',
+        description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
       });
+      return;
+    }
+
+    try {
+      await api.cancelPurchaseReceiptValidation(selectedReceipt.id);
+      refetchReceipts();
+      refetchProducts();
+      toast({ title: 'Validation annulée', description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.' });
+      setSelectedReceipt(prev => prev ? { ...prev, status: 'Brouillon' } : null);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: "Erreur d'annulation", description: error.message });
     }
   };
-  
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Bons de réception"
-        description="Gérez vos bons de réception."
+        title="BR Test"
+        description="Clone de test pour la validation du dialogue persistant."
       >
-        <PurchaseReceiptDialog
-          purchaseOrders={allOrders || []}
-          receipts={receipts || []}
-          products={products || []}
-          suppliers={suppliers || []}
-          lastReceiptNumber={lastReceiptNumber}
-        />
+        <Button onClick={handleOpenNewReceipt}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Créer un bon de réception
+        </Button>
       </PageHeader>
+
        {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
         </div>
       ) : (
-        <>
-            <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Bons de réception récents</CardTitle>
-                {selectedReceipt && (
-                <div className="flex items-center gap-2">
-                    {selectedReceipt.status === 'Brouillon' && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Bons de réception récents</CardTitle>
+              <div className="flex items-center gap-2">
+                  {/* Valider / Annuler validation */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedReceipt ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedReceipt ? '0ms' : '0ms' }}
+                  >
+                    {selectedReceipt?.status === 'Brouillon' && (
                         <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt} disabled={isLoading}>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateReceipt}>
                             <CheckCircle className="h-4 w-4 text-green-500" />
                             <span className="sr-only">Valider</span>
                             </Button>
@@ -363,10 +238,10 @@ export default function PurchaseReceiptsPage() {
                         <TooltipContent>Valider</TooltipContent>
                         </Tooltip>
                     )}
-                    {selectedReceipt.status === 'Validé' && (
+                    {selectedReceipt?.status === 'Validé' && (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation} disabled={isLoading}>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
                                 <XCircle className="h-4 w-4 text-orange-500" />
                                 <span className="sr-only">Annuler la validation</span>
                                 </Button>
@@ -374,180 +249,111 @@ export default function PurchaseReceiptsPage() {
                             <TooltipContent>Annuler la validation</TooltipContent>
                         </Tooltip>
                     )}
+                  </div>
+
+                  {/* Modifier */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedReceipt ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedReceipt ? '75ms' : '0ms' }}
+                  >
                     <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransferToInvoice} disabled={selectedReceipt.status !== 'Validé' || !selectedReceipt.purchaseOrderId || isLoading}>
-                        <FileText className="h-4 w-4" />
-                        <span className="sr-only">Transférer en Facture</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Transférer en Facture</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditClick} disabled={selectedReceipt.status === 'Validé' || isLoading}>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={() => selectedReceipt && handleRowDoubleClick(selectedReceipt)}
+                        >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Modifier</span>
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>Modifier</TooltipContent>
                     </Tooltip>
+                  </div>
+
+                  {/* Transférer en Facture */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedReceipt ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedReceipt ? '150ms' : '0ms' }}
+                  >
                     <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt.status === 'Validé' || isLoading}>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={handleTransferToInvoice} 
+                            disabled={selectedReceipt?.status !== 'Validé' || receiptAlreadyInvoiced}
+                        >
+                        <ArrowRightCircle className="h-4 w-4" />
+                        <span className="sr-only">Transférer en Facture</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Transférer en Facture</TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  {/* Supprimer */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedReceipt ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedReceipt ? '225ms' : '0ms' }}
+                  >
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt?.status === 'Validé'}>
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Supprimer</span>
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>Supprimer</TooltipContent>
                     </Tooltip>
-                </div>
-                )}
-            </CardHeader>
-            <CardContent>
-                <PurchaseReceiptsTable
+                  </div>
+              </div>
+          </CardHeader>
+          <CardContent>
+              <PurchaseReceiptsTable
                 receipts={receipts || []}
                 purchaseOrders={allOrders || []}
                 suppliers={suppliers || []}
                 onRowClick={handleRowClick}
                 onRowDoubleClick={handleRowDoubleClick}
                 selectedReceiptId={selectedReceipt?.id}
-                />
-            </CardContent>
-            </Card>
-
-            {/* --- EMERGENCY CLEANUP ZONE --- */}
-            <Card className="border-red-200 bg-red-50/50 mt-8">
-                <CardHeader>
-                    <div className="flex items-center gap-2 text-red-800">
-                        <AlertTriangle className="h-5 w-5" />
-                        <CardTitle className="text-lg">Zone de Maintenance (Urgence)</CardTitle>
-                    </div>
-                    <CardDescription className="text-red-700">
-                        Utilisez cette zone pour forcer la suppression des bons de réception bloqués (ex: statut "Validé" mais sans mouvement de stock). 
-                        Cette action contourne toutes les vérifications de sécurité.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border bg-white max-h-[300px] overflow-y-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-slate-100 text-left sticky top-0">
-                                <tr className="border-b">
-                                    <th className="p-3 font-medium text-slate-600">Numéro</th>
-                                    <th className="p-3 font-medium text-slate-600">Date</th>
-                                    <th className="p-3 font-medium text-slate-600">Fournisseur</th>
-                                    <th className="p-3 font-medium text-slate-600">Statut</th>
-                                    <th className="p-3 font-medium text-slate-600 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {receipts?.map((receipt) => (
-                                    <tr key={receipt.id} className="border-b hover:bg-slate-50 transition-colors">
-                                        <td className="p-3 font-mono">{receipt.receiptNumber}</td>
-                                        <td className="p-3">{receipt.receiptDate ? format(new Date(receipt.receiptDate), 'dd/MM/yyyy') : '-'}</td>
-                                        <td className="p-3 text-muted-foreground">
-                                            {suppliers?.find(s => s.id === receipt.supplierId)?.name || 'Inconnu'}
-                                        </td>
-                                        <td className="p-3">
-                                            <span className={cn(
-                                                "px-2 py-1 rounded-full text-xs font-semibold",
-                                                receipt.status === 'Validé' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
-                                            )}>
-                                                {receipt.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-right">
-                                            <Button 
-                                                type="button"
-                                                variant="destructive" 
-                                                size="sm"
-                                                className="h-8"
-                                                onClick={() => requestForceDelete(receipt)}
-                                            >
-                                                <Trash2 className="mr-2 h-3 w-3" />
-                                                Forcer la suppression
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-        </>
-      )}
-      <PurchaseReceiptDialog
-        isOpen={dialogOpen}
-        onOpenChange={handleOpenChange}
-        purchaseOrders={allOrders || []}
-        receipts={receipts || []}
-        products={products || []}
-        suppliers={suppliers || []}
-        lastReceiptNumber={lastReceiptNumber}
-        receipt={editingReceipt}
-      />
-      {selectedOrderForInvoice && (
-          <PurchaseInvoiceDialog
-            isOpen={invoiceDialogOpen}
-            onOpenChange={setInvoiceDialogOpen}
-            purchaseOrders={allOrders || []}
-            suppliers={suppliers || []}
-            products={products || []}
-            lastInvoiceNumber={lastInvoiceNumber}
-            purchaseOrder={selectedOrderForInvoice}
-          />
+                onCreateNew={handleOpenNewReceipt}
+              />
+          </CardContent>
+        </Card>
       )}
 
-      {/* Standard Delete Dialog */}
+      {/* Rendu masqué du nouveau dialogue pour permettre son déclenchement externe */}
+      <div className="hidden">
+          <BrTestDialog key={`${dialogToken}-${receiptToEdit?.id ?? 'new'}`} receiptToEdit={receiptToEdit} onSaveSuccess={() => refetchReceipts()} />
+          <FaTestDialog key={`transfer-${dialogToken}-${receiptToTransfer?.id ?? 'none'}`} receiptToTransfer={receiptToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchReceipts()} />
+      </div>
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer ce bon de réception ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer ce bon de réception ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le bon de réception "{receiptToDelete?.receiptNumber}" sera définitivement supprimé.
+              Cette action est irréversible. Le bon "{receiptToDelete?.receiptNumber}" sera supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Supprimer
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* FORCE Delete Dialog (Maintenance) */}
-      <AlertDialog open={!!forceDeleteReceipt} onOpenChange={(open) => !open && setForceDeleteReceipt(null)}>
-        <AlertDialogContent className="border-red-500 border-2">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Suppression Forcée
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-800">
-              Vous êtes sur le point de forcer la suppression du bon <strong>{forceDeleteReceipt?.receiptNumber}</strong>.
-              <br/><br/>
-              Cela supprimera le document de la base de données <strong>sans remettre à jour les stocks</strong>.
-              <br/><br/>
-              Utilisez ceci uniquement pour corriger des erreurs de données (fantômes).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmForceDelete}
-              className="bg-red-600 hover:bg-red-700 text-white border-none"
-            >
-              Confirmer la suppression forcée
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
     </div>
   );
 }

@@ -28,7 +28,7 @@ export function StockLevelChart({ data }: StockLevelChartProps) {
   const chartData = useMemo(() => {
     return data.map(product => ({
       name: product.name,
-      stockLevel: product.stockLevel,
+      stockLevel: (product.stockLevel || 0),
       reorderThreshold: product.reorderThreshold
     }));
   }, [data]);

@@ -3,28 +3,32 @@
 import { PageHeader } from '@/components/page-header';
 import { ClientDialog } from '@/components/client-dialog';
 import { ClientsTable } from '@/components/clients-table';
-import type { Client } from '@/lib/types';
-import { useState, useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { Client, clientFromApi } from '@/lib/types';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useApiCollection } from '@/hooks/use-api';
+import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ClientsPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | undefined>();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  const clientsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'clients') : null),
-    [firestore]
-  );
-  const { data: clients, isLoading } = useCollection<Client>(clientsRef);
+  const fetchClients = useCallback(() => api.getClients(), []);
+  const { data: rawClients, isLoading, refetch } = useApiCollection(fetchClients);
+  const clients: Client[] = useMemo(() => (rawClients || []).map(clientFromApi), [rawClients]);
+  useEffect(() => {
+    if (selectedClient) {
+      const updated = clients.find(item => item.id === selectedClient.id);
+      if (updated && updated !== selectedClient) {
+        setSelectedClient(updated);
+      }
+    }
+  }, [clients, selectedClient]);
 
   const handleAdd = () => {
     setEditingClient(undefined);
@@ -36,14 +40,21 @@ export default function ClientsPage() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (client: Client) => {
-    if (!firestore) return;
-    const clientDocRef = doc(firestore, 'clients', client.id);
-    deleteDocumentNonBlocking(clientDocRef);
-    toast({
-      title: 'Client supprimé',
-      description: `Le client "${client.name}" a été supprimé.`,
-    });
+  const handleDelete = async (client: Client) => {
+    try {
+      await api.deleteClient(client.id);
+      toast({
+        title: 'Client supprimé',
+        description: `Le client "${client.name}" a été supprimé.`,
+      });
+      refetch();
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: `Impossible de supprimer le client "${client.name}".`,
+      });
+    }
     setSelectedClient(null);
   };
 
@@ -64,18 +75,23 @@ export default function ClientsPage() {
         </div>
       ) : (
         <ClientsTable
-          clients={clients || []}
+          clients={clients}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onAdd={handleAdd}
           selectedClient={selectedClient}
           onSetSelectedClient={setSelectedClient}
         />
       )}
       <ClientDialog
         isOpen={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) refetch();
+        }}
         client={editingClient}
       />
     </div>
   );
 }
+

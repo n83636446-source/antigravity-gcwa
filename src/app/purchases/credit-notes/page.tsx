@@ -1,131 +1,312 @@
 'use client';
 
-import { PageHeader } from '@/components/page-header';
-import { PurchaseCreditNoteDialog } from '@/components/purchase-credit-note-dialog';
-import type {
-  PurchaseCreditNote,
-  Product,
-  Supplier,
-  PurchaseOrder,
-  PurchaseInvoice,
-} from '@/lib/types';
 import { useState, useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { api } from "@/lib/api";
+import { productFromApi, supplierFromApi, purchaseCreditNoteFromApi } from "@/lib/types";
+import { useApiCollection } from "@/hooks/use-api";
+import { PageHeader } from '@/components/page-header';
+import type { PurchaseCreditNote, Product, Supplier } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { AaTestDialog } from '@/components/aa-test-dialog';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 
-export default function CreditNotesPage() {
-  const firestore = useFirestore();
-  const { toast } = useToast();
+export default function AATestPage() {
+    const { toast } = useToast();
+  
+  // --- STATES ---
+  const [selectedCreditNote, setSelectedCreditNote] = useState<PurchaseCreditNote | null>(null);
+  const [creditNoteToEdit, setCreditNoteToEdit] = useState<PurchaseCreditNote | null>(null);
+  const [dialogToken, setDialogToken] = useState(0);
+  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [creditNoteToDelete, setCreditNoteToDelete] = useState<PurchaseCreditNote | null>(null);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // --- DATA FETCHING ---
+    const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
+  
+    const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useApiCollection(() => api.getProducts().then(r => r.map(productFromApi)));
 
-  const creditNotesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseCreditNotes') : null),
-    [firestore]
-  );
-  const { data: creditNotes, isLoading: isLoadingCreditNotes } =
-    useCollection<PurchaseCreditNote>(creditNotesRef);
+    const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
+  
+  const isLoading = isLoadingCreditNotes || isLoadingProducts || isLoadingSuppliers;
 
-  const allOrdersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
-    [firestore]
-  );
-  const { data: allOrders, isLoading: isLoadingOrders } =
-    useCollection<PurchaseOrder>(allOrdersRef);
+  // --- HANDLERS ---
 
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
-  );
-  const { data: products, isLoading: isLoadingProducts } =
-    useCollection<Product>(productsRef);
+  const handleOpenNewCreditNote = () => {
+    setCreditNoteToEdit(null);
+    sessionStorage.setItem('aaTestDialogState', 'true');
+    setDialogToken(prev => prev + 1);
+  };
 
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
-  );
-  const { data: suppliers, isLoading: isLoadingSuppliers } =
-    useCollection<Supplier>(suppliersRef);
-
-  const invoicesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
-    [firestore]
-  );
-  const { data: invoices, isLoading: isLoadingInvoices } =
-    useCollection<PurchaseInvoice>(invoicesRef);
-
-  const isLoading =
-    isLoadingCreditNotes ||
-    isLoadingOrders ||
-    isLoadingProducts ||
-    isLoadingSuppliers ||
-    isLoadingInvoices;
-
-  const lastCreditNoteNumber = useMemo(() => {
-    if (!creditNotes || creditNotes.length === 0) {
-      return 0;
+  const handleRowClick = (creditNote: PurchaseCreditNote) => {
+    if (selectedCreditNote?.id === creditNote.id) {
+      setSelectedCreditNote(null);
+    } else {
+      setSelectedCreditNote(creditNote);
     }
-    return creditNotes.reduce((max, cn) => {
-      const codeNumber = parseInt(
-        (cn.creditNoteNumber || 'AV-0000').replace('AV-', ''),
-        10
-      );
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [creditNotes]);
+  };
+
+  const handleRowDoubleClick = (creditNote: PurchaseCreditNote) => {
+    setCreditNoteToEdit(creditNote);
+    sessionStorage.setItem('aaTestDialogState', 'true');
+    setDialogToken(prev => prev + 1);
+  };
+  
+  const handleDeleteRequest = () => {
+    if (selectedCreditNote) {
+      if (selectedCreditNote.status === 'Validé') {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: 'Vous ne pouvez pas supprimer un avoir validé. Annulez d\'abord la validation.',
+        });
+        return;
+      }
+      setCreditNoteToDelete(selectedCreditNote);
+      setDeleteDialogOpen(true);
+    }
+  };
+  
+  const handleDeleteConfirm = async () => {
+    if (!creditNoteToDelete) return;
+    await api.deletePurchaseCreditNote(creditNoteToDelete.id);
+    refetchCreditNotes();
+    toast({
+      title: 'Avoir supprimé',
+      description: `L'avoir "${creditNoteToDelete.creditNoteNumber}" a été supprimé.`,
+    });
+    setDeleteDialogOpen(false);
+    setCreditNoteToDelete(null);
+    setSelectedCreditNote(null);
+  };
+
+  const handleValidateCreditNote = async () => {
+    if (!selectedCreditNote) return;
+    try {
+      await api.validatePurchaseCreditNote(selectedCreditNote.id);
+      refetchCreditNotes();
+      refetchProducts();
+      toast({ title: 'Avoir validé', description: `L'avoir ${selectedCreditNote.creditNoteNumber} a été validé.` });
+      setSelectedCreditNote({ ...selectedCreditNote, status: 'Validé' } as PurchaseCreditNote);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: "Erreur de validation",
+        description: error.message || "La validation a échoué.",
+      });
+    }
+  };
+  
+  const handleCancelValidation = async () => {
+    if (!selectedCreditNote) return;
+    try {
+      await api.cancelPurchaseCreditNoteValidation(selectedCreditNote.id);
+      refetchCreditNotes();
+      refetchProducts();
+      toast({ title: 'Validation annulée', description: `L'avoir ${selectedCreditNote.creditNoteNumber} est de retour en brouillon.` });
+      setSelectedCreditNote({ ...selectedCreditNote, status: 'Brouillon' } as PurchaseCreditNote);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: "Erreur d'annulation",
+        description: error.message || "L'annulation a échoué.",
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Avoirs Fournisseur"
-        description="Gérez vos avoirs fournisseurs."
+        title="Avoirs d'achat"
+        description="Gérez vos avoirs fournisseurs dans cet environnement de test."
       >
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={handleOpenNewCreditNote}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Créer un avoir
         </Button>
       </PageHeader>
-      {isLoading ? (
+
+       {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
         </div>
       ) : (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Avoirs récents</CardTitle>
+              <CardTitle>Avoirs récents</CardTitle>
+              <div className="flex items-center gap-2 h-10">
+                  {/* Valider / Annuler validation */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedCreditNote ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                  >
+                    {selectedCreditNote?.status === 'Brouillon' && (
+                        <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateCreditNote}>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="sr-only">Valider</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Valider</TooltipContent>
+                        </Tooltip>
+                    )}
+                    {selectedCreditNote?.status === 'Validé' && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
+                                <XCircle className="h-4 w-4 text-orange-500" />
+                                <span className="sr-only">Annuler la validation</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Annuler la validation</TooltipContent>
+                        </Tooltip>
+                    )}
+                  </div>
+
+                  {/* Modifier */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedCreditNote ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedCreditNote ? '75ms' : '0ms' }}
+                  >
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={() => selectedCreditNote && handleRowDoubleClick(selectedCreditNote)}
+                        >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Modifier</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Modifier</TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  {/* Supprimer */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedCreditNote ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedCreditNote ? '150ms' : '0ms' }}
+                  >
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedCreditNote?.status === 'Validé'}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Supprimer</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Supprimer</TooltipContent>
+                    </Tooltip>
+                  </div>
+              </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
-              <div className="flex flex-col items-center gap-1 text-center">
-                <h3 className="text-2xl font-bold tracking-tight">
-                  Vous n'avez pas encore d'avoirs.
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Commencez par en créer un.
-                </p>
-                <Button className="mt-4" onClick={() => setDialogOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Créer un avoir
-                </Button>
-              </div>
-            </div>
+              {creditNotes && creditNotes.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Numéro</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Fournisseur</TableHead>
+                      <TableHead>Statut</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {creditNotes.map((creditNote) => (
+                      <TableRow
+                        key={creditNote.id}
+                        onClick={() => handleRowClick(creditNote)}
+                        onDoubleClick={() => handleRowDoubleClick(creditNote)}
+                        className={cn("cursor-pointer", selectedCreditNote?.id === creditNote.id && 'bg-muted/50')}
+                      >
+                        <TableCell className="font-medium">{creditNote.creditNoteNumber}</TableCell>
+                        <TableCell>{format(new Date(creditNote.creditNoteDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                        <TableCell>{suppliers?.find(s => s.id === creditNote.supplierId)?.name || 'Inconnu'}</TableCell>
+                        <TableCell>
+                          <Badge variant={creditNote.status === 'Validé' ? 'default' : 'secondary'}>
+                            {creditNote.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
+                  <div className="flex flex-col items-center gap-1 text-center">
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      Aucun avoir trouvé.
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Commencez par en créer un.
+                    </p>
+                    <Button className="mt-4" onClick={handleOpenNewCreditNote}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Créer un avoir
+                    </Button>
+                  </div>
+                </div>
+              )}
           </CardContent>
         </Card>
       )}
-      <PurchaseCreditNoteDialog
-        isOpen={dialogOpen}
-        onOpenChange={setDialogOpen}
-        purchaseOrders={allOrders || []}
-        receipts={creditNotes || []} // Note: Passing creditNotes to a 'receipts' prop, as per cloning.
-        products={products || []}
-        suppliers={suppliers || []}
-        lastReceiptNumber={lastCreditNoteNumber} // Note: Using creditNoteNumber for 'receipt' prop.
-      />
+
+      {/* Rendu masqué du dialogue pour permettre son déclenchement externe */}
+      <div className="hidden">
+          <AaTestDialog key={`${dialogToken}-${creditNoteToEdit?.id ?? 'new'}`} creditNoteToEdit={creditNoteToEdit} onSaveSuccess={() => refetchCreditNotes()} />
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet avoir ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. L'avoir "{creditNoteToDelete?.creditNoteNumber}" sera supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+

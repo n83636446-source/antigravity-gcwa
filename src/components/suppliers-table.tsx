@@ -20,9 +20,9 @@ type Column = {
 
 type SuppliersTableProps = {
   suppliers: Supplier[];
-  onRowClick: (supplier: Supplier) => void;
+  onRowClick: (supplier: Supplier, index: number, e: React.MouseEvent) => void;
   onRowDoubleClick: (supplier: Supplier) => void;
-  selectedSupplierId?: string | null;
+  selectedIds?: Set<string>;
   columns: Column[];
   columnIds: (keyof Supplier | 'address')[];
 };
@@ -31,7 +31,7 @@ export function SuppliersTable({
   suppliers,
   onRowClick,
   onRowDoubleClick,
-  selectedSupplierId,
+  selectedIds,
   columns,
   columnIds,
 }: SuppliersTableProps) {
@@ -62,7 +62,7 @@ export function SuppliersTable({
     <Table>
       <TableHeader>
         <TableRow>
-          {columns.map(({ id, label }) => (
+          {columns.map(({ id, label }, index) => (
             <DraggableHeader key={id} id={id}>
               {label}
             </DraggableHeader>
@@ -70,14 +70,16 @@ export function SuppliersTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {suppliers.map((supplier) => (
+        {suppliers.map((supplier, index) => (
           <TableRow
             key={supplier.id}
-            onClick={() => onRowClick(supplier)}
+            onClick={(e) => onRowClick(supplier, index, e)}
             onDoubleClick={() => onRowDoubleClick(supplier)}
             className={cn(
-              "cursor-pointer",
-              selectedSupplierId === supplier.id && 'bg-muted/50'
+              "cursor-pointer select-none transition-colors duration-150 ease-out",
+              selectedIds?.has(supplier.id)
+                ? 'bg-sky-500/10 hover:bg-sky-500/20'
+                : 'hover:bg-muted/50'
             )}
           >
             {columnIds.map((columnId) => renderCellContent(supplier, columnId))}

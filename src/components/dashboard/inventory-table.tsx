@@ -23,14 +23,17 @@ type InventoryTableProps = {
 
 export function InventoryTable({ articles, suppliers, onRowDoubleClick }: InventoryTableProps) {
   const getStockStatus = (article: Product) => {
-    if (article.stockLevel === 0) {
+    const stock = article.stockLevel || 0;
+    const threshold = article.reorderThreshold || 0;
+    
+    if (stock === 0) {
       return {
         label: 'En rupture',
         variant: 'destructive',
         icon: <XCircle className="mr-2 h-4 w-4" />,
       } as const;
     }
-    if (article.stockLevel <= article.reorderThreshold) {
+    if (stock <= threshold) {
       return {
         label: 'Stock faible',
         variant: 'secondary',

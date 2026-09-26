@@ -1,0 +1,112 @@
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from ..database import get_db
+from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote
+from ..schemas import PurchaseInvoiceCreate, PurchaseInvoiceUpdate, PurchaseInvoiceRead
+from .. import crud
+
+router = APIRouter()
+
+
+@router.get("", response_model=List[PurchaseInvoiceRead])
+def get_purchase_invoices(db: Session = Depends(get_db)):
+    return crud.get_all(db, PurchaseInvoice)
+
+
+@router.get("/{invoice_id}", response_model=PurchaseInvoiceRead)
+def get_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
+    db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
+    if not db_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+    return db_obj
+
+
+@router.post("", response_model=PurchaseInvoiceRead, status_code=status.HTTP_201_CREATED)
+def create_purchase_invoice(data: PurchaseInvoiceCreate, db: Session = Depends(get_db)):
+    existing = crud.get_by_id(db, PurchaseInvoice, data.id)
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchase invoice ID already exists")
+    if db.query(PurchaseInvoice).filter(PurchaseInvoice.invoice_number == data.invoice_number).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.invoice_number}" est déjà utilisé.')
+    return crud.create(db, PurchaseInvoice, data.model_dump())
+
+
+@router.put("/{invoice_id}", response_model=PurchaseInvoiceRead)
+def update_purchase_invoice(invoice_id: str, data: PurchaseInvoiceUpdate, db: Session = Depends(get_db)):
+    db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
+    if not db_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+    return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
+
+
+@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
+    db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
+    if not db_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+    linked_reglement = db.query(Reglement).filter(Reglement.purchase_invoice_id == invoice_id).first()
+    if linked_reglement:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette facture a des règlements associés et ne peut pas être supprimée.",
+        )
+    linked_credit_note = db.query(PurchaseCreditNote).filter(PurchaseCreditNote.purchase_invoice_id == invoice_id).first()
+    if linked_credit_note:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette facture a un avoir associé et ne peut pas être supprimée.",
+        )
+    crud.delete(db, db_obj)
+
+
+@router.post("/{invoice_id}/validate", response_model=PurchaseInvoiceRead)
+def validate_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
+    db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
+    if not db_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+    if db_obj.status != "Brouillon":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Seule une facture en brouillon peut être validée.",
+        )
+    db_obj.status = "Non payée"
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
+@router.post("/{invoice_id}/cancel-validation", response_model=PurchaseInvoiceRead)
+def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(get_db)):
+    db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
+    if not db_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+    if db_obj.status not in ("Non payée", "En retard"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Seule une facture non payée peut voir sa validation annulée.",
+        )
+
+    linked_credit_note = db.query(PurchaseCreditNote).filter(
+        PurchaseCreditNote.purchase_invoice_id == invoice_id
+    ).first()
+    if linked_credit_note:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un avoir existe déjà pour cette facture. Impossible d'annuler la validation.",
+        )
+
+    linked_reglement = db.query(Reglement).filter(
+        Reglement.purchase_invoice_id == invoice_id,
+        Reglement.status == "Actif",
+    ).first()
+    if linked_reglement:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette facture a des règlements actifs. Annulez-les d'abord avant d'annuler la validation.",
+        )
+
+    db_obj.status = "Brouillon"
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, type ReactNode } from 'react';
+import { useEffect, useState, useMemo, useCallback, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,10 +25,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Product as Article, ArticleFamily } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Product as Article, ArticleFamily, productFromApi } from '@/lib/types';
+import { useApiCollection } from '@/hooks/use-api';
+import { api } from '@/lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const articleSchema = z.object({
@@ -64,14 +63,13 @@ export function ArticleDialog({
  }: ArticleDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
-  const firestore = useFirestore();
   const isEditMode = !!article;
 
   const isOpen = openProp !== undefined ? openProp : internalOpen;
   const onOpenChange = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
 
-  const familiesRef = useMemoFirebase(() => (firestore ? collection(firestore, 'articleFamilies') : null), [firestore]);
-  const { data: families } = useCollection<ArticleFamily>(familiesRef);
+  const fetchFamilies = useCallback(() => api.getArticleFamilies(), []);
+  const { data: families } = useApiCollection<ArticleFamily>(fetchFamilies);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -113,7 +111,6 @@ export function ArticleDialog({
             familyId: article.familyId || '',
         });
       } else {
-        // Use smart suggestion
         form.reset({
           code: nextCode,
           name: '',
@@ -127,11 +124,7 @@ export function ArticleDialog({
     }
   }, [article, isEditMode, isOpen, form, nextCode]);
 
-
   const onSubmit = async (data: ArticleFormValues) => {
-    if (!firestore) return;
-
-    // --- DUPLICATE CHECK: CODE ---
     const codeExists = articles.some(existing => {
         if (isEditMode && existing.id === article?.id) return false;
         return existing.code?.toLowerCase() === data.code.toLowerCase();
@@ -144,35 +137,47 @@ export function ArticleDialog({
         });
         return; 
     }
-    // -----------------------------
 
-    const articleData = {
-        code: data.code,
-        name: data.name,
-        description: data.description || '',
-        price: data.price,
-        stockLevel: data.stockLevel,
-        reorderThreshold: data.reorderThreshold,
-        familyId: data.familyId || '',
-    };
-
-    if (isEditMode && article) {
-        const articleDocRef = doc(firestore, 'products', article.id);
-        updateDocumentNonBlocking(articleDocRef, articleData);
-        toast({
-            title: 'Article modifié',
-            description: `L'article "${data.name}" a été mis à jour.`,
+    try {
+      if (isEditMode && article) {
+        await api.updateProduct(article.id, {
+          code: data.code,
+          name: data.name,
+          description: data.description || '',
+          price: data.price,
+          stock_level: data.stockLevel,
+          reorder_threshold: data.reorderThreshold,
+          family_id: data.familyId || null,
         });
-    } else {
-        const articlesRef = collection(firestore, 'products');
-        const docRef = await addDocumentNonBlocking(articlesRef, articleData);
-        if (docRef) {
-          onArticleCreated?.({ ...articleData, id: docRef.id });
-        }
+        toast({
+          title: 'Article modifié',
+          description: `L'article "${data.name}" a été mis à jour.`,
+        });
+      } else {
+        const newId = `prod-${Date.now()}`;
+        const newProduct = await api.createProduct({
+          id: newId,
+          code: data.code,
+          name: data.name,
+          description: data.description || '',
+          price: data.price,
+          stock_level: data.stockLevel,
+          reorder_threshold: data.reorderThreshold,
+          family_id: data.familyId || null,
+          supplier_id: null,
+        });
+        onArticleCreated?.(productFromApi(newProduct));
         toast({
           title: 'Article créé',
           description: `L'article "${data.name}" a été créé avec succès.`,
         });
+      }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'enregistrement.',
+      });
     }
 
     onOpenChange(false);
@@ -185,7 +190,7 @@ export function ArticleDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {Trigger}
-      <DialogContent className="sm:max-w-[80vw]">
+      <DialogContent className="sm:max-w-[80vw]" onInteractOutside={(e) => e.preventDefault()}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             

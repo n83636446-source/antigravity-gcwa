@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type {
   PurchaseReceipt,
   PurchaseOrder,
@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
-import { PurchaseReceiptDialog } from './purchase-receipt-dialog';
 
 type EnrichedReceipt = PurchaseReceipt & {
   orderNumber?: string;
@@ -45,16 +44,18 @@ type EnrichedReceipt = PurchaseReceipt & {
 }
 
 type Column = {
-  id: keyof EnrichedReceipt | 'orderNumber' | 'supplierName' | 'formattedDate' | 'status';
+  id: keyof EnrichedReceipt | 'orderNumber' | 'supplierName' | 'formattedDate' | 'status' | 'total_ht' | 'total_ttc';
   label: string;
 };
 
 const initialColumns: Column[] = [
-    { id: 'receiptNumber', label: 'Numéro BR' },
-    { id: 'orderNumber', label: 'Numéro BC' },
-    { id: 'supplierName', label: 'Fournisseur' },
-    { id: 'formattedDate', label: 'Date de réception' },
-    { id: 'status', label: 'Statut' },
+  { id: 'receiptNumber', label: 'N° BR' },
+  { id: 'orderNumber', label: 'N° BC' },
+  { id: 'supplierName', label: 'Fournisseur' },
+  { id: 'formattedDate', label: 'Date' },
+  { id: 'status', label: 'Statut' },
+  { id: 'total_ht', label: 'Total HT' },
+  { id: 'total_ttc', label: 'Total TTC' },
 ];
 
 
@@ -62,9 +63,11 @@ type PurchaseReceiptsTableProps = {
   receipts: PurchaseReceipt[];
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
-  onRowClick: (receipt: PurchaseReceipt) => void;
-  onRowDoubleClick: (receipt: PurchaseReceipt) => void;
-  selectedReceiptId?: string | null;
+  onRowClick?: (receipt: PurchaseReceipt, index?: number, e?: React.MouseEvent) => void;
+  onRowDoubleClick?: (receipt: PurchaseReceipt) => void;
+  selectedIds?: Set<string>;
+  selectedReceiptId?: string;
+  onCreateNew: () => void;
 };
 
 export function PurchaseReceiptsTable({
@@ -73,10 +76,11 @@ export function PurchaseReceiptsTable({
   suppliers,
   onRowClick,
   onRowDoubleClick,
+  selectedIds,
   selectedReceiptId,
+  onCreateNew,
 }: PurchaseReceiptsTableProps) {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -163,6 +167,10 @@ export function PurchaseReceiptsTable({
         return <TableCell key={key}>{receipt.formattedDate}</TableCell>;
       case 'status':
         return <TableCell key={key}><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>;
+      case 'total_ht':
+        return <TableCell key={key}>{(receipt.totalHT ?? 0).toFixed(2)} €</TableCell>;
+      case 'total_ttc':
+        return <TableCell key={key}>{(receipt.totalTTC ?? 0).toFixed(2)} €</TableCell>;
       default:
         return <TableCell key={key}></TableCell>;
     }
@@ -191,7 +199,7 @@ export function PurchaseReceiptsTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                     {columns.map(({ id, label }) => (
+                     {columns.map(({ id, label }, index) => (
                         <DraggableHeader key={id} id={id}>
                           {label}
                         </DraggableHeader>
@@ -199,12 +207,12 @@ export function PurchaseReceiptsTable({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {enrichedReceipts.map((receipt) => (
+                  {enrichedReceipts.map((receipt, index) => (
                     <TableRow 
                       key={receipt.id}
-                      onClick={() => onRowClick(receipt)}
-                      onDoubleClick={() => onRowDoubleClick(receipt)}
-                      className={cn("cursor-pointer", selectedReceiptId === receipt.id && 'bg-muted/50')}
+                      onClick={(e) => onRowClick?.(receipt, index, e)}
+                      onDoubleClick={() => onRowDoubleClick?.(receipt)}
+                      className={cn("cursor-pointer", (selectedIds?.has(receipt.id) || selectedReceiptId === receipt.id) && 'bg-muted/50')}
                     >
                       {columnIds.map((columnId) => renderCellContent(receipt, columnId))}
                     </TableRow>
@@ -222,22 +230,13 @@ export function PurchaseReceiptsTable({
               <p className="text-sm text-muted-foreground">
                 Commencez par en créer un.
               </p>
-               <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+               <Button className="mt-4" onClick={onCreateNew}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Créer un bon de réception
                 </Button>
             </div>
           </div>
         )}
-        <PurchaseReceiptDialog
-          isOpen={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          purchaseOrders={purchaseOrders || []}
-          receipts={receipts || []}
-          products={[]}
-          suppliers={suppliers || []}
-          lastReceiptNumber={lastReceiptNumber}
-        />
     </>
   );
 }

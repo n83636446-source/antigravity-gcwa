@@ -1,24 +1,36 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { StockLevelChart } from '@/components/reports/stock-level-chart';
 import { SalesTrendsChart } from '@/components/reports/sales-trends-chart';
-import { salesData } from '@/lib/data';
+import { api, type ApiSalesData } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
-import type { Product } from '@/lib/types';
+import { useApiCollection } from '@/hooks/use-api';
+import { Product, productFromApi } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReportsPage() {
-  const firestore = useFirestore();
+  const [salesData, setSalesData] = useState<ApiSalesData[]>([]);
+  const [isLoadingSales, setIsLoadingSales] = useState(true);
 
-  const articlesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
-  );
-  const { data: articles, isLoading: isLoadingArticles } =
-    useCollection<Product>(articlesRef);
+  useEffect(() => {
+    api.getSalesData()
+      .then(setSalesData)
+      .catch(console.error)
+      .finally(() => setIsLoadingSales(false));
+  }, []);
+
+  const fetchProducts = useCallback(() => api.getProducts(), []);
+  const { data: rawArticles, isLoading: isLoadingArticles } = useApiCollection(fetchProducts);
+  const articles: Product[] = (rawArticles || []).map(productFromApi);
+
+
+  const formattedSalesData = salesData.map(d => ({
+    month: d.month,
+    "Cette Année": d.this_year,
+    "Année Dernière": d.last_year,
+  }));
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -35,7 +47,11 @@ export default function ReportsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SalesTrendsChart data={salesData} />
+            {isLoadingSales ? (
+              <Skeleton className="h-[300px] w-full" />
+            ) : (
+              <SalesTrendsChart data={formattedSalesData} />
+            )}
           </CardContent>
         </Card>
         <Card>

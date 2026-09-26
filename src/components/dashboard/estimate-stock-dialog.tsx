@@ -38,7 +38,7 @@ export function EstimateStockDialog({ article, supplier }: EstimateStockDialogPr
     setResult(null);
 
     const formData = new FormData(event.currentTarget);
-    const response = await runStockEstimation(article.name, article.stockLevel, formData);
+    const response = await runStockEstimation(article.name, article.stockLevel || 0, formData);
 
     if (response.success && response.data) {
       setResult(response.data);
@@ -60,7 +60,7 @@ export function EstimateStockDialog({ article, supplier }: EstimateStockDialogPr
           Estimer le besoin
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[80vw]">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-[80vw]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Estimation de stock par IA</DialogTitle>

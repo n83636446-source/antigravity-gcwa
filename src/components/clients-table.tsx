@@ -10,7 +10,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, PlusCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState } from 'react';
 import {
@@ -32,9 +32,10 @@ type ClientsTableProps = {
   onDelete: (client: Client) => void;
   selectedClient: Client | null;
   onSetSelectedClient: (client: Client | null) => void;
+  onAdd?: () => void;
 };
 
-export function ClientsTable({ clients, onEdit, onDelete, selectedClient, onSetSelectedClient }: ClientsTableProps) {
+export function ClientsTable({ clients, onEdit, onDelete, selectedClient, onSetSelectedClient, onAdd }: ClientsTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
@@ -92,7 +93,7 @@ export function ClientsTable({ clients, onEdit, onDelete, selectedClient, onSetS
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => (
+                {clients.map((client, index) => (
                   <TableRow
                     key={client.id}
                     onClick={() => handleSelectClient(client)}
@@ -113,9 +114,15 @@ export function ClientsTable({ clients, onEdit, onDelete, selectedClient, onSetS
                 <h3 className="text-2xl font-bold tracking-tight">
                   Vous n'avez pas encore de clients.
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   Commencez par en créer un.
                 </p>
+                {onAdd && (
+                  <Button onClick={onAdd}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Ajouter un client
+                  </Button>
+                )}
               </div>
             </div>
           )}

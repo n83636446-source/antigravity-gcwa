@@ -1,26 +1,15 @@
 'use client';
 
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PurchaseOrderDialog } from '@/components/purchase-order-dialog';
-import type { PurchaseOrder, Supplier, Product, PurchaseReceipt } from '@/lib/types';
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import type { PurchaseOrder, Supplier, PurchaseReceipt } from '@/lib/types';
+import { api } from "@/lib/api";
+import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi } from "@/lib/types";
+import { useApiCollection } from "@/hooks/use-api";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, Trash2, ArrowRightLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Pencil, Trash2, PlusCircle, ArrowRightCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,152 +20,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { BcTestDialog } from '@/components/bc-test-dialog';
+import { BrTestDialog } from '@/components/br-test-dialog';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  horizontalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { DraggableHeader } from '@/components/ui/DraggableHeader';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { PurchaseReceiptDialog } from '@/components/purchase-receipt-dialog';
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 
-type Column = {
-  id: 'orderNumber' | 'supplierName' | 'formattedDate' | 'formattedAmount';
-  label: string;
-};
-
-const initialColumns: Column[] = [
-  { id: 'orderNumber', label: 'Numéro' },
-  { id: 'supplierName', label: 'Fournisseur' },
-  { id: 'formattedDate', label: 'Date' },
-  { id: 'formattedAmount', label: 'Montant TTC' },
-];
-
-export default function PurchaseOrdersPage() {
-  const firestore = useFirestore();
+export default function BCTestPage() {
+  
   const { toast } = useToast();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
+  
+  // --- STATES ---
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
+  const [orderToTransfer, setOrderToTransfer] = useState<PurchaseOrder | null>(null);
+  const [dialogToken, setDialogToken] = useState(0);
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
+
+  // --- DATA FETCHING ---
+    const { data: orders, isLoading: isLoadingOrders, refetch: refetchOrders } = useApiCollection(() => api.getPurchaseOrders().then(r => r.map(purchaseOrderFromApi)));
   
-  useEffect(() => {
-    try {
-      const savedColumns = localStorage.getItem('purchaseOrderColumns');
-      if (savedColumns) {
-        const parsedColumns: Column[] = JSON.parse(savedColumns);
-        const savedColumnIds = new Set(parsedColumns.map(c => c.id));
-        const initialColumnIds = new Set(initialColumns.map(c => c.id));
-        
-        // Basic validation to ensure saved columns are valid
-        if (parsedColumns.length === initialColumns.length && [...savedColumnIds].every(id => initialColumnIds.has(id))) {
-          setColumns(parsedColumns);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load or parse columns from localStorage", error);
-      // Silently fail and use initialColumns
-    }
-  }, []);
+    
+    const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
 
-  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+    const { data: receipts, refetch: refetchReceipts } = useApiCollection(() => api.getPurchaseReceipts().then(r => r.map(purchaseReceiptFromApi)));
   
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setColumns((items) => {
-        const oldIndex = columnIds.indexOf(active.id as any);
-        const newIndex = columnIds.indexOf(over.id as any);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        try {
-          localStorage.setItem('purchaseOrderColumns', JSON.stringify(newOrder));
-        } catch (error) {
-          console.error("Failed to save columns to localStorage", error);
-        }
-        return newOrder;
-      });
-    }
-  }
+  const isLoading = isLoadingOrders || isLoadingSuppliers;
 
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
+  // --- DERIVED STATE ---
+  const transferredOrderIds = useMemo(
+    () => new Set((receipts || []).map(r => r.purchaseOrderId).filter(Boolean)),
+    [receipts]
   );
-  const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
 
-  const productsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
-  );
-  const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsRef);
+  // --- HANDLERS ---
 
-
-  const ordersRef = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'purchaseOrders'), orderBy('orderDate', 'desc')) : null),
-    [firestore]
-  );
-  const { data: orders, isLoading: isLoadingOrders } = useCollection<PurchaseOrder>(ordersRef);
-
-  const receiptsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
-    [firestore]
-  );
-  const { data: receipts, isLoading: isLoadingReceipts } = useCollection<PurchaseReceipt>(receiptsRef);
-
-  const getSupplierName = (supplierId: string) => {
-    return suppliers?.find(s => s.id === supplierId)?.name ?? 'Inconnu';
-  };
-  
-  const enrichedOrders = useMemo(() => {
-    if (!orders || !suppliers) return [];
-    return orders.map(order => ({
-      ...order,
-      supplierName: getSupplierName(order.supplierId),
-      formattedDate: format(new Date(order.orderDate), 'dd/MM/yyyy', { locale: fr }),
-      formattedAmount: new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-      }).format(order.totalTTC),
-    }));
-  }, [orders, suppliers]);
-
-
-  const handleAdd = () => {
-    setEditingOrder(null);
-    setDialogOpen(true);
-  };
-
-  const handleEdit = (order: PurchaseOrder) => {
-    setEditingOrder(order);
-    setDialogOpen(true);
-  };
-  
-  const handleTransfer = () => {
-    if (selectedOrder) {
-      setReceiptDialogOpen(true);
-    }
+  const handleOpenNewOrder = () => {
+    setOrderToEdit(null);
+    setOrderToTransfer(null);
+    sessionStorage.setItem('bcTestDialogState', 'true');
+    setDialogToken(prev => prev + 1);
   };
 
   const handleRowClick = (order: PurchaseOrder) => {
@@ -187,223 +83,250 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  const handleDoubleClick = (order: PurchaseOrder) => {
-    handleEdit(order);
+  const handleRowDoubleClick = (order: PurchaseOrder) => {
+    setOrderToEdit(order);
+    setOrderToTransfer(null);
+    sessionStorage.setItem('bcTestDialogState', 'true');
+    setDialogToken(prev => prev + 1);
   };
-
-  const handleDeleteRequest = (order: PurchaseOrder) => {
-    setOrderToDelete(order);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (!firestore || !orderToDelete) return;
-
-    const isOrderInReceipt = (receipts || []).some(
-      (receipt) => receipt.purchaseOrderId === orderToDelete.id
-    );
-
-    if (isOrderInReceipt) {
+  
+  const handleTransferToReceipt = () => {
+    if (!selectedOrder) return;
+    if (transferredOrderIds.has(selectedOrder.id)) {
       toast({
         variant: 'destructive',
-        title: 'Suppression impossible',
-        description: `Le bon de commande "${orderToDelete.orderNumber}" a déjà été transféré en bon de réception.`,
+        title: 'Action impossible',
+        description: 'Cette commande a déjà été transférée en bon de réception.',
+      });
+      return;
+    }
+    setOrderToTransfer(selectedOrder);
+    setOrderToEdit(null);
+    // Use the specific transfer key to isolate from standalone BR Test
+    sessionStorage.setItem('brTransferDialogState', 'true');
+    setDialogToken(prev => prev + 1);
+  };
+
+  const handleDeleteRequest = () => {
+    if (selectedOrder) {
+      if (transferredOrderIds.has(selectedOrder.id)) {
+        toast({
+          variant: 'destructive',
+          title: 'Action impossible',
+          description: 'Cette commande a déjà été transférée en bon de réception et ne peut pas être supprimée.',
+        });
+        return;
+      }
+      setOrderToDelete(selectedOrder);
+      setDeleteDialogOpen(true);
+    }
+  };
+  
+  const handleDeleteConfirm = async () => {
+    if (!orderToDelete) return;
+
+    if (transferredOrderIds.has(orderToDelete.id)) {
+      toast({
+        variant: 'destructive',
+        title: 'Action impossible',
+        description: 'Cette commande a déjà été transférée en bon de réception et ne peut pas être supprimée.',
       });
       setDeleteDialogOpen(false);
       return;
     }
 
-    const orderDocRef = doc(firestore, 'purchaseOrders', orderToDelete.id);
-    deleteDocumentNonBlocking(orderDocRef);
-    toast({
-      title: 'Bon de commande supprimé',
-      description: `Le bon de commande "${orderToDelete.orderNumber}" a été supprimé.`,
-    });
+    try {
+      await api.deletePurchaseOrder(orderToDelete.id);
+      refetchOrders();
+      toast({
+        title: 'Bon de commande supprimé',
+        description: `Le bon de commande "${orderToDelete.orderNumber}" a été supprimé.`,
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Impossible de supprimer le bon de commande.',
+      });
+    }
     setDeleteDialogOpen(false);
     setOrderToDelete(null);
     setSelectedOrder(null);
   };
-  
-  const handleReceiptCreated = () => {
-    // This will trigger a re-fetch of the receipts collection implicitly
-    // and ensures the UI is up-to-date.
-    setSelectedOrder(null);
-  };
-
-  const isLoading = isLoadingSuppliers || isLoadingOrders || isLoadingProducts || isLoadingReceipts;
-  
-  const renderCellContent = (order: any, columnId: Column['id']) => {
-    const key = `${order.id}-${columnId}`;
-    switch (columnId) {
-      case 'orderNumber':
-        return <TableCell key={key} className="font-medium">{order.orderNumber}</TableCell>;
-      case 'supplierName':
-        return <TableCell key={key}>{order.supplierName}</TableCell>;
-      case 'formattedDate':
-        return <TableCell key={key}>{order.formattedDate}</TableCell>;
-      case 'formattedAmount':
-        return <TableCell key={key} className="text-right">{order.formattedAmount}</TableCell>;
-      default:
-        return <TableCell key={key}></TableCell>;
-    }
-  };
-  
-  const lastOrderNumber = useMemo(() => {
-    if (!orders || orders.length === 0) {
-      return 0;
-    }
-    return orders.reduce((max, s) => {
-      const codeNumber = parseInt((s.orderNumber || 'BC-0000').replace('BC-', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [orders]);
-
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="Bons de commande"
-        description="Gérez vos bons de commande."
+        title="BC Test"
+        description="Gérez vos bons de commande dans cet environnement de test."
       >
-        <Button onClick={handleAdd}>
+        <Button onClick={handleOpenNewOrder}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Créer un bon de commande
         </Button>
       </PageHeader>
-      
-      <PurchaseOrderDialog
-          isOpen={dialogOpen}
-          onOpenChange={setDialogOpen}
-          suppliers={suppliers || []}
-          order={editingOrder}
-          lastOrderNumber={lastOrderNumber}
-      />
-      
-      {isLoading ? (
-         <div className="space-y-4">
+
+       {isLoading ? (
+        <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
         </div>
       ) : (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Bons de commande récents</CardTitle>
-                {selectedOrder && (
-                  <div className="flex items-center gap-2">
-                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleTransfer}>
-                          <ArrowRightLeft className="h-4 w-4" />
-                          <span className="sr-only">Transférer en BR</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Transférer en BR</TooltipContent>
-                    </Tooltip>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Bons de commande récents</CardTitle>
+              <div className="flex items-center gap-2 h-10">
+                  {/* Modifier */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedOrder ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedOrder ? '0ms' : '0ms' }}
+                  >
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEdit(selectedOrder)}>
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Modifier</span>
+                    <TooltipTrigger asChild>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={() => selectedOrder && handleRowDoubleClick(selectedOrder)}
+                        >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Modifier</span>
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Modifier</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleDeleteRequest(selectedOrder)}>
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Supprimer</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Supprimer</TooltipContent>
+                    </TooltipTrigger>
+                    <TooltipContent>Modifier</TooltipContent>
                     </Tooltip>
                   </div>
-                )}
-            </CardHeader>
-            <CardContent>
+
+                  {/* Transférer en Bon de Réception */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedOrder ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedOrder ? '75ms' : '0ms' }}
+                  >
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={handleTransferToReceipt}
+                        >
+                        <ArrowRightCircle className="h-4 w-4" />
+                        <span className="sr-only">Transférer en BR</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Transférer en Bon de Réception</TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  {/* Supprimer */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedOrder ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedOrder ? '150ms' : '0ms' }}
+                  >
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Supprimer</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Supprimer</TooltipContent>
+                    </Tooltip>
+                  </div>
+              </div>
+          </CardHeader>
+          <CardContent>
               {orders && orders.length > 0 ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-                    <Table>
-                      <TableHeader>
-                          <TableRow>
-                            {columns.map(({ id, label }) => (
-                              <DraggableHeader key={id} id={id} className={cn(id === 'formattedAmount' && 'text-right')}>
-                                {label}
-                              </DraggableHeader>
-                            ))}
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {enrichedOrders.map(order => (
-                             <TableRow
-                              key={order.id}
-                              onClick={() => handleRowClick(order)}
-                              onDoubleClick={() => handleDoubleClick(order)}
-                              className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
-                             >
-                              {columnIds.map((columnId) => renderCellContent(order, columnId as any))}
-                             </TableRow>
-                          ))}
-                      </TableBody>
-                    </Table>
-                  </SortableContext>
-                </DndContext>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Numéro</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Fournisseur</TableHead>
+                      <TableHead className="text-right">Montant TTC</TableHead>
+                      <TableHead>Transférée</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(orders || []).map((order) => (
+                      <TableRow
+                        key={order.id}
+                        onClick={() => handleRowClick(order)}
+                        onDoubleClick={() => handleRowDoubleClick(order)}
+                        className={cn("cursor-pointer", selectedOrder?.id === order.id && 'bg-muted/50')}
+                      >
+                        <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                        <TableCell>{format(new Date(order.orderDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                        <TableCell>{suppliers?.find(s => s.id === order.supplierId)?.name || 'Inconnu'}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalTTC)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={transferredOrderIds.has(order.id) ? 'default' : 'secondary'}>
+                            {transferredOrderIds.has(order.id) ? 'Oui' : 'Non'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
                   <div className="flex flex-col items-center gap-1 text-center">
                     <h3 className="text-2xl font-bold tracking-tight">
-                      Vous n'avez pas encore de bons de commande.
+                      Aucun bon de commande trouvé.
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       Commencez par en créer un.
                     </p>
-                    <Button className="mt-4" onClick={handleAdd}>
+                    <Button className="mt-4" onClick={handleOpenNewOrder}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Créer un bon de commande
                     </Button>
                   </div>
                 </div>
               )}
-            </CardContent>
+          </CardContent>
         </Card>
       )}
 
-       {selectedOrder && (
-        <PurchaseReceiptDialog
-          isOpen={receiptDialogOpen}
-          onOpenChange={setReceiptDialogOpen}
-          purchaseOrders={orders || []}
-          receipts={receipts || []}
-          purchaseOrder={selectedOrder}
-          products={products || []}
-          suppliers={suppliers || []}
-          lastReceiptNumber={receipts?.length || 0}
-          onReceiptCreated={handleReceiptCreated}
-        />
-      )}
+      {/* Rendu masqué des dialogues pour permettre leur déclenchement externe */}
+      <div className="hidden">
+          <BcTestDialog key={`${dialogToken}-${orderToEdit?.id ?? 'new'}`} orderToEdit={orderToEdit} onSaveSuccess={() => refetchOrders()} />
+          <BrTestDialog key={`transfer-${dialogToken}-${orderToTransfer?.id ?? 'none'}`} orderToTransfer={orderToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchOrders(); refetchReceipts(); }} />
+      </div>
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer ce bon de commande ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer ce bon de commande ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le bon de commande "{orderToDelete?.orderNumber}" sera définitivement supprimé.
+              Cette action est irréversible. Le bon "{orderToDelete?.orderNumber}" sera supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Supprimer
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

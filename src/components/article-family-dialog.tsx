@@ -24,9 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { ArticleFamily } from '@/lib/types';
-import { useFirestore } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { api } from '@/lib/api';
 
 const familySchema = z.object({
   code: z.string().min(1, 'Le code de la famille est requis.'),
@@ -40,11 +38,11 @@ type ArticleFamilyDialogProps = {
   onOpenChange: (open: boolean) => void;
   family?: ArticleFamily;
   lastFamilyCodeNumber?: number;
+  families?: ArticleFamily[];
 };
 
-export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCodeNumber = 0 }: ArticleFamilyDialogProps) {
+export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCodeNumber = 0, families = [] }: ArticleFamilyDialogProps) {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const isEditMode = !!family;
 
   const form = useForm<FamilyFormValues>({
@@ -63,22 +61,42 @@ export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCo
     }
   }, [family, isEditMode, isOpen, form, lastFamilyCodeNumber]);
 
-  const onSubmit = (data: FamilyFormValues) => {
-    if (!firestore) return;
+  const onSubmit = async (data: FamilyFormValues) => {
+    const codeExists = families.some(
+      f => f.code?.toLowerCase() === data.code.toLowerCase() && f.id !== family?.id
+    );
+    if (codeExists) {
+      form.setError('code', { type: 'manual', message: 'Ce code de famille existe déjà.' });
+      return;
+    }
 
-    if (isEditMode && family) {
-      const familyDocRef = doc(firestore, 'articleFamilies', family.id);
-      updateDocumentNonBlocking(familyDocRef, data);
+    try {
+      if (isEditMode && family) {
+        await api.updateArticleFamily(family.id, {
+          code: data.code,
+          name: data.name,
+        });
+        toast({
+          title: 'Famille modifiée',
+          description: `La famille "${data.name}" a été mise à jour.`,
+        });
+      } else {
+        const newId = `fam-${Date.now()}`;
+        await api.createArticleFamily({
+          id: newId,
+          code: data.code,
+          name: data.name,
+        });
+        toast({
+          title: 'Famille ajoutée',
+          description: `La famille "${data.name}" a été ajoutée.`,
+        });
+      }
+    } catch {
       toast({
-        title: 'Famille modifiée',
-        description: `La famille "${data.name}" a été mise à jour.`,
-      });
-    } else {
-      const familiesRef = collection(firestore, 'articleFamilies');
-      addDocumentNonBlocking(familiesRef, data);
-      toast({
-        title: 'Famille ajoutée',
-        description: `La famille "${data.name}" a été ajoutée.`,
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'enregistrement de la famille.',
       });
     }
 
@@ -87,7 +105,7 @@ export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCo
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>

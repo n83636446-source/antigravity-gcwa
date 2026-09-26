@@ -127,7 +127,7 @@ export function RepresentativesTable({
               </TableHeader>
               <TableBody>
                 {/* Render the FORCE SORTED list */}
-                {sortedDisplayList.map((representative) => (
+                {sortedDisplayList.map((representative, index) => (
                   <TableRow
                     key={representative.id}
                     onClick={() => handleSelectRepresentative(representative)}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -26,7 +25,8 @@ import {
   Contact,
   UserCheck,
   UserPlus,
-  FlaskConical,
+
+  AlertTriangle,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -41,24 +41,26 @@ const menuItems = [
 ];
 
 const articlesSubMenuItems = [
-    { href: '/articles', label: 'Liste Articles' },
-    { href: '/articles/families', label: 'Famille Articles' },
-    { href: '/articles/discounts', label: 'Remises' },
-]
-
-const achatSubMenuItems = [
-    { href: '/purchases/orders', label: 'Bons de commande' },
-    { href: '/purchases/receipts', label: 'Bons de réception' },
-    { href: '/purchases/invoices', label: 'Factures' },
-    { href: '/purchases/credit-notes', label: 'Avoirs' },
+  { href: '/articles', label: 'Liste Articles' },
+  { href: '/articles/families', label: 'Famille Articles' },
+  { href: '/articles/discounts', label: 'Remises' },
 ];
 
+const achatSubMenuItems = [
+  { href: '/purchases/orders', label: 'Bons de commande' },
+  { href: '/purchases/receipts', label: 'Bons de réception' },
+  { href: '/purchases/invoices', label: 'Factures' },
+  { href: '/purchases/credit-notes', label: 'Avoirs' },
+  { href: '/purchases/payments', label: 'Règlements' },
+];
+
+
 const tiersSubMenuItems = [
-    { href: '/clients', label: 'Clients', icon: Contact },
-    { href: '/prospects', label: 'Prospects', icon: UserPlus },
-    { href: '/suppliers', label: 'Fournisseurs', icon: Warehouse },
-    { href: '/representants', label: 'Représentants', icon: UserCheck },
-]
+  { href: '/clients', label: 'Clients', icon: Contact },
+  { href: '/prospects', label: 'Prospects', icon: UserPlus },
+  { href: '/suppliers', label: 'Fournisseurs', icon: Warehouse },
+  { href: '/representatives', label: 'Représentants', icon: UserCheck },
+];
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -68,6 +70,7 @@ export function AppSidebar() {
   const [isAchatOpen, setIsAchatOpen] = React.useState(
     achatSubMenuItems.some(item => pathname.startsWith(item.href))
   );
+
   const [isTiersOpen, setIsTiersOpen] = React.useState(
     tiersSubMenuItems.some(item => pathname.startsWith(item.href))
   );
@@ -104,104 +107,111 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
-           <Collapsible open={isArticlesOpen} onOpenChange={setIsArticlesOpen}>
+
+          {/* Articles */}
+          <Collapsible open={isArticlesOpen} onOpenChange={setIsArticlesOpen}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
-                      <Boxes className="size-4" />
-                      <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Articles</span>
-                      <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
-                  </Button>
+                <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
+                  <Boxes className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Articles</span>
+                  <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
+                </Button>
               </CollapsibleTrigger>
             </SidebarMenuItem>
-             <CollapsibleContent>
-                <SidebarMenuSub>
-                    {articlesSubMenuItems.map(subItem => (
-                        <SidebarMenuItem key={subItem.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
-                                <Link href={subItem.href}>
-                                    {subItem.label}
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenuSub>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                {articlesSubMenuItems.map(subItem => (
+                  <SidebarMenuItem key={subItem.href}>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
+                      <Link href={subItem.href}>{subItem.label}</Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenuSub>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Tiers */}
           <Collapsible open={isTiersOpen} onOpenChange={setIsTiersOpen}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
-                      <Users className="size-4" />
-                      <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Tiers</span>
-                      <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
-                  </Button>
+                <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
+                  <Users className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Tiers</span>
+                  <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
+                </Button>
               </CollapsibleTrigger>
             </SidebarMenuItem>
-             <CollapsibleContent>
-                <SidebarMenuSub>
-                    {tiersSubMenuItems.map(subItem => (
-                        <SidebarMenuItem key={subItem.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
-                                <Link href={subItem.href}>
-                                    {subItem.label}
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenuSub>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                {tiersSubMenuItems.map(subItem => (
+                  <SidebarMenuItem key={subItem.href}>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
+                      <Link href={subItem.href}>{subItem.label}</Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenuSub>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Achats */}
           <Collapsible open={isAchatOpen} onOpenChange={setIsAchatOpen}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
-                      <ShoppingCart className="size-4" />
-                      <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achats</span>
-                      <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
-                  </Button>
+                <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
+                  <ShoppingCart className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achats</span>
+                  <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
+                </Button>
               </CollapsibleTrigger>
             </SidebarMenuItem>
-             <CollapsibleContent>
-                <SidebarMenuSub>
-                    {achatSubMenuItems.map(subItem => (
-                        <SidebarMenuItem key={subItem.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                                <Link href={subItem.href}>
-                                    {subItem.label}
-                                </Link>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenuSub>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                {achatSubMenuItems.map(subItem => (
+                  <SidebarMenuItem key={subItem.href}>
+                    <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                      <Link href={subItem.href}>{subItem.label}</Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenuSub>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Rapports */}
           <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === '/reports'}
-                className="justify-start"
-                tooltip={'Rapports'}
-              >
-                <Link href={'/reports'}>
-                  <LineChart className="size-4" />
-                  <span className="group-data-[collapsible=icon]:hidden">Rapports</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === '/test-resize'}
-                className="justify-start"
-                tooltip={'Test Resize'}
-              >
-                <Link href={'/test-resize'}>
-                  <FlaskConical className="size-4" />
-                  <span className="group-data-[collapsible=icon]:hidden">Test Resize</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === '/reports'}
+              className="justify-start"
+              tooltip="Rapports"
+            >
+              <Link href="/reports">
+                <LineChart className="size-4" />
+                <span className="group-data-[collapsible=icon]:hidden">Rapports</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+
+
+          {/* Maintenance */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === '/maintenance'}
+              className="justify-start"
+              tooltip="Maintenance"
+            >
+              <Link href="/maintenance">
+                <AlertTriangle className="size-4" />
+                <span className="group-data-[collapsible=icon]:hidden">Maintenance</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="flex items-center justify-between p-4">

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useApiCollection } from '@/hooks/use-api';
+import { api } from '@/lib/api';
 import type { ArticleFamily } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,15 +13,11 @@ import { ArticleFamiliesTable } from '@/components/article-families-table';
 import { ArticleFamilyDialog } from '@/components/article-family-dialog';
 
 export default function ArticleFamiliesPage() {
-  const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFamily, setEditingFamily] = useState<ArticleFamily | undefined>();
 
-  const familiesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'articleFamilies') : null),
-    [firestore]
-  );
-  const { data: families, isLoading } = useCollection<ArticleFamily>(familiesRef);
+  const fetchFamilies = useCallback(() => api.getArticleFamilies(), []);
+  const { data: families, isLoading, refetch } = useApiCollection<ArticleFamily>(fetchFamilies);
 
   const handleAddFamily = () => {
     setEditingFamily(undefined);
@@ -65,15 +61,25 @@ export default function ArticleFamiliesPage() {
           </CardContent>
         </Card>
       ) : (
-        <ArticleFamiliesTable families={families || []} onEdit={handleEditFamily} />
+        <ArticleFamiliesTable
+          families={families || []}
+          onEdit={handleEditFamily}
+          onDeleteSuccess={refetch}
+          onAdd={handleAddFamily}
+        />
       )}
 
       <ArticleFamilyDialog
         isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) refetch();
+        }}
         family={editingFamily}
         lastFamilyCodeNumber={lastFamilyCodeNumber}
+        families={families || []}
       />
     </div>
   );
 }
+

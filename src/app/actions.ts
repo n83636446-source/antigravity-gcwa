@@ -4,7 +4,7 @@ import {
   estimateStockLevel,
   type StockLevelEstimationInput,
 } from '@/ai/flows/stock-level-estimation';
-import { salesData } from '@/lib/data';
+import { api } from '@/lib/api';
 
 export async function runStockEstimation(
   productName: string,
@@ -12,6 +12,7 @@ export async function runStockEstimation(
   formData: FormData
 ) {
   try {
+    const salesData = await api.getSalesData();
     const input: StockLevelEstimationInput = {
       historicalSalesData: JSON.stringify(salesData), // Using generic sales data for demo
       upcomingTrends: formData.get('upcomingTrends') as string,

@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Pencil, Trash2 } from 'lucide-react';
-import type { ArticleFamily, Product } from '@/lib/types';
+import { Pencil, Trash2, PlusCircle } from 'lucide-react';
+import type { ArticleFamily } from '@/lib/types';
+import { api } from '@/lib/api';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
@@ -33,45 +31,53 @@ import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 type ArticleFamiliesTableProps = {
   families: ArticleFamily[];
   onEdit: (family: ArticleFamily) => void;
+  onDeleteSuccess?: () => void;
+  onAdd?: () => void;
 };
 
-export function ArticleFamiliesTable({ families, onEdit }: ArticleFamiliesTableProps) {
-  const firestore = useFirestore();
+export function ArticleFamiliesTable({ families, onEdit, onDeleteSuccess, onAdd }: ArticleFamiliesTableProps) {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [familyToDelete, setFamilyToDelete] = useState<ArticleFamily | null>(null);
   const [selectedFamily, setSelectedFamily] = useState<ArticleFamily | null>(null);
-
-  const productsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'products') : null), [firestore]);
-  const { data: products } = useCollection<Product>(productsRef);
 
   const handleDeleteRequest = (family: ArticleFamily) => {
     setFamilyToDelete(family);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (!firestore || !familyToDelete) return;
+  const handleDeleteConfirm = async () => {
+    if (!familyToDelete) return;
 
-    const isFamilyInUse = products?.some(p => p.familyId === familyToDelete.id);
+    try {
+      const products = await api.getProducts();
+      const isFamilyInUse = products.some((p) => p.family_id === familyToDelete.id);
 
-    if (isFamilyInUse) {
+      if (isFamilyInUse) {
+        toast({
+          variant: 'destructive',
+          title: 'Suppression impossible',
+          description: `La famille "${familyToDelete.name}" est utilisée par au moins un article et ne peut pas être supprimée.`,
+        });
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      await api.deleteArticleFamily(familyToDelete.id);
+
+      toast({
+        title: 'Famille supprimée',
+        description: `La famille "${familyToDelete.name}" a été supprimée.`,
+      });
+
+      onDeleteSuccess?.();
+    } catch {
       toast({
         variant: 'destructive',
-        title: 'Suppression impossible',
-        description: `La famille "${familyToDelete.name}" est utilisée par au moins un article et ne peut pas être supprimée.`,
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de la suppression de la famille.',
       });
-      setDeleteDialogOpen(false);
-      return;
     }
-
-    const familyDocRef = doc(firestore, 'articleFamilies', familyToDelete.id);
-    deleteDocumentNonBlocking(familyDocRef);
-
-    toast({
-      title: 'Famille supprimée',
-      description: `La famille "${familyToDelete.name}" a été supprimée.`,
-    });
 
     setDeleteDialogOpen(false);
     setFamilyToDelete(null);
@@ -124,7 +130,7 @@ export function ArticleFamiliesTable({ families, onEdit }: ArticleFamiliesTableP
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {families.map((family) => (
+                {families.map((family, index) => (
                   <TableRow
                     key={family.id}
                     onClick={() => handleSelectFamily(family)}
@@ -146,6 +152,12 @@ export function ArticleFamiliesTable({ families, onEdit }: ArticleFamiliesTableP
                     <p className="text-sm text-muted-foreground">
                     Commencez par en créer une.
                     </p>
+                    {onAdd && (
+                      <Button onClick={onAdd} className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Créer une famille
+                      </Button>
+                    )}
                 </div>
             </div>
           )}

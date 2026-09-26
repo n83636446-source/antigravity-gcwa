@@ -23,13 +23,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import {
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
 import type { Supplier } from '@/lib/types';
+import { supplierFromApi, supplierToApi } from '@/lib/types';
+import { api } from '@/lib/api';
 import { Textarea } from './ui/textarea';
 
 const supplierSchema = z.object({
@@ -51,7 +47,7 @@ type SupplierDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   supplier?: Supplier;
   onSupplierCreated?: (supplier: Supplier) => void;
-  suppliers: Supplier[]; // Logic: Full list for auto-calc
+  suppliers: Supplier[];
 };
 
 export function SupplierDialog({ 
@@ -62,7 +58,6 @@ export function SupplierDialog({
     suppliers = [], 
 }: SupplierDialogProps) {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const isEditMode = !!supplier;
 
   const form = useForm<SupplierFormValues>({
@@ -104,10 +99,6 @@ export function SupplierDialog({
   }, [supplier, isEditMode, isOpen, form, nextCode]);
 
   const onSubmit = async (data: SupplierFormValues) => {
-    if (!firestore) return;
-
-    // --- DUPLICATE CHECKS ---
-
     // 1. Code
     const codeExists = suppliers.some(
       s => s.code?.toLowerCase() === data.code.toLowerCase() && s.id !== supplier?.id
@@ -144,24 +135,29 @@ export function SupplierDialog({
         return;
     }
     
-    if (isEditMode && supplier) {
-      const supplierDocRef = doc(firestore, 'suppliers', supplier.id);
-      updateDocumentNonBlocking(supplierDocRef, data);
-      toast({
-        title: 'Fournisseur modifié',
-        description: `Le fournisseur "${data.name}" a été mis à jour.`,
-      });
-      onSupplierCreated?.({ ...data, id: supplier.id });
-    } else {
-      const suppliersRef = collection(firestore, 'suppliers');
-      const docRef = await addDocumentNonBlocking(suppliersRef, data);
-      toast({
-        title: 'Fournisseur ajouté',
-        description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
-      });
-      if (docRef) {
-        onSupplierCreated?.({ ...data, id: docRef.id });
+    try {
+      if (isEditMode && supplier) {
+        await api.updateSupplier(supplier.id, supplierToApi(data));
+        toast({
+          title: 'Fournisseur modifié',
+          description: `Le fournisseur "${data.name}" a été mis à jour.`,
+        });
+        onSupplierCreated?.({ ...data, id: supplier.id });
+      } else {
+        const newId = `sup-${Date.now()}`;
+        const created = await api.createSupplier(supplierToApi({ ...data, id: newId }));
+        toast({
+          title: 'Fournisseur ajouté',
+          description: `Le fournisseur "${data.name}" a été ajouté avec succès.`,
+        });
+        onSupplierCreated?.(supplierFromApi(created));
       }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'enregistrement du fournisseur.',
+      });
     }
 
     onOpenChange(false);
@@ -169,7 +165,7 @@ export function SupplierDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[80vw]">
+      <DialogContent className="sm:max-w-[80vw]" onInteractOutside={(e) => e.preventDefault()}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             

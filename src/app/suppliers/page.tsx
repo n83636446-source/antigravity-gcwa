@@ -1,9 +1,18 @@
-'use client';
+"use client";
 
-import { useMemo, useState, useEffect } from 'react';
-import { collection, doc } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Supplier, PurchaseOrder, PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useApiCollection } from '@/hooks/use-api';
+import { api } from '@/lib/api';
+import {
+  Supplier,
+  PurchaseOrder,
+  PurchaseReceipt,
+  PurchaseInvoice,
+  supplierFromApi,
+  purchaseOrderFromApi,
+  purchaseReceiptFromApi,
+  purchaseInvoiceFromApi,
+} from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { SuppliersTable } from '@/components/suppliers-table';
 import { SupplierDialog } from '@/components/supplier-dialog';
@@ -22,7 +31,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import {
   DndContext,
@@ -39,7 +47,6 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { DraggableHeader } from '@/components/ui/DraggableHeader';
 import { cn } from '@/lib/utils';
 
 type Column = {
@@ -58,14 +65,28 @@ const initialColumns: Column[] = [
 ];
 
 export default function SuppliersPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>();
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [columns, setColumns] = useState<Column[]>(initialColumns);
+  
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const lastClickedIndexRef = useRef<number | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleDocClick = (e: MouseEvent) => {
+      if (dialogOpen || deleteDialogOpen) return;
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        if ((e.target as Element).closest('[role="dialog"], [role="tooltip"]')) return;
+        setSelectedIds(new Set());
+        lastClickedIndexRef.current = null;
+      }
+    };
+    document.addEventListener('mousedown', handleDocClick);
+    return () => document.removeEventListener('mousedown', handleDocClick);
+  }, [dialogOpen, deleteDialogOpen]);
 
   useEffect(() => {
     try {
@@ -110,36 +131,25 @@ export default function SuppliersPage() {
     }
   }
 
+  const fetchSuppliers = useCallback(() => api.getSuppliers(), []);
+  const fetchPurchaseOrders = useCallback(() => api.getPurchaseOrders(), []);
+  const fetchPurchaseReceipts = useCallback(() => api.getPurchaseReceipts(), []);
+  const fetchPurchaseInvoices = useCallback(() => api.getPurchaseInvoices(), []);
 
-  const suppliersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'suppliers') : null),
-    [firestore]
-  );
-  const { data: suppliers, isLoading: isLoadingSuppliers } = useCollection<Supplier>(suppliersRef);
+  const { data: rawSuppliers, isLoading: isLoadingSuppliers, refetch: refetchSuppliers } = useApiCollection(fetchSuppliers);
+  const { data: rawPurchaseOrders } = useApiCollection(fetchPurchaseOrders);
+  const { data: rawPurchaseReceipts } = useApiCollection(fetchPurchaseReceipts);
+  const { data: rawPurchaseInvoices } = useApiCollection(fetchPurchaseInvoices);
 
-  const purchaseOrdersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseOrders') : null),
-    [firestore]
-  );
-  const { data: purchaseOrders } = useCollection<PurchaseOrder>(purchaseOrdersRef);
-    
-  const purchaseReceiptsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseReceipts') : null),
-    [firestore]
-  );
-  const { data: purchaseReceipts } = useCollection<PurchaseReceipt>(purchaseReceiptsRef);
-  
-  const purchaseInvoicesRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'purchaseInvoices') : null),
-    [firestore]
-  );
-  const { data: purchaseInvoices } = useCollection<PurchaseInvoice>(purchaseInvoicesRef);
+  const suppliers: Supplier[] = useMemo(() => (rawSuppliers || []).map(supplierFromApi), [rawSuppliers]);
 
-  // --- SORTING LOGIC ---
+  const purchaseOrders: PurchaseOrder[] = useMemo(() => (rawPurchaseOrders || []).map(purchaseOrderFromApi), [rawPurchaseOrders]);
+  const purchaseReceipts: PurchaseReceipt[] = useMemo(() => (rawPurchaseReceipts || []).map(purchaseReceiptFromApi), [rawPurchaseReceipts]);
+  const purchaseInvoices: PurchaseInvoice[] = useMemo(() => (rawPurchaseInvoices || []).map(purchaseInvoiceFromApi), [rawPurchaseInvoices]);
+
   const sortedSuppliers = useMemo(() => {
     if (!suppliers) return [];
     return [...suppliers].sort((a, b) => {
-      // Helper to extract numeric part of FOU001
       const getVal = (code?: string) => {
         if (!code) return 999999;
         const digits = code.replace(/\D/g, '');
@@ -148,6 +158,14 @@ export default function SuppliersPage() {
       return getVal(a.code) - getVal(b.code);
     });
   }, [suppliers]);
+
+    const selectedSuppliers = sortedSuppliers.filter((s) => selectedIds.has(s.id));
+  const singleSelected = selectedSuppliers.length === 1 ? selectedSuppliers[0] : null;
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    lastClickedIndexRef.current = null;
+  };
 
   const handleAdd = () => {
     setEditingSupplier(undefined);
@@ -159,49 +177,64 @@ export default function SuppliersPage() {
     setDialogOpen(true);
   };
 
-  const handleSelectSupplier = (supplier: Supplier) => {
-    if (selectedSupplier?.id === supplier.id) {
-      setSelectedSupplier(null);
+  const handleRowClick = (supplier: Supplier, index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.shiftKey && lastClickedIndexRef.current !== null) {
+      const from = Math.min(lastClickedIndexRef.current, index);
+      const to = Math.max(lastClickedIndexRef.current, index);
+      const rangeIds = sortedSuppliers.slice(from, to + 1).map((a) => a.id);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        rangeIds.forEach((id) => next.add(id));
+        return next;
+      });
     } else {
-      setSelectedSupplier(supplier);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(supplier.id)) next.delete(supplier.id);
+        else next.add(supplier.id);
+        return next;
+      });
+      lastClickedIndexRef.current = index;
     }
   };
 
-  const handleDeleteRequest = (supplier: Supplier) => {
-    setSupplierToDelete(supplier);
-    setDeleteDialogOpen(true);
-  };
+  const handleDeleteConfirm = async () => {
+    const usedIds = new Set<string>();
+    [
+      ...(purchaseOrders || []).flatMap(o => o.supplierId),
+      ...(purchaseReceipts || []).flatMap(r => r.supplierId),
+      ...(purchaseInvoices || []).flatMap(inv => inv.supplierId)
+    ].forEach((id) => { if (selectedIds.has(id)) usedIds.add(id); });
 
-  const handleDeleteConfirm = () => {
-    if (!firestore || !supplierToDelete) return;
-  
-    const isUsedInOrders = (purchaseOrders || []).some(o => o.supplierId === supplierToDelete.id);
-    const isUsedInReceipts = (purchaseReceipts || []).some(r => r.supplierId === supplierToDelete.id);
-    const isUsedInInvoices = (purchaseInvoices || []).some(i => i.supplierId === supplierToDelete.id);
-
-    if (isUsedInOrders || isUsedInReceipts || isUsedInInvoices) {
-      toast({
-        variant: 'destructive',
-        title: 'Suppression impossible',
-        description: `Le fournisseur "${supplierToDelete.name}" est lié à des documents d'achat (commandes, réceptions, factures) et ne peut pas être supprimé.`,
-        duration: 6000,
-      });
+    if (usedIds.size > 0) {
+      const blockedNames = selectedSuppliers.filter((s) => usedIds.has(s.id)).map((s) => `"${s.name}"`).join(', ');
+      toast({ variant: 'destructive', title: 'Suppression impossible', description: `Ces fournisseurs sont liés à des documents d'achat : ${blockedNames}`, duration: 6000 });
       setDeleteDialogOpen(false);
       return;
     }
-  
-    const supplierDocRef = doc(firestore, 'suppliers', supplierToDelete.id);
-    deleteDocumentNonBlocking(supplierDocRef);
-    toast({
-      title: 'Fournisseur supprimé',
-      description: `Le fournisseur "${supplierToDelete.name}" a été supprimé.`,
-    });
+
+    let successCount = 0, failCount = 0;
+    let lastError = '';
+    await Promise.all(
+      selectedSuppliers.map(async (supplier) => {
+        try { await api.deleteSupplier(supplier.id); successCount++; }
+        catch(e: any) { console.error('DELETE ERROR:', e); failCount++; lastError = e.message; }
+      })
+    );
+
+    toast(successCount > 0
+      ? { title: `${successCount} fournisseur(s) supprimé(s)`, description: failCount > 0 ? `${failCount} échec(s): ${lastError}` : undefined }
+      : { variant: 'destructive', title: 'Erreur', description: `Impossible de supprimer: ${lastError}` }
+    );
+
+    clearSelection();
     setDeleteDialogOpen(false);
-    setSupplierToDelete(null);
-    setSelectedSupplier(null);
+    refetchSuppliers();
   };
 
-  const isLoading = isLoadingSuppliers || !purchaseOrders || !purchaseReceipts || !purchaseInvoices;
+  const isLoading = isLoadingSuppliers;
+
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -216,7 +249,7 @@ export default function SuppliersPage() {
       </PageHeader>
 
       {isLoading ? (
-        <Card>
+        <Card ref={cardRef} className="animate-in fade-in zoom-in-[0.98] duration-300 ease-out">
           <CardHeader>
             <CardTitle>Tous les fournisseurs</CardTitle>
           </CardHeader>
@@ -227,68 +260,90 @@ export default function SuppliersPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Tous les fournisseurs</CardTitle>
-            {selectedSupplier && (
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleEdit(selectedSupplier)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Modifier</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Modifier</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteRequest(selectedSupplier)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Supprimer</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Supprimer</TooltipContent>
-                </Tooltip>
-              </div>
-            )}
+        <Card ref={cardRef} className="animate-in fade-in zoom-in-[0.98] duration-300 ease-out">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>
+              Tous les fournisseurs
+              <span className={cn(
+                'ml-2 text-sm font-normal text-muted-foreground transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+                selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 select-none'
+              )}>
+                — {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+              </span>
+            </CardTitle>
+            <div className={cn(
+              'flex items-center gap-2 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+              selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={cn('h-8 w-8 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]', singleSelected ? 'opacity-100' : 'opacity-0 pointer-events-none')}
+                    onClick={() => singleSelected && handleEdit(singleSelected)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Modifier</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="destructive" size="sm" className="h-8 gap-1" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="h-4 w-4" />
+                    Supprimer {selectedIds.size > 1 ? `(${selectedIds.size})` : ''}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Supprimer la sélection</TooltipContent>
+              </Tooltip>
+            </div>
           </CardHeader>
           <CardContent>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-                <SuppliersTable
-                  suppliers={sortedSuppliers} // Changed: Pass sorted list
-                  onRowClick={handleSelectSupplier}
-                  onRowDoubleClick={handleEdit}
-                  selectedSupplierId={selectedSupplier?.id}
-                  columns={columns}
-                  columnIds={columnIds}
-                />
-              </SortableContext>
-            </DndContext>
+            {sortedSuppliers.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+                  <SuppliersTable
+                    suppliers={sortedSuppliers}
+                    onRowClick={handleRowClick}
+                    onRowDoubleClick={handleEdit}
+                    selectedIds={selectedIds}
+                    columns={columns}
+                    columnIds={columnIds}
+                  />
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <h3 className="text-2xl font-bold tracking-tight">
+                    Vous n'avez pas encore de fournisseurs.
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Commencez par en créer un.
+                  </p>
+                  <Button onClick={handleAdd}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Ajouter un fournisseur
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       <SupplierDialog
         isOpen={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) refetchSuppliers();
+        }}
         supplier={editingSupplier}
-        // Removed: lastSupplierCodeNumber={lastSupplierCodeNumber}
         suppliers={suppliers || []}
       />
 
@@ -296,11 +351,12 @@ export default function SuppliersPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Êtes-vous sûr de vouloir supprimer ce fournisseur ?
+              {selectedIds.size > 1 ? `Supprimer ${selectedIds.size} fournisseurs ?` : 'Supprimer ce fournisseur ?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le fournisseur "
-              {supplierToDelete?.name}" sera définitivement supprimé.
+              {selectedIds.size > 1
+                ? `Cette action est irréversible. Les ${selectedIds.size} fournisseurs sélectionnés seront définitivement supprimés.`
+                : `Cette action est irréversible. Le fournisseur "${selectedSuppliers[0]?.name}" sera définitivement supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
