@@ -95,12 +95,20 @@ export default function AATestPage() {
   
   const handleDeleteConfirm = async () => {
     if (!creditNoteToDelete) return;
-    await api.deletePurchaseCreditNote(creditNoteToDelete.id);
-    refetchCreditNotes();
-    toast({
-      title: 'Avoir supprimé',
-      description: `L'avoir "${creditNoteToDelete.creditNoteNumber}" a été supprimé.`,
-    });
+    try {
+      await api.deletePurchaseCreditNote(creditNoteToDelete.id);
+      refetchCreditNotes();
+      toast({
+        title: 'Avoir supprimé',
+        description: `L'avoir "${creditNoteToDelete.creditNoteNumber}" a été supprimé.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Suppression impossible',
+        description: error.message || 'La suppression a échoué.',
+      });
+    }
     setDeleteDialogOpen(false);
     setCreditNoteToDelete(null);
     setSelectedCreditNote(null);

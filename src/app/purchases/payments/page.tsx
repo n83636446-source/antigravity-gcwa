@@ -8,7 +8,7 @@ import { supplierFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, PlusCircle } from 'lucide-react';
+import { RotateCcw, PlusCircle, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -43,6 +43,8 @@ export default function ReglementTestPage() {
   // --- STATES ---
   const [reglementToVoid, setReglementToVoid] = useState<Reglement | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [reglementToDelete, setReglementToDelete] = useState<Reglement | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [dialogToken, setDialogToken] = useState(0);
 
@@ -76,6 +78,29 @@ export default function ReglementTestPage() {
     }
     setVoidDialogOpen(false);
     setReglementToVoid(null);
+};
+
+const handleDeleteClick = (reglement: Reglement) => {
+  setReglementToDelete(reglement);
+  setDeleteDialogOpen(true);
+};
+
+const handleDeleteConfirm = async () => {
+  if (!reglementToDelete) return;
+  try {
+    await api.deleteReglement(reglementToDelete.id);
+    toast({ title: 'Règlement supprimé', description: 'Le règlement a été supprimé définitivement.' });
+    refetchReglements();
+    refetchInvoices();
+  } catch (error: any) {
+    toast({
+      variant: 'destructive',
+      title: 'Suppression impossible',
+      description: error.message || 'La suppression a échoué.',
+    });
+  }
+  setDeleteDialogOpen(false);
+  setReglementToDelete(null);
 };
 const handleCreateClick = () => {
     setShowCreateDialog(true);
@@ -154,21 +179,36 @@ const handleCreateClick = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {reg.status === 'Actif' && (
+                          <div className="flex items-center gap-1">
+                            {reg.status === 'Actif' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-muted-foreground hover:text-red-600"
+                                    onClick={() => handleVoidClick(reg)}
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Annuler ce règlement</TooltipContent>
+                              </Tooltip>
+                            )}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                                  onClick={() => handleVoidClick(reg)}
+                                  onClick={() => handleDeleteClick(reg)}
                                 >
-                                  <RotateCcw className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Annuler ce règlement</TooltipContent>
+                              <TooltipContent>Supprimer ce règlement</TooltipContent>
                             </Tooltip>
-                          )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -212,6 +252,22 @@ const handleCreateClick = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Retour</AlertDialogCancel>
             <AlertDialogAction onClick={handleVoidConfirm} className="bg-red-600 hover:bg-red-700 text-white">Confirmer l'annulation</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce règlement ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement le règlement <strong>{reglementToDelete?.reglementNumber}</strong>.
+              {reglementToDelete?.status === 'Actif' && ' Le solde dû sera rétabli sur la facture correspondante.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Retour</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700 text-white">Supprimer définitivement</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

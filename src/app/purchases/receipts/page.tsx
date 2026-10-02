@@ -50,7 +50,7 @@ export default function BRTestPage() {
   
     const { data: allOrders, isLoading: isLoadingOrders } = useApiCollection(() => api.getPurchaseOrders().then(r => r.map(purchaseOrderFromApi)));
   
-    const { data: invoices, isLoading: isLoadingInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
+    const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
 
     const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useApiCollection(() => api.getProducts().then(r => r.map(productFromApi)));
 
@@ -121,11 +121,19 @@ export default function BRTestPage() {
   
   const handleDeleteConfirm = async () => {
     if (!receiptToDelete) return;
-    await api.deletePurchaseReceipt(receiptToDelete.id); refetchReceipts();
-    toast({
-      title: 'Bon de réception supprimé',
-      description: `Le bon de réception "${receiptToDelete.receiptNumber}" a été supprimé.`,
-    });
+    try {
+      await api.deletePurchaseReceipt(receiptToDelete.id); refetchReceipts();
+      toast({
+        title: 'Bon de réception supprimé',
+        description: `Le bon de réception "${receiptToDelete.receiptNumber}" a été supprimé.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Suppression impossible',
+        description: error.message || 'La suppression a échoué.',
+      });
+    }
     setDeleteDialogOpen(false);
     setReceiptToDelete(null);
     setSelectedReceipt(null);
@@ -337,7 +345,7 @@ const handleTransferToInvoice = () => {
       {/* Rendu masqué du nouveau dialogue pour permettre son déclenchement externe */}
       <div className="hidden">
           <BrTestDialog key={`${dialogToken}-${receiptToEdit?.id ?? 'new'}`} receiptToEdit={receiptToEdit} onSaveSuccess={() => refetchReceipts()} />
-          <FaTestDialog key={`transfer-${dialogToken}-${receiptToTransfer?.id ?? 'none'}`} receiptToTransfer={receiptToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchReceipts()} />
+          <FaTestDialog key={`transfer-${dialogToken}-${receiptToTransfer?.id ?? 'none'}`} receiptToTransfer={receiptToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchReceipts(); refetchInvoices(); }} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -306,6 +306,7 @@ export const api = {
     const result = await post<any>('/reglements/' + id + '/void', {});
     return reglementFromApi(result);
   },
+  deleteReglement: (id: string) => del('/reglements/' + id),
 
 };
 

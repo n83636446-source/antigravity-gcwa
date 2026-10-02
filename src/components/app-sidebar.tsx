@@ -102,7 +102,7 @@ export function AppSidebar() {
               >
                 <Link href={item.href}>
                   <item.icon className="size-4" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  <span className="font-light group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -114,7 +114,7 @@ export function AppSidebar() {
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
                   <Boxes className="size-4" />
-                  <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Articles</span>
+                  <span className="font-light group-data-[collapsible=icon]:hidden flex-1 text-left">Articles</span>
                   <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
                 </Button>
               </CollapsibleTrigger>
@@ -138,7 +138,7 @@ export function AppSidebar() {
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
                   <Users className="size-4" />
-                  <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Tiers</span>
+                  <span className="font-light group-data-[collapsible=icon]:hidden flex-1 text-left">Tiers</span>
                   <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
                 </Button>
               </CollapsibleTrigger>
@@ -162,7 +162,7 @@ export function AppSidebar() {
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
                   <ShoppingCart className="size-4" />
-                  <span className="group-data-[collapsible=icon]:hidden flex-1 text-left">Achats</span>
+                  <span className="font-light group-data-[collapsible=icon]:hidden flex-1 text-left">Achats</span>
                   <Menu className="size-4 group-data-[collapsible=icon]:hidden" />
                 </Button>
               </CollapsibleTrigger>
@@ -190,7 +190,7 @@ export function AppSidebar() {
             >
               <Link href="/reports">
                 <LineChart className="size-4" />
-                <span className="group-data-[collapsible=icon]:hidden">Rapports</span>
+                <span className="font-light group-data-[collapsible=icon]:hidden">Rapports</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -207,7 +207,7 @@ export function AppSidebar() {
             >
               <Link href="/maintenance">
                 <AlertTriangle className="size-4" />
-                <span className="group-data-[collapsible=icon]:hidden">Maintenance</span>
+                <span className="font-light group-data-[collapsible=icon]:hidden">Maintenance</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

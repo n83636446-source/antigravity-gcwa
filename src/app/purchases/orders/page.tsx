@@ -142,11 +142,11 @@ export default function BCTestPage() {
         title: 'Bon de commande supprimé',
         description: `Le bon de commande "${orderToDelete.orderNumber}" a été supprimé.`,
       });
-    } catch (e) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erreur',
-        description: 'Impossible de supprimer le bon de commande.',
+        description: error.message || 'Impossible de supprimer le bon de commande.',
       });
     }
     setDeleteDialogOpen(false);

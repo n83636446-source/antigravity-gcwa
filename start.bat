@@ -8,8 +8,8 @@ echo    StockPilot - Starting Servers
 echo  ==========================================
 echo.
 
-echo [1/2] Starting FastAPI Backend on port 8000...
-start "StockPilot Backend" cmd /k "python-embed\Scripts\uvicorn.exe backend.main:app --host 0.0.0.0 --port 8000 --reload"
+echo [1/2] Starting FastAPI Backend on port 8001...
+start "StockPilot Backend" cmd /k "python-embed\Scripts\uvicorn.exe backend.main:app --host 0.0.0.0 --port 8001 --reload"
 
 timeout /t 3 /nobreak >nul
 
@@ -24,7 +24,7 @@ echo    Servers are starting up!
 echo  ==========================================
 echo.
 echo   Web App:  http://localhost:9002
-echo   API Docs: http://localhost:8000/docs
+echo   API Docs: http://localhost:8001/docs
 echo.
 echo  Opening browser in 5 seconds...
 timeout /t 5 /nobreak >nul

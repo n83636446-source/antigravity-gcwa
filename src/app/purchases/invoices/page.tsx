@@ -100,12 +100,20 @@ export default function FATestPage() {
   
   const handleDeleteConfirm = async () => {
     if (!invoiceToDelete) return;
-    await api.deletePurchaseInvoice(invoiceToDelete.id); 
-    refetchInvoices();
-    toast({
-      title: 'Facture supprimée',
-      description: `La facture "${invoiceToDelete.invoiceNumber}" a été supprimée.`,
-    });
+    try {
+      await api.deletePurchaseInvoice(invoiceToDelete.id); 
+      refetchInvoices();
+      toast({
+        title: 'Facture supprimée',
+        description: `La facture "${invoiceToDelete.invoiceNumber}" a été supprimée.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Suppression impossible',
+        description: error.message || 'La suppression a échoué.',
+      });
+    }
     setDeleteDialogOpen(false);
     setInvoiceToDelete(null);
     setSelectedInvoice(null);

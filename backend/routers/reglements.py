@@ -79,3 +79,26 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# TEMPORARY (testing phase): allows full deletion of règlements. Revisit with regulations/audit-trail before production.
+@router.delete("/{id}")
+def delete_reglement(id: str, db: Session = Depends(get_db)):
+    reglement = get_by_id(db, Reglement, id)
+    if not reglement:
+        raise HTTPException(status_code=404, detail="Reglement not found")
+
+    try:
+        if reglement.status == "Actif":
+            invoice = get_by_id(db, PurchaseInvoice, reglement.purchase_invoice_id)
+            if invoice:
+                new_amount_paid = (invoice.amount_paid or 0) - reglement.amount
+                invoice.amount_paid = new_amount_paid
+                invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
+        
+        db.delete(reglement)
+        db.commit()
+        return {"deleted": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))

@@ -13,7 +13,7 @@ import { cn, roundMoney, generateId, isDuplicateNumber } from "@/lib/utils"
  
 import { api } from "@/lib/api"
 import { productFromApi, supplierFromApi, representativeFromApi, purchaseCreditNoteFromApi, purchaseCreditNoteToApi } from "@/lib/types";
-import type { PurchaseCreditNote } from "@/lib/types" 
+import type { PurchaseCreditNote, PurchaseInvoice } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
 import { ArticleDialog } from "@/components/article-dialog"
@@ -86,13 +86,16 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
 
 interface AaTestDialogProps {
     creditNoteToEdit?: PurchaseCreditNote | null;
+    invoiceToTransfer?: PurchaseInvoice | null;
+    isTransferInstance?: boolean;
     onSaveSuccess?: () => void;
 }
 
-export function AaTestDialog({ creditNoteToEdit, onSaveSuccess }: AaTestDialogProps) {
-  const storageKeyPrefix = 'aaTestDialog';
+export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferInstance = false, onSaveSuccess }: AaTestDialogProps) {
+  const storageKeyPrefix = isTransferInstance ? 'aaTransferDialog' : 'aaTestDialog';
 
   const [open, setOpen] = useState<boolean>((() => {
+    if (isTransferInstance) return !!invoiceToTransfer;
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(`${storageKeyPrefix}State`);
       return saved ? JSON.parse(saved) : false;
@@ -101,10 +104,12 @@ export function AaTestDialog({ creditNoteToEdit, onSaveSuccess }: AaTestDialogPr
   })());
 
   useEffect(() => {
+    if (isTransferInstance) return;
     sessionStorage.setItem(`${storageKeyPrefix}State`, JSON.stringify(open));
   }, [open, storageKeyPrefix]);
 
   const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    if (isTransferInstance) return false;
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(`${storageKeyPrefix}MinimizedState`);
       return saved ? JSON.parse(saved) : false;
@@ -113,6 +118,7 @@ export function AaTestDialog({ creditNoteToEdit, onSaveSuccess }: AaTestDialogPr
   });
 
   useEffect(() => {
+    if (isTransferInstance) return;
     sessionStorage.setItem(`${storageKeyPrefix}MinimizedState`, JSON.stringify(isMinimized));
   }, [isMinimized, storageKeyPrefix]);
   
@@ -266,6 +272,23 @@ export function AaTestDialog({ creditNoteToEdit, onSaveSuccess }: AaTestDialogPr
               tva: item.tvaRate
             })));
             setOpen(true);
+        } else if (invoiceToTransfer) {
+            setCreditNoteNumber(calculateNextNumber(creditNotes));
+            setDate(new Date());
+            setSupplierId(invoiceToTransfer.supplierId);
+            setPaymentMethod(invoiceToTransfer.paymentMode || "cash");
+            if (invoiceToTransfer.dueDate) setDueDate(new Date(invoiceToTransfer.dueDate));
+            setRepresentativeId(invoiceToTransfer.representativeId || "");
+            setReference(invoiceToTransfer.reference || "");
+            setRemarks(invoiceToTransfer.remarks || "");
+            setItems(invoiceToTransfer.items.map(item => ({
+              id: generateId(),
+              articleId: item.productId,
+              qty: item.quantity,
+              price: item.price,
+              tva: item.tvaRate
+            })));
+            setOpen(true);
         } else {
             setCreditNoteNumber(calculateNextNumber(creditNotes));
         }
@@ -274,7 +297,7 @@ export function AaTestDialog({ creditNoteToEdit, onSaveSuccess }: AaTestDialogPr
       }
     }
     if (open) fetchData()
-  }, [open, isEditMode, creditNoteToEdit])
+  }, [open, isEditMode, creditNoteToEdit, invoiceToTransfer])
 
   useEffect(() => {
     if (isBefore(dueDate, startOfDay(date))) {
@@ -330,6 +353,7 @@ export function AaTestDialog({ creditNoteToEdit, onSaveSuccess }: AaTestDialogPr
         if (representativeId) creditNoteData.representativeId = representativeId;
         if (reference) creditNoteData.reference = reference;
         if (remarks) creditNoteData.remarks = remarks;
+        if (invoiceToTransfer) creditNoteData.purchaseInvoiceId = invoiceToTransfer.id;
 
         if (isEditMode && creditNoteToEdit) {
             await api.updatePurchaseCreditNote(creditNoteToEdit.id, purchaseCreditNoteToApi(creditNoteData));
