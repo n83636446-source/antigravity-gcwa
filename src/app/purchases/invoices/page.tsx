@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { api } from "@/lib/api";
-import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi, purchaseReceiptFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseInvoice, Supplier } from '@/lib/types';
@@ -60,8 +60,9 @@ export default function FATestPage() {
     const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
   
     const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
+    const { data: receipts, isLoading: isLoadingReceipts } = useApiCollection(() => api.getPurchaseReceipts().then(r => r.map(purchaseReceiptFromApi)));
 
-  const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingCreditNotes;
+  const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingCreditNotes || isLoadingReceipts;
 
   const invoiceAlreadyCredited = useMemo(
     () => !!selectedInvoice && (creditNotes ?? []).some(note => note.purchaseInvoiceId === selectedInvoice.id),
@@ -357,6 +358,8 @@ export default function FATestPage() {
                       <TableHead>Fournisseur</TableHead>
                       <TableHead className="text-right">Montant TTC</TableHead>
                       <TableHead>Statut</TableHead>
+                      <TableHead>Réglée</TableHead>
+                      <TableHead>Origine</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -376,6 +379,10 @@ export default function FATestPage() {
                         <TableCell>
                           {getStatusBadge(invoice.status)}
                         </TableCell>
+                        <TableCell>
+                          {invoice.status === 'Payée' ? <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge> : invoice.status === 'Partiellement payée' ? <Badge variant="outline" className="border-amber-500 text-amber-600">Partiellement</Badge> : (invoice.status === 'Non payée' || invoice.status === 'En retard') ? <Badge variant="outline" className="text-muted-foreground">Non</Badge> : '—'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{invoice.purchaseReceiptId ? receipts?.find(r => r.id === invoice.purchaseReceiptId)?.receiptNumber || '—' : '—'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
