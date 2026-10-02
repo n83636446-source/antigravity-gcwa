@@ -264,7 +264,7 @@ const nextNum = calculateNextNumber(existing);
                         <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                            <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
                            <div key={shakeTick} className={cn("w-full", formErrors.supplier && "animate-shake")}>
-                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setSelectedInvoice(null); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} hasError={formErrors.supplier} />
+                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setSelectedInvoice(null); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} hasError={formErrors.supplier} disabled={!!purchaseInvoice} />
                            </div>
                         </div>
                      </div>
