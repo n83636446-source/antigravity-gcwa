@@ -191,22 +191,7 @@ export default function FATestPage() {
     setDialogToken(prev => prev + 1);
   };
 
-  const getStatusBadge = (status: PurchaseInvoice['status']) => {
-    switch (status) {
-        case 'Brouillon':
-            return <Badge variant="secondary">{status}</Badge>;
-        case 'Non payée':
-            return <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">{status}</Badge>;
-        case 'Payée':
-            return <Badge variant="outline" className="border-green-600 text-green-700">{status}</Badge>;
-        case 'Partiellement payée':
-            return <Badge variant="outline" className="border-amber-500 text-amber-600">{status}</Badge>;
-        case 'En retard':
-            return <Badge variant="destructive">{status}</Badge>;
-        default:
-            return <Badge>{status}</Badge>;
-    }
-  };
+
   
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -359,7 +344,7 @@ export default function FATestPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Fournisseur</TableHead>
                       <TableHead className="text-right">Montant TTC</TableHead>
-                      <TableHead>Statut</TableHead>
+                      <TableHead>Validée</TableHead>
                       <TableHead>Réglée</TableHead>
                       <TableHead>Origine</TableHead>
                     </TableRow>
@@ -379,7 +364,9 @@ export default function FATestPage() {
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.totalTTC)}
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(invoice.status)}
+                          {invoice.status === 'Brouillon'
+                            ? <Badge variant="outline" className="text-muted-foreground">Non</Badge>
+                            : <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge>}
                         </TableCell>
                         <TableCell>
                           {invoice.status === 'Payée' ? <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge> : invoice.status === 'Partiellement payée' ? <Badge variant="outline" className="border-amber-500 text-amber-600">Partiellement</Badge> : (invoice.status === 'Non payée' || invoice.status === 'En retard') ? <Badge variant="outline" className="text-muted-foreground">Non</Badge> : '—'}
