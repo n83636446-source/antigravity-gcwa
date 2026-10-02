@@ -22,6 +22,7 @@ import { useShakeWarning } from "@/hooks/use-shake-warning"
 // --- SHARED UI IMPORTS ---
 import {
   SupplierSelector,
+  SupplierSearchDialog,
   DatePickerField,
 } from "@/components/purchase-dialog-shared-ui"
 
@@ -50,6 +51,7 @@ export function ReglementTestDialog({ purchaseInvoice, onSaveSuccess }: Reglemen
   
   // Interactive Selection State
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null);
 
   // Form states
@@ -156,6 +158,12 @@ const nextNum = calculateNextNumber(existing);
     setOpen(false);
   };
 
+  const handleSupplierSearchSelect = (supplier: Supplier) => {
+    setSelectedSupplierId(supplier.id);
+    setSelectedInvoice(null);
+    setIsSupplierSearchOpen(false);
+  };
+
   const handleCreateReglement = async () => {
     
     
@@ -256,7 +264,7 @@ const nextNum = calculateNextNumber(existing);
                         <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                            <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
                            <div key={shakeTick} className={cn("w-full", formErrors.supplier && "animate-shake")}>
-                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setSelectedInvoice(null); }} suppliers={availableSuppliers} onOpenAdvanced={() => {}} onCreateNew={() => {}} hasError={formErrors.supplier} />
+                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setSelectedInvoice(null); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} onCreateNew={() => {}} hasError={formErrors.supplier} />
                            </div>
                         </div>
                      </div>
@@ -448,6 +456,7 @@ const nextNum = calculateNextNumber(existing);
           </div>
         </DialogPortal>
       </Dialog>
+      <SupplierSearchDialog isOpen={isSupplierSearchOpen} onOpenChange={setIsSupplierSearchOpen} onSelect={handleSupplierSearchSelect} suppliers={availableSuppliers} />
     </>
   );
 }
