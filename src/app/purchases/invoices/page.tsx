@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { api } from "@/lib/api";
-import { supplierFromApi, purchaseInvoiceFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseInvoice, Supplier } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle, Wallet } from 'lucide-react';
+import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle, Wallet, ArrowRightCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { FaTestDialog } from '@/components/fa-test-dialog';
+import { AaTestDialog } from '@/components/aa-test-dialog';
 import { ReglementTestDialog } from '@/components/reglement-test-dialog';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -50,6 +51,7 @@ export default function FATestPage() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<PurchaseInvoice | null>(null);
   
   const [invoiceToReglement, setInvoiceToReglement] = useState<PurchaseInvoice | null>(null);
+  const [invoiceToTransfer, setInvoiceToTransfer] = useState<PurchaseInvoice | null>(null);
 
   // --- DATA FETCHING ---
     const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
@@ -57,13 +59,21 @@ export default function FATestPage() {
     
     const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
   
-  const isLoading = isLoadingInvoices || isLoadingSuppliers;
+    const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
+
+  const isLoading = isLoadingInvoices || isLoadingSuppliers || isLoadingCreditNotes;
+
+  const invoiceAlreadyCredited = useMemo(
+    () => !!selectedInvoice && (creditNotes ?? []).some(note => note.purchaseInvoiceId === selectedInvoice.id),
+    [selectedInvoice, creditNotes]
+  );
 
   // --- HANDLERS ---
 
   const handleOpenNewInvoice = () => {
     setInvoiceToEdit(null);
     setInvoiceToReglement(null);
+    setInvoiceToTransfer(null);
     sessionStorage.setItem('faTestDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
@@ -79,6 +89,7 @@ export default function FATestPage() {
   const handleRowDoubleClick = (invoice: PurchaseInvoice) => {
     setInvoiceToEdit(invoice);
     setInvoiceToReglement(null);
+    setInvoiceToTransfer(null);
     sessionStorage.setItem('faTestDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
@@ -158,7 +169,24 @@ export default function FATestPage() {
   };
 
   const handleReglerClick = () => {
+    setInvoiceToTransfer(null);
     setInvoiceToReglement(selectedInvoice);
+    setDialogToken(prev => prev + 1);
+  };
+
+  const handleTransferToCreditNote = () => {
+    if (!selectedInvoice) return;
+    if (selectedInvoice.status === 'Brouillon') {
+      toast({ variant: 'destructive', title: 'Action impossible', description: "Vous ne pouvez transférer qu'une facture validée." });
+      return;
+    }
+    if (invoiceAlreadyCredited) {
+      toast({ variant: 'destructive', title: 'Action impossible', description: 'Cette facture a déjà été transférée en avoir.' });
+      return;
+    }
+    setInvoiceToEdit(null);
+    setInvoiceToReglement(null);
+    setInvoiceToTransfer(selectedInvoice);
     setDialogToken(prev => prev + 1);
   };
 
@@ -248,6 +276,31 @@ export default function FATestPage() {
                         <TooltipContent>Régler</TooltipContent>
                       </Tooltip>
                     )}
+                  </div>
+
+                  {/* Transférer en Avoir */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300",
+                      selectedInvoice ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                    )}
+                    style={{ transitionDelay: selectedInvoice ? '110ms' : '0ms' }}
+                  >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8" 
+                          onClick={handleTransferToCreditNote}
+                          disabled={!selectedInvoice || selectedInvoice.status === 'Brouillon' || invoiceAlreadyCredited}
+                        >
+                          <ArrowRightCircle className="h-4 w-4" />
+                          <span className="sr-only">Transférer en Avoir</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Transférer en Avoir</TooltipContent>
+                    </Tooltip>
                   </div>
 
                   {/* Modifier */}
@@ -353,6 +406,7 @@ export default function FATestPage() {
           {invoiceToReglement && (
             <ReglementTestDialog key={`reglement-${dialogToken}-${invoiceToReglement.id}`} purchaseInvoice={invoiceToReglement} onSaveSuccess={() => refetchInvoices()} />
           )}
+          <AaTestDialog key={`transfer-${dialogToken}-${invoiceToTransfer?.id ?? 'none'}`} invoiceToTransfer={invoiceToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
