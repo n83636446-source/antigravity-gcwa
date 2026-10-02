@@ -190,7 +190,7 @@ export const SupplierSelector = ({
     onChange: (id: string) => void, 
     suppliers: Supplier[],
     onOpenAdvanced: () => void,
-    onCreateNew: () => void,
+    onCreateNew?: () => void,
     hasError?: boolean,
     disabled?: boolean
 }) => {
@@ -273,6 +273,7 @@ export const SupplierSelector = ({
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="flex flex-col">
+                    {onCreateNew && (
                     <div 
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={(e) => { 
@@ -287,6 +288,7 @@ export const SupplierSelector = ({
                         <PlusCircle className="ml-1 h-4 w-4" />
                         Créer un nouveau fournisseur
                     </div>
+                    )}
 
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b bg-slate-50 shrink-0">
                         <span className="text-left pl-2">Code</span>
@@ -657,6 +659,7 @@ export const SupplierSearchDialog = ({
             </div>
         </div>
 
+        {onCreateNew && (
         <div 
             onClick={onCreateNew}
             className="flex items-center gap-2 px-4 py-3 text-sm text-blue-600 font-semibold bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-colors border-b"
@@ -664,6 +667,7 @@ export const SupplierSearchDialog = ({
             <PlusCircle className="h-4 w-4" />
             Créer un nouveau fournisseur
         </div>
+        )}
 
         <div className="flex-1 overflow-auto p-0">
             <table className="w-full caption-bottom text-sm">
