@@ -199,6 +199,8 @@ export default function FATestPage() {
             return <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">{status}</Badge>;
         case 'Payée':
             return <Badge variant="outline" className="border-green-600 text-green-700">{status}</Badge>;
+        case 'Partiellement payée':
+            return <Badge variant="outline" className="border-amber-500 text-amber-600">{status}</Badge>;
         case 'En retard':
             return <Badge variant="destructive">{status}</Badge>;
         default:
