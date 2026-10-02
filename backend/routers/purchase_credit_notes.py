@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import PurchaseCreditNote, Product
+from ..models import PurchaseCreditNote, PurchaseInvoice, Product
 from ..schemas import PurchaseCreditNoteCreate, PurchaseCreditNoteUpdate, PurchaseCreditNoteRead
 from .. import crud
 
@@ -29,6 +29,16 @@ def create_purchase_credit_note(data: PurchaseCreditNoteCreate, db: Session = De
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Credit note ID already exists")
     if db.query(PurchaseCreditNote).filter(PurchaseCreditNote.credit_note_number == data.credit_note_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.credit_note_number}" est déjà utilisé.')
+    
+    if data.purchase_invoice_id:
+        source_invoice = crud.get_by_id(db, PurchaseInvoice, data.purchase_invoice_id)
+        if not source_invoice:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Facture source introuvable.")
+        if source_invoice.status == "Brouillon":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vous ne pouvez créer un avoir qu'à partir d'une facture validée.")
+        if db.query(PurchaseCreditNote).filter(PurchaseCreditNote.purchase_invoice_id == data.purchase_invoice_id).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Un avoir existe déjà pour cette facture.")
+
     return crud.create(db, PurchaseCreditNote, data.model_dump())
 
 
