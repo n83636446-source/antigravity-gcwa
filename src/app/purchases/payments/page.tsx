@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { Reglement, PurchaseInvoice, Supplier } from '@/lib/types';
+import type { Reglement, PurchaseInvoice, Supplier, ReglementLine } from '@/lib/types';
 import { api } from "@/lib/api";
 import { supplierFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
@@ -107,9 +107,8 @@ const handleCreateClick = () => {
     setDialogToken(prev => prev + 1);
   };
 
-  const getInvoiceNumber = (id: string) => {
-    return invoices?.find(i => i.id === id)?.invoiceNumber || 'Inconnue';
-  };
+  const getInvoiceNumbers = (lines: ReglementLine[]) =>
+    lines.map(l => invoices?.find(i => i.id === l.purchaseInvoiceId)?.invoiceNumber || 'Inconnue').join(', ');
 
   const getSupplierName = (id: string) => {
     return suppliers?.find(s => s.id === id)?.name || 'Inconnu';
@@ -153,7 +152,7 @@ const handleCreateClick = () => {
                       <TableHead>Numéro</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Fournisseur</TableHead>
-                      <TableHead>Facture</TableHead>
+                      <TableHead>Factures</TableHead>
                       <TableHead className="text-right">Montant</TableHead>
                       <TableHead>Mode</TableHead>
                       <TableHead>Statut</TableHead>
@@ -168,7 +167,7 @@ const handleCreateClick = () => {
                         </TableCell>
                         <TableCell>{format(new Date(reg.date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                         <TableCell>{getSupplierName(reg.supplierId)}</TableCell>
-                        <TableCell className="font-mono text-xs">{getInvoiceNumber(reg.purchaseInvoiceId)}</TableCell>
+                        <TableCell className="font-mono text-xs">{getInvoiceNumbers(reg.lines)}</TableCell>
                         <TableCell className="text-right font-medium">
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(reg.amount)}
                         </TableCell>

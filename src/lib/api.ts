@@ -294,10 +294,7 @@ export const api = {
     return data.map(reglementFromApi);
   },
 
-  updateReglement: async (id: string, data: any): Promise<Reglement> => {
-    const result = await put<any>('/reglements/' + id, data);
-    return reglementFromApi(result);
-  },
+
   submitReglement: async (data: any): Promise<Reglement> => {
     const result = await post<any>('/reglements/submit', data);
     return reglementFromApi(result);

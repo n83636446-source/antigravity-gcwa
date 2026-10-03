@@ -142,10 +142,15 @@ export type PurchaseCreditNote = {
   remarks?: string;
 };
 
+export type ReglementLine = {
+  id: string;
+  purchaseInvoiceId: string;
+  amount: number;
+};
+
 export type Reglement = {
   id: string;
   reglementNumber: string;
-  purchaseInvoiceId: string;
   supplierId: string;
   date: string;
   amount: number;
@@ -153,6 +158,7 @@ export type Reglement = {
   reference?: string;
   remarks?: string;
   status: 'Actif' | 'Annulé';
+  lines: ReglementLine[];
 };
 
 export type Representative = {
@@ -339,7 +345,6 @@ export function reglementFromApi(apiItem: any): Reglement {
   return {
     id: apiItem.id,
     reglementNumber: apiItem.reglement_number,
-    purchaseInvoiceId: apiItem.purchase_invoice_id,
     supplierId: apiItem.supplier_id,
     date: apiItem.date,
     amount: apiItem.amount,
@@ -347,6 +352,7 @@ export function reglementFromApi(apiItem: any): Reglement {
     reference: apiItem.reference || undefined,
     remarks: apiItem.remarks || undefined,
     status: apiItem.status || 'Actif',
+    lines: (apiItem.lines || []).map((l: any) => ({ id: l.id, purchaseInvoiceId: l.purchase_invoice_id, amount: l.amount })),
   };
 }
 
