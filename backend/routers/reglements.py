@@ -34,8 +34,8 @@ def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    remaining = (invoice.total_ttc or 0) - (invoice.amount_paid or 0)
-    if data.amount <= 0 or data.amount > remaining:
+    remaining = round((invoice.total_ttc or 0) - (invoice.amount_paid or 0), 2)
+    if round(data.amount, 2) <= 0 or round(data.amount, 2) > remaining:
         raise HTTPException(status_code=400, detail="Le montant du règlement dépasse le solde dû.")
 
     if db.query(Reglement).filter(Reglement.reglement_number == data.reglement_number).first():
@@ -45,9 +45,9 @@ def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
         reglement = Reglement(**data.model_dump())
         db.add(reglement)
 
-        new_amount_paid = (invoice.amount_paid or 0) + data.amount
+        new_amount_paid = round((invoice.amount_paid or 0) + data.amount, 2)
         invoice.amount_paid = new_amount_paid
-        invoice.status = "Payée" if new_amount_paid >= (invoice.total_ttc or 0) else "Partiellement payée"
+        invoice.status = "Payée" if new_amount_paid >= round(invoice.total_ttc or 0, 2) else "Partiellement payée"
 
         db.commit()
         db.refresh(reglement)
@@ -68,7 +68,7 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
     try:
         invoice = get_by_id(db, PurchaseInvoice, reglement.purchase_invoice_id)
         if invoice:
-            new_amount_paid = (invoice.amount_paid or 0) - reglement.amount
+            new_amount_paid = round((invoice.amount_paid or 0) - reglement.amount, 2)
             invoice.amount_paid = new_amount_paid
             invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
 
@@ -92,7 +92,7 @@ def delete_reglement(id: str, db: Session = Depends(get_db)):
         if reglement.status == "Actif":
             invoice = get_by_id(db, PurchaseInvoice, reglement.purchase_invoice_id)
             if invoice:
-                new_amount_paid = (invoice.amount_paid or 0) - reglement.amount
+                new_amount_paid = round((invoice.amount_paid or 0) - reglement.amount, 2)
                 invoice.amount_paid = new_amount_paid
                 invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
         
