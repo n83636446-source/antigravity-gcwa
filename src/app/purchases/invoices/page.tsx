@@ -253,7 +253,7 @@ export default function FATestPage() {
                     )}
                     style={{ transitionDelay: selectedInvoice ? '75ms' : '0ms' }}
                   >
-                    {selectedInvoice?.status === 'Non payée' && (
+                    {(selectedInvoice?.status === 'Non payée' || selectedInvoice?.status === 'Partiellement payée') && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleReglerClick}>
