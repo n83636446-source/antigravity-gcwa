@@ -237,6 +237,7 @@ const handleCreateClick = () => {
         <ReglementTestDialog
             key={`new-${dialogToken}`}
             purchaseInvoice={null}
+            onSaveSuccess={() => { refetchReglements(); refetchInvoices(); }}
         />
       )}
 
