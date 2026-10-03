@@ -314,31 +314,35 @@ class PurchaseCreditNoteRead(PurchaseCreditNoteBase):
     id: str
     model_config = ConfigDict(from_attributes=True)
 # --- Reglement ---
-class ReglementBase(BaseModel):
-    reglement_number: str
+class ReglementLineIn(BaseModel):
     purchase_invoice_id: str
+    amount: float = Field(gt=0)
+
+class ReglementLineRead(BaseModel):
+    id: str
+    purchase_invoice_id: str
+    amount: float
+    model_config = ConfigDict(from_attributes=True)
+
+class ReglementCreate(BaseModel):
+    id: str
+    reglement_number: str = Field(min_length=1)
+    supplier_id: str
+    date: str
+    payment_mode: Optional[str] = None
+    reference: Optional[str] = None
+    remarks: Optional[str] = None
+    lines: List[ReglementLineIn] = Field(min_length=1)
+
+class ReglementRead(BaseModel):
+    id: str
+    reglement_number: str
     supplier_id: str
     date: str
     amount: float
     payment_mode: Optional[str] = None
     reference: Optional[str] = None
     remarks: Optional[str] = None
-    status: str = "Actif"
-
-class ReglementCreate(ReglementBase):
-    id: str
-
-class ReglementUpdate(BaseModel):
-    reglement_number: Optional[str] = None
-    purchase_invoice_id: Optional[str] = None
-    supplier_id: Optional[str] = None
-    date: Optional[str] = None
-    amount: Optional[float] = None
-    payment_mode: Optional[str] = None
-    reference: Optional[str] = None
-    remarks: Optional[str] = None
-    status: Optional[str] = None
-
-class ReglementRead(ReglementBase):
-    id: str
+    status: str
+    lines: List[ReglementLineRead] = []
     model_config = ConfigDict(from_attributes=True)

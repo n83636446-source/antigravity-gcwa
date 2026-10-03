@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+import uuid
 
 from ..database import get_db
-from ..models import Reglement, PurchaseInvoice
-from ..schemas import ReglementCreate, ReglementRead, ReglementUpdate
-from ..crud import get_all, get_by_id, update
+from ..models import Reglement, PurchaseInvoice, Supplier, ReglementLine
+from ..schemas import ReglementCreate, ReglementRead
+from ..crud import get_all, get_by_id
 
 router = APIRouter()
 
@@ -20,34 +21,71 @@ def read_reglement(id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Reglement not found")
     return db_obj
 
-@router.put("/{id}", response_model=ReglementRead)
-def update_reglement(id: str, data: ReglementUpdate, db: Session = Depends(get_db)):
-    db_obj = get_by_id(db, Reglement, id)
-    if not db_obj:
-        raise HTTPException(status_code=404, detail="Reglement not found")
-    return update(db, db_obj, data.model_dump(exclude_unset=True))
-
-
 @router.post("/submit", response_model=ReglementRead)
 def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
-    invoice = get_by_id(db, PurchaseInvoice, data.purchase_invoice_id)
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    remaining = round((invoice.total_ttc or 0) - (invoice.amount_paid or 0), 2)
-    if round(data.amount, 2) <= 0 or round(data.amount, 2) > remaining:
-        raise HTTPException(status_code=400, detail="Le montant du règlement dépasse le solde dû.")
-
     if db.query(Reglement).filter(Reglement.reglement_number == data.reglement_number).first():
         raise HTTPException(status_code=400, detail=f'Le numéro "{data.reglement_number}" est déjà utilisé.')
 
+    supplier = get_by_id(db, Supplier, data.supplier_id)
+    if not supplier:
+        raise HTTPException(status_code=400, detail="Fournisseur introuvable.")
+
+    invoice_ids = [line.purchase_invoice_id for line in data.lines]
+    if len(invoice_ids) != len(set(invoice_ids)):
+        raise HTTPException(status_code=400, detail="Une même facture ne peut apparaître qu'une seule fois dans un règlement.")
+
+    total_amount = 0.0
+    invoices_to_update = []
+
+    for line in data.lines:
+        invoice = get_by_id(db, PurchaseInvoice, line.purchase_invoice_id)
+        if not invoice:
+            raise HTTPException(status_code=400, detail="Facture introuvable.")
+        
+        if invoice.supplier_id != data.supplier_id:
+            raise HTTPException(status_code=400, detail=f"La facture {invoice.invoice_number} n'appartient pas à ce fournisseur.")
+        
+        if invoice.status == "Brouillon":
+            raise HTTPException(status_code=400, detail=f"La facture {invoice.invoice_number} n'est pas validée.")
+
+        amount = round(line.amount, 2)
+        remaining = round((invoice.total_ttc or 0) - (invoice.amount_paid or 0), 2)
+        
+        if amount <= 0 or amount > remaining:
+            raise HTTPException(status_code=400, detail=f"Le montant pour la facture {invoice.invoice_number} dépasse le solde dû.")
+        
+        total_amount += amount
+        invoices_to_update.append((invoice, amount))
+
+    total_amount = round(total_amount, 2)
+
     try:
-        reglement = Reglement(**data.model_dump())
+        reglement = Reglement(
+            id=data.id,
+            reglement_number=data.reglement_number,
+            supplier_id=data.supplier_id,
+            date=data.date,
+            amount=total_amount,
+            payment_mode=data.payment_mode,
+            reference=data.reference,
+            remarks=data.remarks,
+            status="Actif"
+        )
         db.add(reglement)
 
-        new_amount_paid = round((invoice.amount_paid or 0) + data.amount, 2)
-        invoice.amount_paid = new_amount_paid
-        invoice.status = "Payée" if new_amount_paid >= round(invoice.total_ttc or 0, 2) else "Partiellement payée"
+        for line in data.lines:
+            r_line = ReglementLine(
+                id=f"rgl-line-{uuid.uuid4().hex[:12]}",
+                reglement_id=reglement.id,
+                purchase_invoice_id=line.purchase_invoice_id,
+                amount=round(line.amount, 2)
+            )
+            db.add(r_line)
+
+        for invoice, amount in invoices_to_update:
+            new_amount_paid = round((invoice.amount_paid or 0) + amount, 2)
+            invoice.amount_paid = new_amount_paid
+            invoice.status = "Payée" if new_amount_paid >= round(invoice.total_ttc or 0, 2) else "Partiellement payée"
 
         db.commit()
         db.refresh(reglement)
@@ -66,11 +104,12 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Ce règlement est déjà annulé.")
 
     try:
-        invoice = get_by_id(db, PurchaseInvoice, reglement.purchase_invoice_id)
-        if invoice:
-            new_amount_paid = round((invoice.amount_paid or 0) - reglement.amount, 2)
-            invoice.amount_paid = new_amount_paid
-            invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
+        for line in reglement.lines:
+            invoice = get_by_id(db, PurchaseInvoice, line.purchase_invoice_id)
+            if invoice:
+                new_amount_paid = round((invoice.amount_paid or 0) - line.amount, 2)
+                invoice.amount_paid = new_amount_paid
+                invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
 
         reglement.status = "Annulé"
         db.commit()
@@ -90,11 +129,12 @@ def delete_reglement(id: str, db: Session = Depends(get_db)):
 
     try:
         if reglement.status == "Actif":
-            invoice = get_by_id(db, PurchaseInvoice, reglement.purchase_invoice_id)
-            if invoice:
-                new_amount_paid = round((invoice.amount_paid or 0) - reglement.amount, 2)
-                invoice.amount_paid = new_amount_paid
-                invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
+            for line in reglement.lines:
+                invoice = get_by_id(db, PurchaseInvoice, line.purchase_invoice_id)
+                if invoice:
+                    new_amount_paid = round((invoice.amount_paid or 0) - line.amount, 2)
+                    invoice.amount_paid = new_amount_paid
+                    invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
         
         db.delete(reglement)
         db.commit()

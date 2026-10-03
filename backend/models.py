@@ -142,7 +142,6 @@ class Reglement(Base):
     __tablename__ = "reglements"
     id: Mapped[str] = mapped_column(String, primary_key=True)
     reglement_number: Mapped[str] = mapped_column(String, unique=True)
-    purchase_invoice_id: Mapped[str] = mapped_column(String, ForeignKey("purchase_invoices.id"))
     supplier_id: Mapped[str] = mapped_column(String, ForeignKey("suppliers.id"))
     date: Mapped[str] = mapped_column(String)
     amount: Mapped[float] = mapped_column(Float)
@@ -150,3 +149,12 @@ class Reglement(Base):
     reference: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     remarks: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, default="Actif")
+    lines: Mapped[List["ReglementLine"]] = relationship("ReglementLine", back_populates="reglement", cascade="all, delete-orphan")
+
+class ReglementLine(Base):
+    __tablename__ = "reglement_lines"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    reglement_id: Mapped[str] = mapped_column(String, ForeignKey("reglements.id"))
+    purchase_invoice_id: Mapped[str] = mapped_column(String, ForeignKey("purchase_invoices.id"))
+    amount: Mapped[float] = mapped_column(Float)
+    reglement: Mapped["Reglement"] = relationship("Reglement", back_populates="lines")

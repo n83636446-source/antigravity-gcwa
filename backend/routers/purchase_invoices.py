@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote
+from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine
 from ..schemas import PurchaseInvoiceCreate, PurchaseInvoiceUpdate, PurchaseInvoiceRead
 from .. import crud
 
@@ -45,7 +45,7 @@ def delete_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
-    linked_reglement = db.query(Reglement).filter(Reglement.purchase_invoice_id == invoice_id).first()
+    linked_reglement = db.query(ReglementLine).filter(ReglementLine.purchase_invoice_id == invoice_id).first()
     if linked_reglement:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -96,8 +96,8 @@ def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(ge
             detail="Un avoir existe déjà pour cette facture. Impossible d'annuler la validation.",
         )
 
-    linked_reglement = db.query(Reglement).filter(
-        Reglement.purchase_invoice_id == invoice_id,
+    linked_reglement = db.query(ReglementLine).join(Reglement, ReglementLine.reglement_id == Reglement.id).filter(
+        ReglementLine.purchase_invoice_id == invoice_id,
         Reglement.status == "Actif",
     ).first()
     if linked_reglement:
