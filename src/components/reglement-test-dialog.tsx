@@ -52,17 +52,17 @@ export function ReglementTestDialog({ purchaseInvoice, onSaveSuccess }: Reglemen
   // Interactive Selection State
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
   const [isSupplierSearchOpen, setIsSupplierSearchOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null);
+  const [lineAmounts, setLineAmounts] = useState<Record<string, string>>({}); // key = invoice id; key present = ticked
+  const [lineErrors, setLineErrors] = useState<Record<string, boolean>>({});
 
   // Form states
   const [reglementNumber, setReglementNumber] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [dueDate, setDueDate] = useState<Date>(new Date());
-  const [amount, setAmount] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<string>("cash");
   const [reference, setReference] = useState<string>("");
   const [remarks, setRemarks] = useState<string>("");
-  const [formErrors, setFormErrors] = useState<{ amount?: boolean; reglementNumber?: boolean; supplier?: boolean; invoice?: boolean }>({});
+  const [formErrors, setFormErrors] = useState<{ reglementNumber?: boolean; supplier?: boolean; invoice?: boolean }>({});
 
   const initialValuesRef = useRef<any>(null);
   ;
@@ -82,6 +82,20 @@ export function ReglementTestDialog({ purchaseInvoice, onSaveSuccess }: Reglemen
     () => unpaidInvoices.filter(inv => inv.supplierId === selectedSupplierId),
     [unpaidInvoices, selectedSupplierId]
   );
+
+  const getRemaining = (inv: PurchaseInvoice) => roundMoney(inv.totalTTC - (inv.amountPaid || 0));
+  const totalAmount = roundMoney(Object.values(lineAmounts).reduce((sum, v) => sum + (Number(v) || 0), 0));
+
+  const toggleInvoice = (inv: PurchaseInvoice, checked: boolean) => {
+    setLineAmounts(prev => {
+      const next = { ...prev };
+      if (checked) next[inv.id] = String(getRemaining(inv));
+      else delete next[inv.id];
+      return next;
+    });
+    setLineErrors(prev => { const n = { ...prev }; delete n[inv.id]; return n; });
+    setFormErrors(prev => ({ ...prev, invoice: false }));
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -103,9 +117,7 @@ const nextNum = calculateNextNumber(existing);
         // Pre-fill from prop if provided (FA Test entry)
         if (purchaseInvoice) {
             setSelectedSupplierId(purchaseInvoice.supplierId);
-            setSelectedInvoice(purchaseInvoice);
-            const remaining = roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0));
-            setAmount(remaining);
+            setLineAmounts({ [purchaseInvoice.id]: String(roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0))) });
             setPaymentMode(purchaseInvoice.paymentMode || "cash");
             if (purchaseInvoice.dueDate) setDueDate(new Date(purchaseInvoice.dueDate));
         }
@@ -113,12 +125,11 @@ const nextNum = calculateNextNumber(existing);
         initialValuesRef.current = {
             reglementNumber: nextNum,
             date: new Date(),
-            amount: purchaseInvoice ? roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0)) : 0,
             paymentMode: purchaseInvoice?.paymentMode || "cash",
             reference: "",
             remarks: "",
             supplierId: purchaseInvoice?.supplierId || "",
-            invoiceId: purchaseInvoice?.id || null
+            lines: purchaseInvoice ? JSON.stringify({ [purchaseInvoice.id]: String(roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0))) }) : '{}',
         };
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -131,12 +142,11 @@ const nextNum = calculateNextNumber(existing);
     if (!initialValuesRef.current) return false;
     if (reglementNumber !== initialValuesRef.current.reglementNumber) return true;
     if (!isSameDay(date, initialValuesRef.current.date)) return true;
-    if (amount !== initialValuesRef.current.amount) return true;
     if (paymentMode !== initialValuesRef.current.paymentMode) return true;
     if (reference !== initialValuesRef.current.reference) return true;
     if (remarks !== initialValuesRef.current.remarks) return true;
     if (selectedSupplierId !== initialValuesRef.current.supplierId) return true;
-    if (selectedInvoice?.id !== initialValuesRef.current.invoiceId) return true;
+    if (JSON.stringify(lineAmounts) !== initialValuesRef.current.lines) return true;
     return false;
   };
 
@@ -160,7 +170,7 @@ const nextNum = calculateNextNumber(existing);
 
   const handleSupplierSearchSelect = (supplier: Supplier) => {
     setSelectedSupplierId(supplier.id);
-    setSelectedInvoice(null);
+    setLineAmounts({}); setLineErrors({});
     setIsSupplierSearchOpen(false);
   };
 
@@ -170,14 +180,14 @@ const nextNum = calculateNextNumber(existing);
     const newErrors: typeof formErrors = {};
     let hasError = false;
 
+    const selectedRows = supplierUnpaidInvoices.filter(inv => lineAmounts[inv.id] !== undefined);
     if (!selectedSupplierId) { newErrors.supplier = true; hasError = true; }
-    if (!selectedInvoice) { newErrors.invoice = true; hasError = true; }
-
-    const remaining = selectedInvoice ? roundMoney(selectedInvoice.totalTTC - (selectedInvoice.amountPaid || 0)) : 0;
-    if (amount <= 0 || amount > remaining) {
-      newErrors.amount = true;
-      hasError = true;
-    }
+    if (selectedRows.length === 0) { newErrors.invoice = true; hasError = true; }
+    const newLineErrors: Record<string, boolean> = {};
+    selectedRows.forEach(inv => {
+      const value = roundMoney(Number(lineAmounts[inv.id]) || 0);
+      if (value <= 0 || value > getRemaining(inv)) { newLineErrors[inv.id] = true; hasError = true; }
+    });
     if (isDuplicateNumber(existingReglements, 'reglementNumber', reglementNumber)) {
       newErrors.reglementNumber = true;
       hasError = true;
@@ -185,25 +195,24 @@ const nextNum = calculateNextNumber(existing);
 
     if (hasError) {
       setFormErrors(newErrors);
+      setLineErrors(newLineErrors);
       triggerFieldShake();
       return;
     }
 
-    if (!selectedInvoice) return;
+    setLineErrors({});
 
     setIsSubmitting(true);
     try {
       const newReglement: any = {
         id: generateId(),
         reglement_number: reglementNumber,
-        purchase_invoice_id: selectedInvoice.id,
         supplier_id: selectedSupplierId!,
         date: date.toISOString(),
-        amount: amount,
         payment_mode: paymentMode || null,
         reference: reference || null,
         remarks: remarks || null,
-        status: "Actif"
+        lines: selectedRows.map(inv => ({ purchase_invoice_id: inv.id, amount: roundMoney(Number(lineAmounts[inv.id])) })),
       };
       await api.submitReglement(newReglement);
 
@@ -213,7 +222,7 @@ const nextNum = calculateNextNumber(existing);
       setOpen(false);
     } catch (error) {
       console.error("Transaction failed:", error);
-      toast({ variant: 'destructive', title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement." });
+      toast({ variant: 'destructive', title: "Erreur", description: error instanceof Error && error.message ? error.message : "Une erreur est survenue lors de l'enregistrement." });
     } finally {
       setIsSubmitting(false);
     }
@@ -264,7 +273,7 @@ const nextNum = calculateNextNumber(existing);
                         <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                            <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
                            <div key={shakeTick} className={cn("w-full", formErrors.supplier && "animate-shake")}>
-                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setSelectedInvoice(null); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} hasError={formErrors.supplier} disabled={!!purchaseInvoice} />
+                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setLineAmounts({}); setLineErrors({}); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} hasError={formErrors.supplier} disabled={!!purchaseInvoice} />
                            </div>
                         </div>
                      </div>
@@ -288,10 +297,9 @@ const nextNum = calculateNextNumber(existing);
                           <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" minDate={date} />
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.amount && "text-red-500")}>Mt Règlement *</Label>
-                          <div key={shakeTick} className={cn("w-full", formErrors.amount && "animate-shake")}>
-                             <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className={cn("w-full min-w-0 font-bold text-blue-900", formErrors.amount && "border-red-500 focus-visible:ring-red-500")} />
-                             {formErrors.amount && <span className="text-xs text-red-500 mt-1 block font-normal">Le montant ne peut pas dépasser le solde dû.</span>}
+                          <Label className={isMobileSize ? "text-left" : "text-right"}>Mt Règlement</Label>
+                          <div key={shakeTick} className="w-full">
+                             <Input readOnly value={totalAmount.toFixed(2)} className="w-full min-w-0 font-bold text-blue-900 bg-slate-50" />
                           </div>
                        </div>
                     </div>
@@ -319,28 +327,37 @@ const nextNum = calculateNextNumber(existing);
                  <table className="w-full text-sm">
                    <thead className="bg-slate-50 border-b">
                      <tr className="text-left text-muted-foreground">
+                       <th className="h-10 px-4 w-10"></th>
                        <th className="h-10 px-4 font-medium">Échéance</th>
                        <th className="h-10 px-4 font-medium">N° pièce</th>
                        <th className="h-10 px-4 font-medium text-right">Solde dû</th>
+                       <th className="h-10 px-4 font-medium text-right">Montant à régler</th>
                      </tr>
                    </thead>
                    <tbody>
                      {supplierUnpaidInvoices.length === 0 ? (
-                       <tr><td colSpan={3} className="p-8 text-center text-muted-foreground italic">Aucune facture non payée pour ce fournisseur.</td></tr>
+                       <tr><td colSpan={5} className="p-8 text-center text-muted-foreground italic">Aucune facture non payée pour ce fournisseur.</td></tr>
                      ) : supplierUnpaidInvoices.map(inv => {
-                       const remaining = roundMoney(inv.totalTTC - (inv.amountPaid || 0));
-                       const isSelected = selectedInvoice?.id === inv.id;
+                       const remaining = getRemaining(inv);
+                       const isTicked = lineAmounts[inv.id] !== undefined;
                        return (
-                         <tr key={inv.id} className={cn("cursor-pointer border-b last:border-0 hover:bg-slate-50 transition-colors", isSelected && "bg-blue-50/50")} onClick={() => setSelectedInvoice(inv)}>
+                         <tr key={inv.id} className={cn("border-b last:border-0 hover:bg-slate-50 transition-colors", isTicked && "bg-blue-50/50")}>
+                           <td className="px-4 py-2.5 w-10">
+                             <input type="checkbox" className="h-4 w-4 cursor-pointer" checked={isTicked} onChange={(e) => toggleInvoice(inv, e.target.checked)} />
+                           </td>
                            <td className="px-4 py-2.5">{inv.dueDate ? format(new Date(inv.dueDate), "dd/MM/yyyy") : "—"}</td>
                            <td className="px-4 py-2.5 font-mono text-xs">{inv.invoiceNumber}</td>
                            <td className="px-4 py-2.5 text-right font-semibold">{remaining.toFixed(2)} €</td>
+                           <td className="px-4 py-2.5 text-right">
+                             <Input type="number" min={0} step="0.01" disabled={!isTicked} value={lineAmounts[inv.id] ?? ''} onChange={(e) => setLineAmounts(prev => ({ ...prev, [inv.id]: e.target.value }))} className={cn("h-8 w-32 ml-auto text-right font-semibold", lineErrors[inv.id] && "border-red-500 focus-visible:ring-red-500")} />
+                             {lineErrors[inv.id] && <span className="text-xs text-red-500 block mt-1">Maximum {remaining.toFixed(2)} €</span>}
+                           </td>
                          </tr>
                        );
                      })}
                    </tbody>
                  </table>
-                 {formErrors.invoice && <div className="bg-red-50 text-red-600 text-xs px-4 py-2 border-t border-red-100 font-medium text-center">Veuillez sélectionner une facture dans la liste.</div>}
+                 {formErrors.invoice && <div className="bg-red-50 text-red-600 text-xs px-4 py-2 border-t border-red-100 font-medium text-center">Veuillez cocher au moins une facture.</div>}
                </div>
              )}
           </div>
@@ -349,7 +366,7 @@ const nextNum = calculateNextNumber(existing);
 
       <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg text-right">
         <div className="space-y-2 mb-4">
-            <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>Total Règlement:</span> <span>{(amount || 0).toFixed(2)} €</span></div>
+            <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>Total Règlement:</span> <span>{totalAmount.toFixed(2)} €</span></div>
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
