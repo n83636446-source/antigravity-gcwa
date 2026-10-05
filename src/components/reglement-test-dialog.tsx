@@ -192,6 +192,7 @@ const nextNum = calculateNextNumber(existing);
       newErrors.reglementNumber = true;
       hasError = true;
     }
+    if (!reglementNumber.trim()) { newErrors.reglementNumber = true; hasError = true; }
 
     if (hasError) {
       setFormErrors(newErrors);
