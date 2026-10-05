@@ -379,7 +379,7 @@ export function BrTestDialog({ receiptToEdit, orderToTransfer, isTransferInstanc
         }
     } catch (error) {
         console.error("Failed to save receipt", error);
-        toast({ title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
+        toast({ title: "Erreur", description: error instanceof Error && error.message ? error.message : "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
         setIsSubmitting(false);
     }
   }

@@ -373,7 +373,7 @@ export function FaTestDialog({ invoiceToEdit, receiptToTransfer, isTransferInsta
         }
     } catch (error) {
         console.error("Failed to save invoice", error);
-        toast({ title: "Erreur", description: "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
+        toast({ title: "Erreur", description: error instanceof Error && error.message ? error.message : "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
         setIsSubmitting(false);
     }
   }
