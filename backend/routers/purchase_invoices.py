@@ -91,7 +91,7 @@ def validate_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{invoice_id}/cancel-validation", response_model=PurchaseInvoiceRead)
-def cancel_purchase_invoice_validation(invoice_id: str, allow_negative_stock: bool = False, db: Session = Depends(get_db)):
+def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
@@ -134,8 +134,8 @@ def cancel_purchase_invoice_validation(invoice_id: str, allow_negative_stock: bo
                     affected.append((product, qty))
                     if (product.stock_level or 0) < qty:
                         insufficient.append(f'"{product.name}"')
-            if insufficient and not allow_negative_stock:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Stock insuffisant pour {', '.join(insufficient)}.")
+            if insufficient:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Stock insuffisant pour {', '.join(insufficient)}.")
             for product, qty in affected:
                 product.stock_level = (product.stock_level or 0) - qty
         db_obj.status = "Brouillon"
