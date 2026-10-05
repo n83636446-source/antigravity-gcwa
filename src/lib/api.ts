@@ -158,13 +158,28 @@ export type ApiPurchaseCreditNote = {
   remarks?: string | null;
 };
 
+function formatApiDetail(detail: unknown, fallback: string): string {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first: any = detail[0];
+    const msg = typeof first?.msg === 'string' ? first.msg : null;
+    if (msg) {
+      const field = Array.isArray(first?.loc)
+        ? [...first.loc].reverse().find((p: unknown) => typeof p === 'string' && p !== 'body')
+        : null;
+      return field ? `${field} : ${msg}` : msg;
+    }
+  }
+  return fallback;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { cache: 'no-store' });
   if (!res.ok) {
     let detail = `API error ${res.status} on ${path}`;
     try {
       const errBody = await res.json();
-      if (errBody?.detail) detail = errBody.detail;
+      if (errBody?.detail) detail = formatApiDetail(errBody.detail, detail);
     } catch {
       // response wasn't valid JSON, keep the generic message
     }
@@ -183,7 +198,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     let detail = `API POST error ${res.status} on ${path}`;
     try {
       const errBody = await res.json();
-      if (errBody?.detail) detail = errBody.detail;
+      if (errBody?.detail) detail = formatApiDetail(errBody.detail, detail);
     } catch {
       // response wasn't valid JSON, keep the generic message
     }
@@ -202,7 +217,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
     let detail = `API PUT error ${res.status} on ${path}`;
     try {
       const errBody = await res.json();
-      if (errBody?.detail) detail = errBody.detail;
+      if (errBody?.detail) detail = formatApiDetail(errBody.detail, detail);
     } catch {
       // response wasn't valid JSON, keep the generic message
     }
@@ -217,7 +232,7 @@ async function del(path: string): Promise<void> {
     let detail = `API DELETE error ${res.status} on ${path}`;
     try {
       const errBody = await res.json();
-      if (errBody?.detail) detail = errBody.detail;
+      if (errBody?.detail) detail = formatApiDetail(errBody.detail, detail);
     } catch {
       // response wasn't valid JSON, keep the generic message
     }
