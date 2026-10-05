@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import PurchaseOrder
+from ..models import PurchaseOrder, PurchaseReceipt
 from ..schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderRead
 from .. import crud
 
@@ -45,5 +45,10 @@ def delete_purchase_order(order_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseOrder, order_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found")
+    if db.query(PurchaseReceipt).filter(PurchaseReceipt.purchase_order_id == order_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette commande a déjà été transférée en bon de réception et ne peut pas être supprimée.",
+        )
     crud.delete(db, db_obj)
  

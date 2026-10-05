@@ -29,6 +29,11 @@ def create_purchase_receipt(data: PurchaseReceiptCreate, db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchase receipt ID already exists")
     if db.query(PurchaseReceipt).filter(PurchaseReceipt.receipt_number == data.receipt_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.receipt_number}" est déjà utilisé.')
+    if data.purchase_order_id and db.query(PurchaseReceipt).filter(PurchaseReceipt.purchase_order_id == data.purchase_order_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette commande a déjà été transférée en bon de réception.",
+        )
     return crud.create(db, PurchaseReceipt, data.model_dump())
 
 

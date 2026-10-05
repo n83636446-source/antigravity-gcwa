@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine, Product
+from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine, Product, PurchaseReceipt
 from ..schemas import PurchaseInvoiceCreate, PurchaseInvoiceUpdate, PurchaseInvoiceRead
 from .. import crud
 
@@ -29,6 +29,14 @@ def create_purchase_invoice(data: PurchaseInvoiceCreate, db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchase invoice ID already exists")
     if db.query(PurchaseInvoice).filter(PurchaseInvoice.invoice_number == data.invoice_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.invoice_number}" est déjà utilisé.')
+    if data.purchase_receipt_id:
+        source_receipt = crud.get_by_id(db, PurchaseReceipt, data.purchase_receipt_id)
+        if not source_receipt:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bon de réception source introuvable.")
+        if source_receipt.status != "Validé":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vous ne pouvez créer une facture qu'à partir d'un bon de réception validé.")
+        if db.query(PurchaseInvoice).filter(PurchaseInvoice.purchase_receipt_id == data.purchase_receipt_id).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Une facture existe déjà pour ce bon de réception.")
     return crud.create(db, PurchaseInvoice, data.model_dump())
 
 
