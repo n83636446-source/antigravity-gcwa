@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine
+from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine, Product
 from ..schemas import PurchaseInvoiceCreate, PurchaseInvoiceUpdate, PurchaseInvoiceRead
 from .. import crud
 
@@ -57,6 +57,11 @@ def delete_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cette facture a un avoir associé et ne peut pas être supprimée.",
         )
+    if db_obj.status != "Brouillon":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Une facture validée ne peut pas être supprimée. Annulez d'abord sa validation.",
+        )
     crud.delete(db, db_obj)
 
 
@@ -70,14 +75,23 @@ def validate_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Seule une facture en brouillon peut être validée.",
         )
-    db_obj.status = "Non payée"
-    db.commit()
-    db.refresh(db_obj)
-    return db_obj
+    try:
+        if not db_obj.purchase_receipt_id:
+            for item in (db_obj.items or []):
+                product = crud.get_by_id(db, Product, item.get("product_id"))
+                if product:
+                    product.stock_level = (product.stock_level or 0) + item.get("quantity", 0)
+        db_obj.status = "Non payée"
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/{invoice_id}/cancel-validation", response_model=PurchaseInvoiceRead)
-def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(get_db)):
+def cancel_purchase_invoice_validation(invoice_id: str, allow_negative_stock: bool = False, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
@@ -106,7 +120,31 @@ def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(ge
             detail="Cette facture a des règlements actifs. Annulez-les d'abord avant d'annuler la validation.",
         )
 
-    db_obj.status = "Brouillon"
-    db.commit()
-    db.refresh(db_obj)
-    return db_obj
+    try:
+        if not db_obj.purchase_receipt_id:
+            needed = {}
+            for item in (db_obj.items or []):
+                pid = item.get("product_id")
+                needed[pid] = needed.get(pid, 0) + item.get("quantity", 0)
+            affected = []
+            insufficient = []
+            for pid, qty in needed.items():
+                product = crud.get_by_id(db, Product, pid)
+                if product:
+                    affected.append((product, qty))
+                    if (product.stock_level or 0) < qty:
+                        insufficient.append(f'"{product.name}"')
+            if insufficient and not allow_negative_stock:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Stock insuffisant pour {', '.join(insufficient)}.")
+            for product, qty in affected:
+                product.stock_level = (product.stock_level or 0) - qty
+        db_obj.status = "Brouillon"
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
