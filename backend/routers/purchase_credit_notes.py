@@ -47,7 +47,18 @@ def update_purchase_credit_note(credit_note_id: str, data: PurchaseCreditNoteUpd
     db_obj = crud.get_by_id(db, PurchaseCreditNote, credit_note_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credit note not found")
-    return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
+    payload = data.model_dump(exclude_unset=True)
+    if db_obj.status == "Validé":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cet avoir est validé et ne peut pas être modifié. Annulez d'abord sa validation.",
+        )
+    if "status" in payload and payload["status"] != db_obj.status:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le statut ne peut être modifié que par la validation ou l'annulation de validation.",
+        )
+    return crud.update(db, db_obj, payload)
 
 
 @router.delete("/{credit_note_id}", status_code=status.HTTP_204_NO_CONTENT)

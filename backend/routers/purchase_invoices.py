@@ -37,7 +37,18 @@ def update_purchase_invoice(invoice_id: str, data: PurchaseInvoiceUpdate, db: Se
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
-    return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
+    payload = data.model_dump(exclude_unset=True)
+    if db_obj.status != "Brouillon":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Une facture validée ne peut pas être modifiée. Annulez d'abord sa validation.",
+        )
+    if "status" in payload and payload["status"] != db_obj.status:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le statut ne peut être modifié que par la validation ou l'annulation de validation.",
+        )
+    return crud.update(db, db_obj, payload)
 
 
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
