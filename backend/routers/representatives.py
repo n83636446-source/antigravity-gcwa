@@ -5,6 +5,7 @@ from ..database import get_db
 from ..models import Representative
 from ..schemas import RepresentativeCreate, RepresentativeUpdate, RepresentativeRead
 from .. import crud
+from ..reference_guards import ensure_representative_deletable
 
 router = APIRouter()
 
@@ -47,5 +48,6 @@ def delete_representative(representative_id: str, db: Session = Depends(get_db))
     db_obj = crud.get_by_id(db, Representative, representative_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Representative not found")
+    ensure_representative_deletable(db, representative_id)
     crud.delete(db, db_obj)
  

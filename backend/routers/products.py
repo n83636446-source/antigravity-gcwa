@@ -5,6 +5,7 @@ from ..database import get_db
 from ..models import Product
 from ..schemas import ProductCreate, ProductUpdate, ProductRead
 from .. import crud
+from ..reference_guards import ensure_product_deletable
 
 router = APIRouter()
 
@@ -46,5 +47,6 @@ def delete_product(product_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Product, product_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    ensure_product_deletable(db, product_id)
     crud.delete(db, db_obj)
  

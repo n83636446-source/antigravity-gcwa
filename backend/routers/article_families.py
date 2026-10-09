@@ -5,6 +5,7 @@ from ..database import get_db
 from ..models import ArticleFamily
 from ..schemas import ArticleFamilyCreate, ArticleFamilyUpdate, ArticleFamilyRead
 from .. import crud
+from ..reference_guards import ensure_family_deletable
 
 router = APIRouter()
 
@@ -45,5 +46,6 @@ def delete_article_family(family_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, ArticleFamily, family_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article family not found")
+    ensure_family_deletable(db, family_id)
     crud.delete(db, db_obj)
  

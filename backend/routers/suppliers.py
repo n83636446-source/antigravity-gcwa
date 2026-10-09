@@ -5,6 +5,7 @@ from ..database import get_db
 from ..models import Supplier
 from ..schemas import SupplierCreate, SupplierUpdate, SupplierRead
 from .. import crud
+from ..reference_guards import ensure_supplier_deletable
 
 router = APIRouter()
 
@@ -51,5 +52,6 @@ def delete_supplier(supplier_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Supplier, supplier_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+    ensure_supplier_deletable(db, supplier_id)
     crud.delete(db, db_obj)
  
