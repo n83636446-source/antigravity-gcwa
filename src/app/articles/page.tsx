@@ -123,7 +123,7 @@ export default function ArticlesPage() {
     );
 
     toast(successCount > 0
-      ? { title: `${successCount} article(s) supprime(s)`, description: failCount > 0 ? `${failCount} echec(s): ${lastError}` : undefined }
+      ? { title: `${successCount} article(s) supprimé(s)`, description: failCount > 0 ? `${failCount} échec(s): ${lastError}` : undefined }
       : { variant: 'destructive', title: 'Erreur', description: `Impossible de supprimer les articles: ${lastError}` }
     );
 
@@ -134,7 +134,7 @@ export default function ArticlesPage() {
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
-      <PageHeader title="Articles" description="Gerez votre inventaire d articles.">
+      <PageHeader title="Articles" description="Gérez votre inventaire d'articles.">
         <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Ajouter un article</Button>
       </PageHeader>
 
@@ -154,7 +154,7 @@ export default function ArticlesPage() {
                 'ml-2 text-sm font-normal text-muted-foreground transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
                 selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 select-none'
               )}>
-                — {selectedIds.size} selectionne{selectedIds.size > 1 ? 's' : ''}
+                — {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
               </span>
             </CardTitle>
             <div className={cn(
@@ -182,7 +182,7 @@ export default function ArticlesPage() {
                     Supprimer {selectedIds.size > 1 ? `(${selectedIds.size})` : ''}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Supprimer la selection</TooltipContent>
+                <TooltipContent>Supprimer la sélection</TooltipContent>
               </Tooltip>
             </div>
           </CardHeader>
@@ -257,8 +257,8 @@ export default function ArticlesPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {selectedIds.size > 1
-                ? `Cette action est irreversible. Les ${selectedIds.size} articles selectionnes seront definitivement supprimes.`
-                : `Cette action est irreversible. L article "${selectedArticles[0]?.name}" sera definitivement supprime.`}
+                ? `Cette action est irréversible. Les ${selectedIds.size} articles sélectionnés seront définitivement supprimés.`
+                : `Cette action est irréversible. L'article "${selectedArticles[0]?.name}" sera définitivement supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
