@@ -19,7 +19,7 @@ def get_suppliers(db: Session = Depends(get_db)):
 def get_supplier(supplier_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Supplier, supplier_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fournisseur introuvable.")
     return db_obj
 
 
@@ -27,7 +27,7 @@ def get_supplier(supplier_id: str, db: Session = Depends(get_db)):
 def create_supplier(data: SupplierCreate, db: Session = Depends(get_db)):
     existing = crud.get_by_id(db, Supplier, data.id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Supplier ID already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     if db.query(Supplier).filter(Supplier.code == data.code).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le code "{data.code}" est déjà utilisé.')
     if db.query(Supplier).filter(Supplier.ice == data.ice).first():
@@ -43,7 +43,7 @@ def create_supplier(data: SupplierCreate, db: Session = Depends(get_db)):
 def update_supplier(supplier_id: str, data: SupplierUpdate, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Supplier, supplier_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fournisseur introuvable.")
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 
@@ -51,7 +51,7 @@ def update_supplier(supplier_id: str, data: SupplierUpdate, db: Session = Depend
 def delete_supplier(supplier_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Supplier, supplier_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fournisseur introuvable.")
     ensure_supplier_deletable(db, supplier_id)
     crud.delete(db, db_obj)
  

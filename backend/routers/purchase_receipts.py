@@ -20,7 +20,7 @@ def get_purchase_receipts(db: Session = Depends(get_db)):
 def get_purchase_receipt(receipt_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseReceipt, receipt_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase receipt not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de réception introuvable.")
     return db_obj
 
 
@@ -28,7 +28,7 @@ def get_purchase_receipt(receipt_id: str, db: Session = Depends(get_db)):
 def create_purchase_receipt(data: PurchaseReceiptCreate, db: Session = Depends(get_db)):
     existing = crud.get_by_id(db, PurchaseReceipt, data.id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchase receipt ID already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     if db.query(PurchaseReceipt).filter(PurchaseReceipt.receipt_number == data.receipt_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.receipt_number}" est déjà utilisé.')
     if data.purchase_order_id and db.query(PurchaseReceipt).filter(PurchaseReceipt.purchase_order_id == data.purchase_order_id).first():
@@ -43,7 +43,7 @@ def create_purchase_receipt(data: PurchaseReceiptCreate, db: Session = Depends(g
 def update_purchase_receipt(receipt_id: str, data: PurchaseReceiptUpdate, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseReceipt, receipt_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase receipt not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de réception introuvable.")
     payload = data.model_dump(exclude_unset=True)
     if db_obj.status == "Validé":
         raise HTTPException(
@@ -62,7 +62,7 @@ def update_purchase_receipt(receipt_id: str, data: PurchaseReceiptUpdate, db: Se
 def delete_purchase_receipt(receipt_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseReceipt, receipt_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase receipt not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de réception introuvable.")
     if db_obj.status == "Validé":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,7 +75,7 @@ def delete_purchase_receipt(receipt_id: str, db: Session = Depends(get_db)):
 def validate_purchase_receipt(receipt_id: str, db: Session = Depends(get_db)):
     receipt = crud.get_by_id(db, PurchaseReceipt, receipt_id)
     if not receipt:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase receipt not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de réception introuvable.")
     if receipt.status == "Validé":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ce bon de réception est déjà validé.")
 
@@ -98,7 +98,7 @@ def validate_purchase_receipt(receipt_id: str, db: Session = Depends(get_db)):
 def cancel_purchase_receipt_validation(receipt_id: str, db: Session = Depends(get_db)):
     receipt = crud.get_by_id(db, PurchaseReceipt, receipt_id)
     if not receipt:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase receipt not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de réception introuvable.")
     if receipt.status != "Validé":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ce bon de réception n'est pas validé.")
 

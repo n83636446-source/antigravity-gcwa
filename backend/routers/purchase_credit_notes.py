@@ -20,7 +20,7 @@ def get_purchase_credit_notes(db: Session = Depends(get_db)):
 def get_purchase_credit_note(credit_note_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseCreditNote, credit_note_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credit note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avoir introuvable.")
     return db_obj
 
 
@@ -28,7 +28,7 @@ def get_purchase_credit_note(credit_note_id: str, db: Session = Depends(get_db))
 def create_purchase_credit_note(data: PurchaseCreditNoteCreate, db: Session = Depends(get_db)):
     existing = crud.get_by_id(db, PurchaseCreditNote, data.id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Credit note ID already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     if db.query(PurchaseCreditNote).filter(PurchaseCreditNote.credit_note_number == data.credit_note_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.credit_note_number}" est déjà utilisé.')
     
@@ -48,7 +48,7 @@ def create_purchase_credit_note(data: PurchaseCreditNoteCreate, db: Session = De
 def update_purchase_credit_note(credit_note_id: str, data: PurchaseCreditNoteUpdate, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseCreditNote, credit_note_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credit note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avoir introuvable.")
     payload = data.model_dump(exclude_unset=True)
     if db_obj.status == "Validé":
         raise HTTPException(
@@ -67,7 +67,7 @@ def update_purchase_credit_note(credit_note_id: str, data: PurchaseCreditNoteUpd
 def delete_purchase_credit_note(credit_note_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseCreditNote, credit_note_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credit note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avoir introuvable.")
     if db_obj.status == "Validé":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -80,7 +80,7 @@ def delete_purchase_credit_note(credit_note_id: str, db: Session = Depends(get_d
 def validate_purchase_credit_note(credit_note_id: str, db: Session = Depends(get_db)):
     credit_note = crud.get_by_id(db, PurchaseCreditNote, credit_note_id)
     if not credit_note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credit note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avoir introuvable.")
     if credit_note.status == "Validé":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet avoir est déjà validé.")
 
@@ -110,7 +110,7 @@ def validate_purchase_credit_note(credit_note_id: str, db: Session = Depends(get
 def cancel_purchase_credit_note_validation(credit_note_id: str, db: Session = Depends(get_db)):
     credit_note = crud.get_by_id(db, PurchaseCreditNote, credit_note_id)
     if not credit_note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credit note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avoir introuvable.")
     if credit_note.status != "Validé":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet avoir n'est pas validé.")
 

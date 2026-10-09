@@ -20,7 +20,7 @@ def get_purchase_invoices(db: Session = Depends(get_db)):
 def get_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
     return db_obj
 
 
@@ -28,7 +28,7 @@ def get_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
 def create_purchase_invoice(data: PurchaseInvoiceCreate, db: Session = Depends(get_db)):
     existing = crud.get_by_id(db, PurchaseInvoice, data.id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchase invoice ID already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     if db.query(PurchaseInvoice).filter(PurchaseInvoice.invoice_number == data.invoice_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.invoice_number}" est déjà utilisé.')
     if data.purchase_receipt_id:
@@ -46,7 +46,7 @@ def create_purchase_invoice(data: PurchaseInvoiceCreate, db: Session = Depends(g
 def update_purchase_invoice(invoice_id: str, data: PurchaseInvoiceUpdate, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
     payload = data.model_dump(exclude_unset=True)
     if db_obj.status != "Brouillon":
         raise HTTPException(
@@ -65,7 +65,7 @@ def update_purchase_invoice(invoice_id: str, data: PurchaseInvoiceUpdate, db: Se
 def delete_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
     linked_reglement = db.query(ReglementLine).filter(ReglementLine.purchase_invoice_id == invoice_id).first()
     if linked_reglement:
         raise HTTPException(
@@ -90,7 +90,7 @@ def delete_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
 def validate_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
     if db_obj.status != "Brouillon":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -116,7 +116,7 @@ def validate_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
 def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase invoice not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
     if db_obj.status not in ("Non payée", "En retard"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

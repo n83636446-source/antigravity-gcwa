@@ -20,7 +20,7 @@ def read_reglements(db: Session = Depends(get_db)):
 def read_reglement(id: str, db: Session = Depends(get_db)):
     db_obj = get_by_id(db, Reglement, id)
     if not db_obj:
-        raise HTTPException(status_code=404, detail="Reglement not found")
+        raise HTTPException(status_code=404, detail="Règlement introuvable.")
     return db_obj
 
 @router.post("/submit", response_model=ReglementRead)
@@ -102,7 +102,7 @@ def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
 def void_reglement(id: str, db: Session = Depends(get_db)):
     reglement = get_by_id(db, Reglement, id)
     if not reglement:
-        raise HTTPException(status_code=404, detail="Reglement not found")
+        raise HTTPException(status_code=404, detail="Règlement introuvable.")
     if reglement.status == "Annulé":
         raise HTTPException(status_code=400, detail="Ce règlement est déjà annulé.")
 
@@ -129,7 +129,7 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
 def delete_reglement(id: str, db: Session = Depends(get_db)):
     reglement = get_by_id(db, Reglement, id)
     if not reglement:
-        raise HTTPException(status_code=404, detail="Reglement not found")
+        raise HTTPException(status_code=404, detail="Règlement introuvable.")
 
     try:
         if reglement.status == "Actif":

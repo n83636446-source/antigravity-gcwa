@@ -18,7 +18,7 @@ def get_clients(db: Session = Depends(get_db)):
 def get_client(client_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Client, client_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client introuvable.")
     return db_obj
 
 
@@ -26,7 +26,7 @@ def get_client(client_id: str, db: Session = Depends(get_db)):
 def create_client(data: ClientCreate, db: Session = Depends(get_db)):
     existing = crud.get_by_id(db, Client, data.id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Client ID already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     return crud.create(db, Client, data.model_dump())
 
 
@@ -34,7 +34,7 @@ def create_client(data: ClientCreate, db: Session = Depends(get_db)):
 def update_client(client_id: str, data: ClientUpdate, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Client, client_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client introuvable.")
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 
@@ -42,6 +42,6 @@ def update_client(client_id: str, data: ClientUpdate, db: Session = Depends(get_
 def delete_client(client_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, Client, client_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client introuvable.")
     crud.delete(db, db_obj)
  

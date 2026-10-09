@@ -18,7 +18,7 @@ def get_purchase_orders(db: Session = Depends(get_db)):
 def get_purchase_order(order_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseOrder, order_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de commande introuvable.")
     return db_obj
 
 
@@ -26,7 +26,7 @@ def get_purchase_order(order_id: str, db: Session = Depends(get_db)):
 def create_purchase_order(data: PurchaseOrderCreate, db: Session = Depends(get_db)):
     existing = crud.get_by_id(db, PurchaseOrder, data.id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchase order ID already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     if db.query(PurchaseOrder).filter(PurchaseOrder.order_number == data.order_number).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le numéro "{data.order_number}" est déjà utilisé.')
     return crud.create(db, PurchaseOrder, data.model_dump())
@@ -36,7 +36,7 @@ def create_purchase_order(data: PurchaseOrderCreate, db: Session = Depends(get_d
 def update_purchase_order(order_id: str, data: PurchaseOrderUpdate, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseOrder, order_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de commande introuvable.")
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 
@@ -44,7 +44,7 @@ def update_purchase_order(order_id: str, data: PurchaseOrderUpdate, db: Session 
 def delete_purchase_order(order_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseOrder, order_id)
     if not db_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de commande introuvable.")
     if db.query(PurchaseReceipt).filter(PurchaseReceipt.purchase_order_id == order_id).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
