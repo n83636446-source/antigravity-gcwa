@@ -50,19 +50,6 @@ export function ArticleFamiliesTable({ families, onEdit, onDeleteSuccess, onAdd 
     if (!familyToDelete) return;
 
     try {
-      const products = await api.getProducts();
-      const isFamilyInUse = products.some((p) => p.family_id === familyToDelete.id);
-
-      if (isFamilyInUse) {
-        toast({
-          variant: 'destructive',
-          title: 'Suppression impossible',
-          description: `La famille "${familyToDelete.name}" est utilisée par au moins un article et ne peut pas être supprimée.`,
-        });
-        setDeleteDialogOpen(false);
-        return;
-      }
-
       await api.deleteArticleFamily(familyToDelete.id);
 
       toast({
@@ -71,11 +58,11 @@ export function ArticleFamiliesTable({ families, onEdit, onDeleteSuccess, onAdd 
       });
 
       onDeleteSuccess?.();
-    } catch {
+    } catch (e) {
       toast({
         variant: 'destructive',
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de la suppression de la famille.',
+        description: e instanceof Error && e.message ? e.message : 'Une erreur est survenue lors de la suppression de la famille.',
       });
     }
 

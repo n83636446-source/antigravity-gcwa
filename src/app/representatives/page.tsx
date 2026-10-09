@@ -65,10 +65,10 @@ export default function RepresentativesPage() {
       });
       refetch();
       setSelectedRepresentative(null);
-    } catch {
+    } catch (e) {
       toast({
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de la suppression.',
+        description: e instanceof Error && e.message ? e.message : 'Une erreur est survenue lors de la suppression.',
         variant: 'destructive',
       });
     }
