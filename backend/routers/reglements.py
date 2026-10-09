@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -8,6 +9,7 @@ from ..models import Reglement, PurchaseInvoice, Supplier, ReglementLine
 from ..schemas import ReglementCreate, ReglementRead
 from ..crud import get_all, get_by_id
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/", response_model=List[ReglementRead])
@@ -90,9 +92,10 @@ def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(reglement)
         return reglement
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("submit_reglement failed")
+        raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")
 
 
 @router.post("/{id}/void", response_model=ReglementRead)
@@ -115,9 +118,10 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(reglement)
         return reglement
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("void_reglement failed")
+        raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")
 
 
 # TEMPORARY (testing phase): allows full deletion of règlements. Revisit with regulations/audit-trail before production.
@@ -139,6 +143,7 @@ def delete_reglement(id: str, db: Session = Depends(get_db)):
         db.delete(reglement)
         db.commit()
         return {"deleted": True}
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("delete_reglement failed")
+        raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")

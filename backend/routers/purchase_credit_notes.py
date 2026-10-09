@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,6 +7,7 @@ from ..models import PurchaseCreditNote, PurchaseInvoice, Product
 from ..schemas import PurchaseCreditNoteCreate, PurchaseCreditNoteUpdate, PurchaseCreditNoteRead
 from .. import crud
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -95,9 +97,13 @@ def validate_purchase_credit_note(credit_note_id: str, db: Session = Depends(get
         db.commit()
         db.refresh(credit_note)
         return credit_note
-    except Exception as e:
+    except ValueError as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        db.rollback()
+        logger.exception("validate_purchase_credit_note failed")
+        raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")
 
 
 @router.post("/{credit_note_id}/cancel-validation", response_model=PurchaseCreditNoteRead)
@@ -118,6 +124,7 @@ def cancel_purchase_credit_note_validation(credit_note_id: str, db: Session = De
         db.commit()
         db.refresh(credit_note)
         return credit_note
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.exception("cancel_purchase_credit_note_validation failed")
+        raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")
