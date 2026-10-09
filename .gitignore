@@ -1,4 +1,4 @@
-﻿# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules
@@ -46,6 +46,8 @@ firestore-debug.log
 
 # local runtime data / backend artifacts
 stockpilot.db
+stockpilot.db-wal
+stockpilot.db-shm
 python-embed/
 python-embed.zip
 get-pip.py
