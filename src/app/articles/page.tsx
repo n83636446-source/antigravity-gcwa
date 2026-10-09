@@ -6,14 +6,8 @@ import { useApiCollection } from '@/hooks/use-api';
 import { api } from '@/lib/api';
 import {
   Product as Article,
-  PurchaseOrder,
-  PurchaseReceipt,
-  PurchaseInvoice,
   ArticleFamily,
   productFromApi,
-  purchaseOrderFromApi,
-  purchaseReceiptFromApi,
-  purchaseInvoiceFromApi,
 } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { ArticleDialog } from '@/components/article-dialog';
@@ -60,20 +54,11 @@ export default function ArticlesPage() {
 
   const fetchArticles = useCallback(() => api.getProducts(), []);
   const fetchFamilies = useCallback(() => api.getArticleFamilies(), []);
-  const fetchPurchaseOrders = useCallback(() => api.getPurchaseOrders(), []);
-  const fetchPurchaseReceipts = useCallback(() => api.getPurchaseReceipts(), []);
-  const fetchPurchaseInvoices = useCallback(() => api.getPurchaseInvoices(), []);
 
   const { data: rawArticles, isLoading: isLoadingArticles, refetch: refetchArticles } = useApiCollection(fetchArticles);
   const { data: families, isLoading: isLoadingFamilies } = useApiCollection<ArticleFamily>(fetchFamilies);
-  const { data: rawPurchaseOrders } = useApiCollection(fetchPurchaseOrders);
-  const { data: rawPurchaseReceipts } = useApiCollection(fetchPurchaseReceipts);
-  const { data: rawPurchaseInvoices } = useApiCollection(fetchPurchaseInvoices);
 
   const articles: Article[] = (rawArticles || []).map(productFromApi);
-  const purchaseOrders: PurchaseOrder[] = (rawPurchaseOrders || []).map(purchaseOrderFromApi);
-  const purchaseReceipts: PurchaseReceipt[] = (rawPurchaseReceipts || []).map(purchaseReceiptFromApi);
-  const purchaseInvoices: PurchaseInvoice[] = (rawPurchaseInvoices || []).map(purchaseInvoiceFromApi);
 
   const isLoading = isLoadingArticles || isLoadingFamilies;
 
@@ -128,26 +113,12 @@ export default function ArticlesPage() {
   const handleEdit = (article: Article) => { setEditingArticle(article); setDialogOpen(true); };
 
   const handleDeleteConfirm = async () => {
-    const usedIds = new Set<string>();
-    [
-      ...(purchaseOrders || []).flatMap((o) => o.items.map((i) => i.productId)),
-      ...(purchaseReceipts || []).flatMap((r) => r.items.map((i) => i.productId)),
-      ...(purchaseInvoices || []).flatMap((inv) => inv.items.map((i) => i.productId)),
-    ].forEach((id) => { if (selectedIds.has(id)) usedIds.add(id); });
-
-    if (usedIds.size > 0) {
-      const blockedNames = selectedArticles.filter((a) => usedIds.has(a.id)).map((a) => `"${a.name}"`).join(', ');
-      toast({ variant: 'destructive', title: 'Suppression impossible', description: `Ces articles sont utilises dans des documents : ${blockedNames}`, duration: 6000 });
-      setDeleteDialogOpen(false);
-      return;
-    }
-
     let successCount = 0, failCount = 0;
     let lastError = '';
     await Promise.all(
       selectedArticles.map(async (article) => {
         try { await api.deleteProduct(article.id); successCount++; }
-        catch(e: any) { console.error('DELETE ERROR:', e); failCount++; lastError = e.message; }
+        catch(e: any) { failCount++; lastError = `"${article.name}" : ${e.message}`; }
       })
     );
 

@@ -5,13 +5,7 @@ import { useApiCollection } from '@/hooks/use-api';
 import { api } from '@/lib/api';
 import {
   Supplier,
-  PurchaseOrder,
-  PurchaseReceipt,
-  PurchaseInvoice,
   supplierFromApi,
-  purchaseOrderFromApi,
-  purchaseReceiptFromApi,
-  purchaseInvoiceFromApi,
 } from '@/lib/types';
 import { PageHeader } from '@/components/page-header';
 import { SuppliersTable } from '@/components/suppliers-table';
@@ -132,20 +126,8 @@ export default function SuppliersPage() {
   }
 
   const fetchSuppliers = useCallback(() => api.getSuppliers(), []);
-  const fetchPurchaseOrders = useCallback(() => api.getPurchaseOrders(), []);
-  const fetchPurchaseReceipts = useCallback(() => api.getPurchaseReceipts(), []);
-  const fetchPurchaseInvoices = useCallback(() => api.getPurchaseInvoices(), []);
-
   const { data: rawSuppliers, isLoading: isLoadingSuppliers, refetch: refetchSuppliers } = useApiCollection(fetchSuppliers);
-  const { data: rawPurchaseOrders } = useApiCollection(fetchPurchaseOrders);
-  const { data: rawPurchaseReceipts } = useApiCollection(fetchPurchaseReceipts);
-  const { data: rawPurchaseInvoices } = useApiCollection(fetchPurchaseInvoices);
-
   const suppliers: Supplier[] = useMemo(() => (rawSuppliers || []).map(supplierFromApi), [rawSuppliers]);
-
-  const purchaseOrders: PurchaseOrder[] = useMemo(() => (rawPurchaseOrders || []).map(purchaseOrderFromApi), [rawPurchaseOrders]);
-  const purchaseReceipts: PurchaseReceipt[] = useMemo(() => (rawPurchaseReceipts || []).map(purchaseReceiptFromApi), [rawPurchaseReceipts]);
-  const purchaseInvoices: PurchaseInvoice[] = useMemo(() => (rawPurchaseInvoices || []).map(purchaseInvoiceFromApi), [rawPurchaseInvoices]);
 
   const sortedSuppliers = useMemo(() => {
     if (!suppliers) return [];
@@ -200,26 +182,12 @@ export default function SuppliersPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    const usedIds = new Set<string>();
-    [
-      ...(purchaseOrders || []).flatMap(o => o.supplierId),
-      ...(purchaseReceipts || []).flatMap(r => r.supplierId),
-      ...(purchaseInvoices || []).flatMap(inv => inv.supplierId)
-    ].forEach((id) => { if (selectedIds.has(id)) usedIds.add(id); });
-
-    if (usedIds.size > 0) {
-      const blockedNames = selectedSuppliers.filter((s) => usedIds.has(s.id)).map((s) => `"${s.name}"`).join(', ');
-      toast({ variant: 'destructive', title: 'Suppression impossible', description: `Ces fournisseurs sont liés à des documents d'achat : ${blockedNames}`, duration: 6000 });
-      setDeleteDialogOpen(false);
-      return;
-    }
-
     let successCount = 0, failCount = 0;
     let lastError = '';
     await Promise.all(
       selectedSuppliers.map(async (supplier) => {
         try { await api.deleteSupplier(supplier.id); successCount++; }
-        catch(e: any) { console.error('DELETE ERROR:', e); failCount++; lastError = e.message; }
+        catch(e: any) { failCount++; lastError = `"${supplier.name}" : ${e.message}`; }
       })
     );
 
