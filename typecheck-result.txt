@@ -1,4 +1,4 @@
-Typecheck run: 2026-10-10T09:08:23Z
+Typecheck run: 2026-10-10T09:17:08Z
 
 > nextn@0.1.0 typecheck
 > tsc --noEmit

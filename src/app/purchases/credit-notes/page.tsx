@@ -35,9 +35,11 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
+import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 export default function AATestPage() {
     const { toast } = useToast();
+    const { warning, showWarning, clearWarning } = useActionWarning();
   
   // --- STATES ---
   const [selectedCreditNote, setSelectedCreditNote] = useState<PurchaseCreditNote | null>(null);
@@ -65,6 +67,7 @@ export default function AATestPage() {
   };
 
   const handleRowClick = (creditNote: PurchaseCreditNote) => {
+    clearWarning();
     if (selectedCreditNote?.id === creditNote.id) {
       setSelectedCreditNote(null);
     } else {
@@ -81,11 +84,7 @@ export default function AATestPage() {
   const handleDeleteRequest = () => {
     if (selectedCreditNote) {
       if (selectedCreditNote.status === 'Validé') {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: 'Vous ne pouvez pas supprimer un avoir validé. Annulez d\'abord la validation.',
-        });
+        showWarning('delete', "Vous ne pouvez pas supprimer un avoir validé. Annulez d'abord la validation.");
         return;
       }
       setCreditNoteToDelete(selectedCreditNote);
@@ -234,15 +233,17 @@ export default function AATestPage() {
                     )}
                     style={{ transitionDelay: selectedCreditNote ? '150ms' : '0ms' }}
                   >
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Supprimer</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="delete" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Supprimer</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
               </div>
           </CardHeader>

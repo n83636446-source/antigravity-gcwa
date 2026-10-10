@@ -37,10 +37,11 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-
+import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 export default function FATestPage() {
     const { toast } = useToast();
+    const { warning, showWarning, clearWarning } = useActionWarning();
   
   // --- STATES ---
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null);
@@ -81,6 +82,7 @@ export default function FATestPage() {
   };
 
   const handleRowClick = (invoice: PurchaseInvoice) => {
+    clearWarning();
     if (selectedInvoice?.id === invoice.id) {
       setSelectedInvoice(null);
     } else {
@@ -99,11 +101,7 @@ export default function FATestPage() {
   const handleDeleteRequest = () => {
     if (selectedInvoice) {
       if (selectedInvoice.status !== 'Brouillon') {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: 'Vous ne pouvez supprimer qu\'une facture en brouillon.',
-        });
+        showWarning('delete', "Vous ne pouvez supprimer qu'une facture en brouillon.");
         return;
       }
       setInvoiceToDelete(selectedInvoice);
@@ -154,11 +152,11 @@ export default function FATestPage() {
   const handleCancelInvoiceValidation = async () => {
     if (!selectedInvoice) return;
     if (selectedInvoice.status === 'Partiellement payée' || selectedInvoice.status === 'Payée') {
-      toast({ variant: 'destructive', title: 'Action impossible', description: "Cette facture a des règlements. Annulez-les d'abord depuis la page Règlements avant d'annuler la validation." });
+      showWarning('cancel', "Cette facture a des règlements. Annulez-les d'abord depuis la page Règlements avant d'annuler la validation.");
       return;
     }
     if (invoiceAlreadyCredited) {
-      toast({ variant: 'destructive', title: 'Action impossible', description: "Un avoir existe déjà pour cette facture. Impossible d'annuler la validation." });
+      showWarning('cancel', "Un avoir existe déjà pour cette facture. Impossible d'annuler la validation.");
       return;
     }
     try {
@@ -191,7 +189,7 @@ export default function FATestPage() {
       return;
     }
     if (invoiceAlreadyCredited) {
-      toast({ variant: 'destructive', title: 'Action impossible', description: 'Cette facture a déjà été transférée en avoir.' });
+      showWarning('transfer', 'Cette facture a déjà été transférée en avoir.');
       return;
     }
     setInvoiceToEdit(null);
@@ -271,15 +269,17 @@ export default function FATestPage() {
                         </Tooltip>
                     )}
                     {selectedInvoice && selectedInvoice.status !== 'Brouillon' && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className={cn("h-8 w-8", cancelValidationBlocked && "opacity-50")} onClick={handleCancelInvoiceValidation} aria-disabled={cancelValidationBlocked}>
-                                <XCircle className="h-4 w-4 text-orange-500" />
-                                <span className="sr-only">Annuler la validation</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Annuler la validation</TooltipContent>
-                        </Tooltip>
+                        <ActionWarning id="cancel" warning={warning} onClose={clearWarning}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" className={cn("h-8 w-8", cancelValidationBlocked && "opacity-50")} onClick={handleCancelInvoiceValidation} aria-disabled={cancelValidationBlocked}>
+                                    <XCircle className="h-4 w-4 text-orange-500" />
+                                    <span className="sr-only">Annuler la validation</span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Annuler la validation</TooltipContent>
+                            </Tooltip>
+                        </ActionWarning>
                     )}
                   </div>
 
@@ -312,21 +312,23 @@ export default function FATestPage() {
                     )}
                     style={{ transitionDelay: selectedInvoice ? '110ms' : '0ms' }}
                   >
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className={cn("h-8 w-8", transferBlocked && "opacity-50")} 
-                          onClick={handleTransferToCreditNote}
-                          aria-disabled={transferBlocked}
-                        >
-                          <ArrowRightCircle className="h-4 w-4" />
-                          <span className="sr-only">Transférer en Avoir</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Transférer en Avoir</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="transfer" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className={cn("h-8 w-8", transferBlocked && "opacity-50")} 
+                            onClick={handleTransferToCreditNote}
+                            aria-disabled={transferBlocked}
+                          >
+                            <ArrowRightCircle className="h-4 w-4" />
+                            <span className="sr-only">Transférer en Avoir</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Transférer en Avoir</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
 
                   {/* Modifier */}
@@ -361,15 +363,17 @@ export default function FATestPage() {
                     )}
                     style={{ transitionDelay: selectedInvoice ? '225ms' : '0ms' }}
                   >
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Supprimer</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="delete" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Supprimer</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
               </div>
           </CardHeader>
