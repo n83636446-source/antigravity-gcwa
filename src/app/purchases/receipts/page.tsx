@@ -27,9 +27,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { BrTestDialog } from '@/components/br-test-dialog';
 import { hasDownstreamDocument } from "@/lib/purchase-document-guards";
+import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 export default function BRTestPage() {
     const { toast } = useToast();
+    const { warning, showWarning, clearWarning } = useActionWarning();
   
   // --- STATES ---
   const [selectedReceipt, setSelectedReceipt] = useState<PurchaseReceipt | null>(null);
@@ -92,6 +94,7 @@ export default function BRTestPage() {
   };
 
   const handleRowClick = (receipt: PurchaseReceipt) => {
+    clearWarning();
     if (selectedReceipt?.id === receipt.id) {
       setSelectedReceipt(null);
     } else {
@@ -109,11 +112,7 @@ export default function BRTestPage() {
   const handleDeleteRequest = () => {
     if (selectedReceipt) {
       if (selectedReceipt.status === 'Validé') {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: 'Vous ne pouvez pas supprimer un bon de réception validé. Annulez d\'abord la validation.',
-        });
+        showWarning('delete', "Vous ne pouvez pas supprimer un bon de réception validé. Annulez d'abord la validation.");
         return;
       }
       setReceiptToDelete(selectedReceipt);
@@ -148,11 +147,7 @@ const handleTransferToInvoice = () => {
       return;
     }
     if (receiptAlreadyInvoiced) {
-      toast({
-        variant: 'destructive',
-        title: 'Action impossible',
-        description: 'Ce bon de réception a déjà été transféré en facture.',
-      });
+      showWarning('transfer', 'Ce bon de réception a déjà été transféré en facture.');
       return;
     }
     setReceiptToTransfer(selectedReceipt);
@@ -211,11 +206,7 @@ const handleTransferToInvoice = () => {
     );
 
     if (receiptAlreadyInvoiced) {
-      toast({
-        variant: 'destructive',
-        title: 'Action impossible',
-        description: 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.',
-      });
+      showWarning('cancel', 'Ce bon de réception a déjà été facturé et sa validation ne peut pas être annulée.');
       return;
     }
 
@@ -275,15 +266,17 @@ const handleTransferToInvoice = () => {
                         </Tooltip>
                     )}
                     {selectedReceipt?.status === 'Validé' && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className={cn("h-8 w-8", cancelValidationBlocked && "opacity-50")} aria-disabled={cancelValidationBlocked} onClick={handleCancelValidation}>
-                                <XCircle className="h-4 w-4 text-orange-500" />
-                                <span className="sr-only">Annuler la validation</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Annuler la validation</TooltipContent>
-                        </Tooltip>
+                        <ActionWarning id="cancel" warning={warning} onClose={clearWarning}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" className={cn("h-8 w-8", cancelValidationBlocked && "opacity-50")} aria-disabled={cancelValidationBlocked} onClick={handleCancelValidation}>
+                                    <XCircle className="h-4 w-4 text-orange-500" />
+                                    <span className="sr-only">Annuler la validation</span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Annuler la validation</TooltipContent>
+                            </Tooltip>
+                        </ActionWarning>
                     )}
                   </div>
 
@@ -319,21 +312,23 @@ const handleTransferToInvoice = () => {
                     )}
                     style={{ transitionDelay: selectedReceipt ? '150ms' : '0ms' }}
                   >
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className={cn("h-8 w-8", transferBlocked && "opacity-50")} 
-                            onClick={handleTransferToInvoice} 
-                            aria-disabled={transferBlocked}
-                        >
-                        <ArrowRightCircle className="h-4 w-4" />
-                        <span className="sr-only">Transférer en Facture</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Transférer en Facture</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="transfer" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className={cn("h-8 w-8", transferBlocked && "opacity-50")} 
+                              onClick={handleTransferToInvoice} 
+                              aria-disabled={transferBlocked}
+                          >
+                          <ArrowRightCircle className="h-4 w-4" />
+                          <span className="sr-only">Transférer en Facture</span>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Transférer en Facture</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
 
                   {/* Supprimer */}
@@ -344,15 +339,17 @@ const handleTransferToInvoice = () => {
                     )}
                     style={{ transitionDelay: selectedReceipt ? '225ms' : '0ms' }}
                   >
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Supprimer</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="delete" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Supprimer</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
               </div>
           </CardHeader>
