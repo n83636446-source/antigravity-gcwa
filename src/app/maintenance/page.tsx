@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseReceipt, Supplier } from '@/lib/types';
+import type { PurchaseReceipt } from '@/lib/types';
 import { api } from '@/lib/api';
 import { purchaseReceiptFromApi, supplierFromApi } from '@/lib/types';
 import { useApiCollection } from '@/hooks/use-api';
@@ -51,7 +51,7 @@ export default function MaintenancePage() {
         description: `Le bon ${forceDeleteReceipt.receiptNumber} a été supprimé.`,
       });
       setForceDeleteReceipt(null);
-    } catch (e) {
+    } catch {
       toast({
         title: 'Erreur',
         description: 'Impossible de supprimer le document.',

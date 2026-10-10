@@ -93,7 +93,7 @@ export function ClientsTable({ clients, onEdit, onDelete, selectedClient, onSetS
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client, index) => (
+                {clients.map((client) => (
                   <TableRow
                     key={client.id}
                     onClick={() => handleSelectClient(client)}

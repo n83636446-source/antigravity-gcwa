@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { Dialog, DialogTitle, DialogPortal } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -532,13 +532,7 @@ export function BrTestDialog({ receiptToEdit, orderToTransfer, isTransferInstanc
       setSupplierId(supplierWithType.id)
   }
 
-  const handleMainButtonClick = () => {
-    if (open) {
-      if (isMinimized) setIsMinimized(false)
-    } else {
-      setOpen(true)
-    }
-  }
+
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {

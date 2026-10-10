@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi, purchaseReceiptFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseInvoice, Supplier } from '@/lib/types';
+import type { PurchaseInvoice } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle, Wallet, ArrowRightCircle } from 'lucide-react';

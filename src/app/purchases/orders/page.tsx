@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseOrder, Supplier, PurchaseReceipt } from '@/lib/types';
+import type { PurchaseOrder } from '@/lib/types';
 import { api } from "@/lib/api";
 import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";

@@ -5,7 +5,6 @@ import {
   Table,
   TableHeader,
   TableRow,
-  TableHead,
   TableBody,
   TableCell,
 } from '@/components/ui/table';
@@ -62,7 +61,7 @@ export function SuppliersTable({
     <Table>
       <TableHeader>
         <TableRow>
-          {columns.map(({ id, label }, index) => (
+          {columns.map(({ id, label }) => (
             <DraggableHeader key={id} id={id}>
               {label}
             </DraggableHeader>

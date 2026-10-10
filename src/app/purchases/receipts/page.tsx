@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from "@/lib/api";
-import { productFromApi, supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseInvoiceFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseReceipt, Product, Supplier, PurchaseOrder, PurchaseInvoice } from '@/lib/types';
+import type { PurchaseReceipt } from '@/lib/types';
 import { PurchaseReceiptsTable } from '@/components/purchase-receipts-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ import { FaTestDialog } from '@/components/fa-test-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { BrTestDialog } from '@/components/br-test-dialog';
-import { hasDownstreamDocument } from "@/lib/purchase-document-guards";
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 export default function BRTestPage() {
@@ -56,21 +55,9 @@ export default function BRTestPage() {
   
     const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
 
-    const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useApiCollection(() => api.getProducts().then(r => r.map(productFromApi)));
-
     const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
   
-  const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingProducts || isLoadingSuppliers || isLoadingInvoices;
-
-  const lastInvoiceNumber = useMemo(() => {
-    if (!invoices || invoices.length === 0) {
-      return 0;
-    }
-    return invoices.reduce((max, inv) => {
-      const codeNumber = parseInt((inv.invoiceNumber || 'FA-0000').replace('FA-', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [invoices]);
+  const isLoading = isLoadingReceipts || isLoadingOrders || isLoadingSuppliers || isLoadingInvoices;
 
   // --- GUARDS ---
   useEffect(() => {
@@ -161,7 +148,6 @@ const handleTransferToInvoice = () => {
     try {
       await api.validatePurchaseReceipt(selectedReceipt.id);
       refetchReceipts();
-      refetchProducts();
       const validatedReceipt = { ...selectedReceipt, status: 'Validé' as const };
       setSelectedReceipt(validatedReceipt);
       toast({ title: 'Bon de réception validé', description: 'Le statut a été mis à jour avec succès et le stock a été modifié.' });
@@ -186,7 +172,6 @@ const handleTransferToInvoice = () => {
     try {
       await api.validatePurchaseReceipt(selectedReceipt.id);
       refetchReceipts();
-      refetchProducts();
       toast({ title: 'Bon de réception validé', description: 'Le statut a été mis à jour avec succès et le stock a été modifié.' });
       setSelectedReceipt({ ...selectedReceipt, status: 'Validé' as const });
     } catch (error) {
@@ -213,7 +198,6 @@ const handleTransferToInvoice = () => {
     try {
       await api.cancelPurchaseReceiptValidation(selectedReceipt.id);
       refetchReceipts();
-      refetchProducts();
       toast({ title: 'Validation annulée', description: 'Le bon de réception est de retour en brouillon et le stock a été restauré.' });
       setSelectedReceipt(prev => prev ? { ...prev, status: 'Brouillon' } : null);
     } catch (error: any) {

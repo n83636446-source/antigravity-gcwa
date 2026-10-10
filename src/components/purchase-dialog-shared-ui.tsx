@@ -842,7 +842,6 @@ export const SimpleCalendar = ({ selected, onSelect, onClose, minDate }: { selec
     const parts = val.split(/[\/\-\.]/)
     const dStr = parts[0]
     const mStr = parts[1]
-    const yStr = parts[2]
 
     let invalid = false
     if (dStr && parseInt(dStr, 10) > 31) invalid = true

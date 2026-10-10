@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import type { Reglement, PurchaseInvoice, Supplier, ReglementLine } from '@/lib/types';
+import type { Reglement, ReglementLine } from '@/lib/types';
 import { api } from "@/lib/api";
 import { supplierFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn, roundMoney } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { api } from "@/lib/api";
-import { productFromApi, supplierFromApi, purchaseCreditNoteFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseCreditNoteFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseCreditNote, Product, Supplier } from '@/lib/types';
+import type { PurchaseCreditNote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
@@ -52,11 +52,9 @@ export default function AATestPage() {
   // --- DATA FETCHING ---
     const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
   
-    const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useApiCollection(() => api.getProducts().then(r => r.map(productFromApi)));
-
     const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
   
-  const isLoading = isLoadingCreditNotes || isLoadingProducts || isLoadingSuppliers;
+  const isLoading = isLoadingCreditNotes || isLoadingSuppliers;
 
   // --- HANDLERS ---
 
@@ -118,7 +116,6 @@ export default function AATestPage() {
     try {
       await api.validatePurchaseCreditNote(selectedCreditNote.id);
       refetchCreditNotes();
-      refetchProducts();
       toast({ title: 'Avoir validé', description: `L'avoir ${selectedCreditNote.creditNoteNumber} a été validé.` });
       setSelectedCreditNote({ ...selectedCreditNote, status: 'Validé' } as PurchaseCreditNote);
     } catch (error: any) {
@@ -135,7 +132,6 @@ export default function AATestPage() {
     try {
       await api.cancelPurchaseCreditNoteValidation(selectedCreditNote.id);
       refetchCreditNotes();
-      refetchProducts();
       toast({ title: 'Validation annulée', description: `L'avoir ${selectedCreditNote.creditNoteNumber} est de retour en brouillon.` });
       setSelectedCreditNote({ ...selectedCreditNote, status: 'Brouillon' } as PurchaseCreditNote);
     } catch (error: any) {

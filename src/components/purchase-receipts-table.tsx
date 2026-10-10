@@ -10,7 +10,6 @@ import {
   Table,
   TableHeader,
   TableRow,
-  TableHead,
   TableBody,
   TableCell,
 } from '@/components/ui/table';
@@ -176,15 +175,6 @@ export function PurchaseReceiptsTable({
     }
   };
 
-  const lastReceiptNumber = useMemo(() => {
-    if (!receipts || receipts.length === 0) {
-      return 0;
-    }
-    return receipts.reduce((max, rec) => {
-      const codeNumber = parseInt((rec.receiptNumber || 'BR-0000').replace('BR-', ''), 10);
-      return codeNumber > max ? codeNumber : max;
-    }, 0);
-  }, [receipts]);
 
 
   return (
@@ -199,7 +189,7 @@ export function PurchaseReceiptsTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                     {columns.map(({ id, label }, index) => (
+                     {columns.map(({ id, label }) => (
                         <DraggableHeader key={id} id={id}>
                           {label}
                         </DraggableHeader>

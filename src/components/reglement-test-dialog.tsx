@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Minus, Loader2, X } from "lucide-react"
 import { isSameDay, format } from "date-fns"
-import { fr } from "date-fns/locale"
+
 import { cn, roundMoney, isDuplicateNumber, generateId } from "@/lib/utils"
 
  

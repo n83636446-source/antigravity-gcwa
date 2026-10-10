@@ -117,7 +117,7 @@ export function ArticleFamiliesTable({ families, onEdit, onDeleteSuccess, onAdd 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {families.map((family, index) => (
+                {families.map((family) => (
                   <TableRow
                     key={family.id}
                     onClick={() => handleSelectFamily(family)}

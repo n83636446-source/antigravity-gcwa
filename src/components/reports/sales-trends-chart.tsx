@@ -4,7 +4,6 @@ import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } f
 import {
   ChartContainer,
   ChartTooltipContent,
-  ChartLegend,
   ChartLegendContent,
   ChartConfig,
 } from '@/components/ui/chart';
