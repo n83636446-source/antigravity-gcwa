@@ -52,7 +52,8 @@ export default function FATestPage() {
   
   const [invoiceToReglement, setInvoiceToReglement] = useState<PurchaseInvoice | null>(null);
   const [invoiceToTransfer, setInvoiceToTransfer] = useState<PurchaseInvoice | null>(null);
-
+  const [validateThenTransferOpen, setValidateThenTransferOpen] = useState(false);
+  const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
   // --- DATA FETCHING ---
     const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
   
@@ -186,7 +187,7 @@ export default function FATestPage() {
   const handleTransferToCreditNote = () => {
     if (!selectedInvoice) return;
     if (selectedInvoice.status === 'Brouillon') {
-      toast({ variant: 'destructive', title: 'Action impossible', description: "Vous ne pouvez transférer qu'une facture validée." });
+      setValidateThenTransferOpen(true);
       return;
     }
     if (invoiceAlreadyCredited) {
@@ -199,6 +200,31 @@ export default function FATestPage() {
     setDialogToken(prev => prev + 1);
   };
 
+  const handleValidateAndTransfer = async () => {
+    if (!selectedInvoice) return;
+    setIsValidatingForTransfer(true);
+    try {
+      await api.validatePurchaseInvoice(selectedInvoice.id);
+      refetchInvoices();
+      const validatedInvoice = { ...selectedInvoice, status: 'Non payée' } as PurchaseInvoice;
+      setSelectedInvoice(validatedInvoice);
+      toast({ title: 'Facture validée', description: `La facture ${selectedInvoice.invoiceNumber} est passée en "Non payée".` });
+      setValidateThenTransferOpen(false);
+      setInvoiceToEdit(null);
+      setInvoiceToReglement(null);
+      setInvoiceToTransfer(validatedInvoice);
+      setDialogToken(prev => prev + 1);
+    } catch (error: any) {
+      setValidateThenTransferOpen(false);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de validation',
+        description: error.message || 'La validation a échoué.',
+      });
+    } finally {
+      setIsValidatingForTransfer(false);
+    }
+  };
 
   
   const cancelValidationBlocked = !!selectedInvoice && (selectedInvoice.status === 'Partiellement payée' || selectedInvoice.status === 'Payée' || invoiceAlreadyCredited);
@@ -428,6 +454,23 @@ export default function FATestPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={validateThenTransferOpen} onOpenChange={(open) => { if (!isValidatingForTransfer) setValidateThenTransferOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Facture non validée</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette facture n'est pas encore validée. Voulez-vous la valider puis la transférer en avoir ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isValidatingForTransfer}>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={isValidatingForTransfer} onClick={(e) => { e.preventDefault(); handleValidateAndTransfer(); }}>
+              Valider et transférer
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -44,6 +44,8 @@ export default function BRTestPage() {
   
   const [receiptToTransfer, setReceiptToTransfer] = useState<PurchaseReceipt | null>(null);
   const [receiptAlreadyInvoiced, setReceiptAlreadyInvoiced] = useState(false);
+  const [validateThenTransferOpen, setValidateThenTransferOpen] = useState(false);
+  const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
 
   // --- DATA FETCHING ---
     const { data: receipts, isLoading: isLoadingReceipts, refetch: refetchReceipts } = useApiCollection(() => api.getPurchaseReceipts().then(r => r.map(purchaseReceiptFromApi)));
@@ -142,11 +144,7 @@ export default function BRTestPage() {
 const handleTransferToInvoice = () => {
     if (!selectedReceipt) return;
     if (selectedReceipt.status !== 'Validé') {
-      toast({
-        variant: 'destructive',
-        title: 'Action impossible',
-        description: 'Vous ne pouvez transférer qu\'un bon de réception validé.',
-      });
+      setValidateThenTransferOpen(true);
       return;
     }
     if (receiptAlreadyInvoiced) {
@@ -160,6 +158,32 @@ const handleTransferToInvoice = () => {
     setReceiptToTransfer(selectedReceipt);
     sessionStorage.setItem('faTransferDialogState', 'true');
     setDialogToken(prev => prev + 1);
+  };
+
+  const handleValidateAndTransfer = async () => {
+    if (!selectedReceipt) return;
+    setIsValidatingForTransfer(true);
+    try {
+      await api.validatePurchaseReceipt(selectedReceipt.id);
+      refetchReceipts();
+      refetchProducts();
+      const validatedReceipt = { ...selectedReceipt, status: 'Validé' as const };
+      setSelectedReceipt(validatedReceipt);
+      toast({ title: 'Bon de réception validé', description: 'Le statut a été mis à jour avec succès et le stock a été modifié.' });
+      setValidateThenTransferOpen(false);
+      setReceiptToTransfer(validatedReceipt);
+      sessionStorage.setItem('faTransferDialogState', 'true');
+      setDialogToken(prev => prev + 1);
+    } catch (error) {
+      setValidateThenTransferOpen(false);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de validation',
+        description: (error instanceof Error ? error.message : 'La transaction a échoué.'),
+      });
+    } finally {
+      setIsValidatingForTransfer(false);
+    }
   };
 
   const handleValidateReceipt = async () => {
@@ -363,6 +387,23 @@ const handleTransferToInvoice = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={validateThenTransferOpen} onOpenChange={(open) => { if (!isValidatingForTransfer) setValidateThenTransferOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bon de réception non validé</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ce bon de réception n'est pas encore validé. Voulez-vous le valider puis le transférer en facture ? La validation ajoutera les quantités au stock.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isValidatingForTransfer}>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={isValidatingForTransfer} onClick={(e) => { e.preventDefault(); handleValidateAndTransfer(); }}>
+              Valider et transférer
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
