@@ -36,10 +36,12 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
+import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 export default function BCTestPage() {
   
   const { toast } = useToast();
+  const { warning, showWarning, clearWarning } = useActionWarning();
   
   // --- STATES ---
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
@@ -76,6 +78,7 @@ export default function BCTestPage() {
   };
 
   const handleRowClick = (order: PurchaseOrder) => {
+    clearWarning();
     if (selectedOrder?.id === order.id) {
       setSelectedOrder(null);
     } else {
@@ -93,11 +96,7 @@ export default function BCTestPage() {
   const handleTransferToReceipt = () => {
     if (!selectedOrder) return;
     if (transferredOrderIds.has(selectedOrder.id)) {
-      toast({
-        variant: 'destructive',
-        title: 'Action impossible',
-        description: 'Cette commande a déjà été transférée en bon de réception.',
-      });
+      showWarning('transfer', 'Cette commande a déjà été transférée en bon de réception.');
       return;
     }
     setOrderToTransfer(selectedOrder);
@@ -110,11 +109,7 @@ export default function BCTestPage() {
   const handleDeleteRequest = () => {
     if (selectedOrder) {
       if (transferredOrderIds.has(selectedOrder.id)) {
-        toast({
-          variant: 'destructive',
-          title: 'Action impossible',
-          description: 'Cette commande a déjà été transférée en bon de réception et ne peut pas être supprimée.',
-        });
+        showWarning('delete', 'Cette commande a déjà été transférée en bon de réception et ne peut pas être supprimée.');
         return;
       }
       setOrderToDelete(selectedOrder);
@@ -209,21 +204,23 @@ export default function BCTestPage() {
                     )}
                     style={{ transitionDelay: selectedOrder ? '75ms' : '0ms' }}
                   >
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className={cn("h-8 w-8", selectedOrderTransferred && "opacity-50")}
-                            aria-disabled={selectedOrderTransferred}
-                            onClick={handleTransferToReceipt}
-                        >
-                        <ArrowRightCircle className="h-4 w-4" />
-                        <span className="sr-only">Transférer en BR</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Transférer en Bon de Réception</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="transfer" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className={cn("h-8 w-8", selectedOrderTransferred && "opacity-50")}
+                              aria-disabled={selectedOrderTransferred}
+                              onClick={handleTransferToReceipt}
+                          >
+                          <ArrowRightCircle className="h-4 w-4" />
+                          <span className="sr-only">Transférer en BR</span>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Transférer en Bon de Réception</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
 
                   {/* Supprimer */}
@@ -234,15 +231,17 @@ export default function BCTestPage() {
                     )}
                     style={{ transitionDelay: selectedOrder ? '150ms' : '0ms' }}
                   >
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", selectedOrderTransferred && "opacity-50")} aria-disabled={selectedOrderTransferred} onClick={handleDeleteRequest}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Supprimer</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
-                    </Tooltip>
+                    <ActionWarning id="delete" warning={warning} onClose={clearWarning}>
+                      <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="destructive" size="icon" className={cn("h-8 w-8", selectedOrderTransferred && "opacity-50")} aria-disabled={selectedOrderTransferred} onClick={handleDeleteRequest}>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Supprimer</TooltipContent>
+                      </Tooltip>
+                    </ActionWarning>
                   </div>
               </div>
           </CardHeader>
