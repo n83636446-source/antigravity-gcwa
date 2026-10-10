@@ -206,6 +206,10 @@ const handleTransferToInvoice = () => {
     }
   };
 
+  const transferBlocked = selectedReceipt?.status !== 'Validé' || receiptAlreadyInvoiced;
+  const deleteBlocked = selectedReceipt?.status === 'Validé';
+  const cancelValidationBlocked = receiptAlreadyInvoiced;
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
@@ -249,7 +253,7 @@ const handleTransferToInvoice = () => {
                     {selectedReceipt?.status === 'Validé' && (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
+                                <Button variant="outline" size="icon" className={cn("h-8 w-8", cancelValidationBlocked && "opacity-50")} aria-disabled={cancelValidationBlocked} onClick={handleCancelValidation}>
                                 <XCircle className="h-4 w-4 text-orange-500" />
                                 <span className="sr-only">Annuler la validation</span>
                                 </Button>
@@ -296,9 +300,9 @@ const handleTransferToInvoice = () => {
                         <Button 
                             variant="outline" 
                             size="icon" 
-                            className="h-8 w-8" 
+                            className={cn("h-8 w-8", transferBlocked && "opacity-50")} 
                             onClick={handleTransferToInvoice} 
-                            disabled={selectedReceipt?.status !== 'Validé' || receiptAlreadyInvoiced}
+                            aria-disabled={transferBlocked}
                         >
                         <ArrowRightCircle className="h-4 w-4" />
                         <span className="sr-only">Transférer en Facture</span>
@@ -318,7 +322,7 @@ const handleTransferToInvoice = () => {
                   >
                     <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedReceipt?.status === 'Validé'}>
+                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Supprimer</span>
                         </Button>

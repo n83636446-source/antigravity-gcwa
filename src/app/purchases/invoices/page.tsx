@@ -152,6 +152,14 @@ export default function FATestPage() {
   
   const handleCancelInvoiceValidation = async () => {
     if (!selectedInvoice) return;
+    if (selectedInvoice.status === 'Partiellement payée' || selectedInvoice.status === 'Payée') {
+      toast({ variant: 'destructive', title: 'Action impossible', description: "Cette facture a des règlements. Annulez-les d'abord depuis la page Règlements avant d'annuler la validation." });
+      return;
+    }
+    if (invoiceAlreadyCredited) {
+      toast({ variant: 'destructive', title: 'Action impossible', description: "Un avoir existe déjà pour cette facture. Impossible d'annuler la validation." });
+      return;
+    }
     try {
       await api.cancelPurchaseInvoiceValidation(selectedInvoice.id);
       refetchInvoices();
@@ -193,6 +201,10 @@ export default function FATestPage() {
 
 
   
+  const cancelValidationBlocked = !!selectedInvoice && (selectedInvoice.status === 'Partiellement payée' || selectedInvoice.status === 'Payée' || invoiceAlreadyCredited);
+  const transferBlocked = !selectedInvoice || selectedInvoice.status === 'Brouillon' || invoiceAlreadyCredited;
+  const deleteBlocked = selectedInvoice?.status !== 'Brouillon';
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
@@ -232,10 +244,10 @@ export default function FATestPage() {
                         <TooltipContent>Valider</TooltipContent>
                         </Tooltip>
                     )}
-                    {selectedInvoice?.status === 'Non payée' && (
+                    {selectedInvoice && selectedInvoice.status !== 'Brouillon' && (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelInvoiceValidation}>
+                                <Button variant="outline" size="icon" className={cn("h-8 w-8", cancelValidationBlocked && "opacity-50")} onClick={handleCancelInvoiceValidation} aria-disabled={cancelValidationBlocked}>
                                 <XCircle className="h-4 w-4 text-orange-500" />
                                 <span className="sr-only">Annuler la validation</span>
                                 </Button>
@@ -279,9 +291,9 @@ export default function FATestPage() {
                         <Button 
                           variant="outline" 
                           size="icon" 
-                          className="h-8 w-8" 
+                          className={cn("h-8 w-8", transferBlocked && "opacity-50")} 
                           onClick={handleTransferToCreditNote}
-                          disabled={!selectedInvoice || selectedInvoice.status === 'Brouillon' || invoiceAlreadyCredited}
+                          aria-disabled={transferBlocked}
                         >
                           <ArrowRightCircle className="h-4 w-4" />
                           <span className="sr-only">Transférer en Avoir</span>
@@ -325,7 +337,7 @@ export default function FATestPage() {
                   >
                     <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedInvoice?.status !== 'Brouillon'}>
+                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Supprimer</span>
                         </Button>

@@ -154,6 +154,8 @@ export default function BCTestPage() {
     setSelectedOrder(null);
   };
 
+  const selectedOrderTransferred = !!selectedOrder && transferredOrderIds.has(selectedOrder.id);
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
@@ -212,7 +214,8 @@ export default function BCTestPage() {
                         <Button 
                             variant="outline" 
                             size="icon" 
-                            className="h-8 w-8" 
+                            className={cn("h-8 w-8", selectedOrderTransferred && "opacity-50")}
+                            aria-disabled={selectedOrderTransferred}
                             onClick={handleTransferToReceipt}
                         >
                         <ArrowRightCircle className="h-4 w-4" />
@@ -233,7 +236,7 @@ export default function BCTestPage() {
                   >
                     <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest}>
+                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", selectedOrderTransferred && "opacity-50")} aria-disabled={selectedOrderTransferred} onClick={handleDeleteRequest}>
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Supprimer</span>
                         </Button>

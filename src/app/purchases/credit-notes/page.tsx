@@ -148,6 +148,8 @@ export default function AATestPage() {
     }
   };
 
+  const deleteBlocked = selectedCreditNote?.status === 'Validé';
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
@@ -234,7 +236,7 @@ export default function AATestPage() {
                   >
                     <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest} disabled={selectedCreditNote?.status === 'Validé'}>
+                        <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Supprimer</span>
                         </Button>
