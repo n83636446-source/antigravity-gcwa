@@ -20,3 +20,7 @@ export function isDuplicateNumber<T extends { id: string }>(
   return items.some(item => item[numberField] === typedValue && item.id !== editingId);
 }
 
+export function compareDocumentNumbers(a?: string | null, b?: string | null): number {
+  return (a ?? '').localeCompare(b ?? '', 'fr', { numeric: true, sensitivity: 'base' });
+}
+

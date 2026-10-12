@@ -31,7 +31,7 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { DraggableHeader } from '@/components/ui/DraggableHeader';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -146,7 +146,7 @@ export function PurchaseReceiptsTable({
         supplierName: supplier?.name ?? 'Inconnu',
         formattedDate: format(new Date(receipt.receiptDate), 'dd/MM/yyyy', { locale: fr }),
       };
-    }).sort((a, b) => new Date(b.receiptDate).getTime() - new Date(a.receiptDate).getTime());
+    }).sort((a, b) => compareDocumentNumbers(a.receiptNumber, b.receiptNumber));
   }, [receipts, purchaseOrders, suppliers]);
   
   const getStatusVariant = (status: PurchaseReceipt['status']) => {
