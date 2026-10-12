@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { api } from "@/lib/api";
-import { supplierFromApi, purchaseCreditNoteFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseCreditNoteFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseCreditNote } from '@/lib/types';
@@ -53,8 +53,9 @@ export default function AATestPage() {
     const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
   
     const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
+    const { data: invoices, isLoading: isLoadingInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
   
-  const isLoading = isLoadingCreditNotes || isLoadingSuppliers;
+  const isLoading = isLoadingCreditNotes || isLoadingSuppliers || isLoadingInvoices;
 
   // --- HANDLERS ---
 
@@ -251,7 +252,8 @@ export default function AATestPage() {
                       <TableHead>Numéro</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Fournisseur</TableHead>
-                      <TableHead>Statut</TableHead>
+                      <TableHead>Origine</TableHead>
+                      <TableHead>Validée</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -265,10 +267,13 @@ export default function AATestPage() {
                         <TableCell className="font-medium">{creditNote.creditNoteNumber}</TableCell>
                         <TableCell>{format(new Date(creditNote.creditNoteDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                         <TableCell>{suppliers?.find(s => s.id === creditNote.supplierId)?.name || 'Inconnu'}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {creditNote.purchaseInvoiceId ? (invoices || []).find((i) => i.id === creditNote.purchaseInvoiceId)?.invoiceNumber || '—' : '—'}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={creditNote.status === 'Validé' ? 'default' : 'secondary'}>
-                            {creditNote.status}
-                          </Badge>
+                          {creditNote.status === 'Brouillon'
+                            ? <Badge variant="outline" className="text-muted-foreground">Non</Badge>
+                            : <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge>}
                         </TableCell>
                       </TableRow>
                     ))}

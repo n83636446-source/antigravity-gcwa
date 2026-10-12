@@ -389,6 +389,7 @@ export default function FATestPage() {
                       <TableHead>Validée</TableHead>
                       <TableHead>Réglée</TableHead>
                       <TableHead>Origine</TableHead>
+                      <TableHead>Transférée</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -414,6 +415,14 @@ export default function FATestPage() {
                           {invoice.status === 'Payée' ? <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge> : invoice.status === 'Partiellement payée' ? <Badge variant="outline" className="border-amber-500 text-amber-600">Partiellement</Badge> : (invoice.status === 'Non payée' || invoice.status === 'En retard') ? <Badge variant="outline" className="text-muted-foreground">Non</Badge> : '—'}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{invoice.purchaseReceiptId ? receipts?.find(r => r.id === invoice.purchaseReceiptId)?.receiptNumber || '—' : '—'}</TableCell>
+                        <TableCell>
+                          {(() => {
+                            const creditNote = (creditNotes || []).find((c) => c.purchaseInvoiceId === invoice.id);
+                            return creditNote
+                              ? <span className="font-mono text-xs">{creditNote.creditNoteNumber}</span>
+                              : <Badge variant="outline" className="text-muted-foreground">Non</Badge>;
+                          })()}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
