@@ -262,7 +262,7 @@ export default function AATestPage() {
                         key={creditNote.id}
                         onClick={() => handleRowClick(creditNote)}
                         onDoubleClick={() => handleRowDoubleClick(creditNote)}
-                        className={cn("cursor-pointer", selectedCreditNote?.id === creditNote.id && 'bg-muted/50')}
+                        className={cn("cursor-pointer", selectedCreditNote?.id === creditNote.id && 'bg-muted/50', creditNote.status === 'Validé' && '[&>td]:font-semibold')}
                       >
                         <TableCell className="font-medium">{creditNote.creditNoteNumber}</TableCell>
                         <TableCell>{format(new Date(creditNote.creditNoteDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>

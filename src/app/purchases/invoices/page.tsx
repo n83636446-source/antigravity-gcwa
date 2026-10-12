@@ -398,7 +398,7 @@ export default function FATestPage() {
                         key={invoice.id}
                         onClick={() => handleRowClick(invoice)}
                         onDoubleClick={() => handleRowDoubleClick(invoice)}
-                        className={cn("cursor-pointer", selectedInvoice?.id === invoice.id && 'bg-muted/50')}
+                        className={cn("cursor-pointer", selectedInvoice?.id === invoice.id && 'bg-muted/50', invoice.status !== 'Brouillon' && '[&>td]:font-semibold')}
                       >
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                         <TableCell>{format(new Date(invoice.invoiceDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>

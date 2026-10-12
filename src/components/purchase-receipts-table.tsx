@@ -208,7 +208,7 @@ export function PurchaseReceiptsTable({
                       key={receipt.id}
                       onClick={(e) => onRowClick?.(receipt, index, e)}
                       onDoubleClick={() => onRowDoubleClick?.(receipt)}
-                      className={cn("cursor-pointer", (selectedIds?.has(receipt.id) || selectedReceiptId === receipt.id) && 'bg-muted/50')}
+                      className={cn("cursor-pointer", (selectedIds?.has(receipt.id) || selectedReceiptId === receipt.id) && 'bg-muted/50', receipt.status === 'Validé' && '[&>td]:font-semibold')}
                     >
                       {columnIds.map((columnId) => renderCellContent(receipt, columnId))}
                     </TableRow>
