@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import type {
   PurchaseReceipt,
   PurchaseOrder,
+  PurchaseInvoice,
   Supplier,
 } from '@/lib/types';
 import {
@@ -40,19 +41,21 @@ type EnrichedReceipt = PurchaseReceipt & {
   orderNumber?: string;
   supplierName: string;
   formattedDate: string;
+  invoiceNumber?: string;
 }
 
 type Column = {
-  id: keyof EnrichedReceipt | 'orderNumber' | 'supplierName' | 'formattedDate' | 'status' | 'total_ht' | 'total_ttc';
+  id: keyof EnrichedReceipt | 'orderNumber' | 'supplierName' | 'formattedDate' | 'status' | 'transferredTo' | 'total_ht' | 'total_ttc';
   label: string;
 };
 
 const initialColumns: Column[] = [
   { id: 'receiptNumber', label: 'N° BR' },
-  { id: 'orderNumber', label: 'N° BC' },
+  { id: 'orderNumber', label: 'Origine' },
   { id: 'supplierName', label: 'Fournisseur' },
   { id: 'formattedDate', label: 'Date' },
-  { id: 'status', label: 'Statut' },
+  { id: 'status', label: 'Validée' },
+  { id: 'transferredTo', label: 'Transférée' },
   { id: 'total_ht', label: 'Total HT' },
   { id: 'total_ttc', label: 'Total TTC' },
 ];
@@ -61,6 +64,7 @@ const initialColumns: Column[] = [
 type PurchaseReceiptsTableProps = {
   receipts: PurchaseReceipt[];
   purchaseOrders: PurchaseOrder[];
+  purchaseInvoices: PurchaseInvoice[];
   suppliers: Supplier[];
   onRowClick?: (receipt: PurchaseReceipt, index?: number, e?: React.MouseEvent) => void;
   onRowDoubleClick?: (receipt: PurchaseReceipt) => void;
@@ -72,6 +76,7 @@ type PurchaseReceiptsTableProps = {
 export function PurchaseReceiptsTable({
   receipts,
   purchaseOrders,
+  purchaseInvoices,
   suppliers,
   onRowClick,
   onRowDoubleClick,
@@ -132,26 +137,25 @@ export function PurchaseReceiptsTable({
   const enrichedReceipts = useMemo(() => {
     if (!receipts || !suppliers) return [];
     return receipts.map(receipt => {
-      let orderNumber: string | undefined = 'N/A';
+      let orderNumber: string | undefined = '—';
       const supplier = suppliers.find((s) => s.id === receipt.supplierId);
       
       if (receipt.purchaseOrderId && purchaseOrders) {
           const order = purchaseOrders.find((o) => o.id === receipt.purchaseOrderId);
-          orderNumber = order?.orderNumber;
+          orderNumber = order?.orderNumber ?? '—';
       }
       
+      const invoice = (purchaseInvoices || []).find((i) => i.purchaseReceiptId === receipt.id);
+
       return {
         ...receipt,
         orderNumber,
         supplierName: supplier?.name ?? 'Inconnu',
         formattedDate: format(new Date(receipt.receiptDate), 'dd/MM/yyyy', { locale: fr }),
+        invoiceNumber: invoice?.invoiceNumber,
       };
     }).sort((a, b) => compareDocumentNumbers(a.receiptNumber, b.receiptNumber));
-  }, [receipts, purchaseOrders, suppliers]);
-  
-  const getStatusVariant = (status: PurchaseReceipt['status']) => {
-    return status === 'Brouillon' ? 'secondary' : 'default';
-  };
+  }, [receipts, purchaseOrders, suppliers, purchaseInvoices]);
   
   const renderCellContent = (receipt: any, columnId: Column['id']) => {
     const key = `${receipt.id}-${columnId}`;
@@ -159,13 +163,15 @@ export function PurchaseReceiptsTable({
       case 'receiptNumber':
         return <TableCell key={key} className="font-medium">{receipt.receiptNumber}</TableCell>;
       case 'orderNumber':
-        return <TableCell key={key}>{receipt.orderNumber}</TableCell>;
+        return <TableCell key={key} className="font-mono text-xs">{receipt.orderNumber}</TableCell>;
       case 'supplierName':
         return <TableCell key={key}>{receipt.supplierName}</TableCell>;
       case 'formattedDate':
         return <TableCell key={key}>{receipt.formattedDate}</TableCell>;
       case 'status':
-        return <TableCell key={key}><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>;
+        return <TableCell key={key}>{receipt.status === 'Brouillon' ? <Badge variant="outline" className="text-muted-foreground">Non</Badge> : <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge>}</TableCell>;
+      case 'transferredTo':
+        return <TableCell key={key}>{receipt.invoiceNumber ? <span className="font-mono text-xs">{receipt.invoiceNumber}</span> : <Badge variant="outline" className="text-muted-foreground">Non</Badge>}</TableCell>;
       case 'total_ht':
         return <TableCell key={key}>{(receipt.totalHT ?? 0).toFixed(2)} €</TableCell>;
       case 'total_ttc':

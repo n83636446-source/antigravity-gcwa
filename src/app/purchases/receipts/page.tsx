@@ -341,6 +341,7 @@ const handleTransferToInvoice = () => {
               <PurchaseReceiptsTable
                 receipts={receipts || []}
                 purchaseOrders={allOrders || []}
+                purchaseInvoices={invoices || []}
                 suppliers={suppliers || []}
                 onRowClick={handleRowClick}
                 onRowDoubleClick={handleRowDoubleClick}

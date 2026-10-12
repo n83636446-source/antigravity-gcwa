@@ -272,9 +272,12 @@ export default function BCTestPage() {
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalTTC)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={transferredOrderIds.has(order.id) ? 'default' : 'secondary'}>
-                            {transferredOrderIds.has(order.id) ? 'Oui' : 'Non'}
-                          </Badge>
+                          {(() => {
+                            const transferredReceipt = (receipts || []).find((r) => r.purchaseOrderId === order.id);
+                            return transferredReceipt
+                              ? <span className="font-mono text-xs">{transferredReceipt.receiptNumber}</span>
+                              : <Badge variant="outline" className="text-muted-foreground">Non</Badge>;
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))}
