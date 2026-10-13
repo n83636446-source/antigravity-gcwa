@@ -106,4 +106,4 @@ def ensure_name_still_unique(db: Session, model, db_obj, new_name, message: str)
         return
     if _normalize_name(new_name) == _normalize_name(db_obj.name):
         return
-    ensure_unique_name(db, model, new_name, message, exclude_id=db_obj.id)
+    ensure_unique_name(db, model, new_name, message, exclude_id=db_obj.id)
