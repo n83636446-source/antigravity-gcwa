@@ -394,7 +394,7 @@ const nextNum = calculateNextNumber(existing);
              <div className="flex-1 relative pointer-events-none h-full w-full">
                 {open && !isMinimized && (
                     <div 
-                        className="absolute inset-0 z-40 bg-black/80 pointer-events-auto transition-all duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                        className="absolute inset-0 z-40 bg-black/50 pointer-events-auto transition-all duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
                         onClick={(e) => { e.stopPropagation(); triggerOverlayShake(); }}
                     />
                 )}
