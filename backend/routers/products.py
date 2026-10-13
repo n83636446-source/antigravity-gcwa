@@ -5,7 +5,7 @@ from ..database import get_db
 from ..models import Product
 from ..schemas import ProductCreate, ProductUpdate, ProductRead
 from .. import crud
-from ..reference_guards import ensure_product_deletable
+from ..reference_guards import ensure_product_deletable, ensure_unique_name, ensure_name_still_unique
 
 router = APIRouter()
 
@@ -31,6 +31,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
     existing_code = db.query(Product).filter(Product.code == data.code).first()
     if existing_code:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le code "{data.code}" est déjà utilisé.')
+    ensure_unique_name(db, Product, data.name, "Ce nom d'article existe déjà.")
     return crud.create(db, Product, data.model_dump())
 
 
@@ -39,6 +40,7 @@ def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(g
     db_obj = crud.get_by_id(db, Product, product_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article introuvable.")
+    ensure_name_still_unique(db, Product, db_obj, data.model_dump(exclude_unset=True).get("name"), "Ce nom d'article existe déjà.")
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 

@@ -5,7 +5,7 @@ from ..database import get_db
 from ..models import Representative
 from ..schemas import RepresentativeCreate, RepresentativeUpdate, RepresentativeRead
 from .. import crud
-from ..reference_guards import ensure_representative_deletable
+from ..reference_guards import ensure_representative_deletable, ensure_unique_name, ensure_name_still_unique
 
 router = APIRouter()
 
@@ -32,6 +32,7 @@ def create_representative(data: RepresentativeCreate, db: Session = Depends(get_
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le code "{data.code}" est déjà utilisé.')
     if db.query(Representative).filter(Representative.email == data.email).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet email est déjà utilisé.")
+    ensure_unique_name(db, Representative, data.name, "Ce nom de représentant existe déjà.")
     return crud.create(db, Representative, data.model_dump())
 
 
@@ -40,6 +41,7 @@ def update_representative(representative_id: str, data: RepresentativeUpdate, db
     db_obj = crud.get_by_id(db, Representative, representative_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Représentant introuvable.")
+    ensure_name_still_unique(db, Representative, db_obj, data.model_dump(exclude_unset=True).get("name"), "Ce nom de représentant existe déjà.")
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 

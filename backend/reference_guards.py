@@ -87,3 +87,23 @@ def ensure_representative_deletable(db: Session, representative_id: str) -> None
             status_code=400,
             detail=f"Ce représentant est utilisé par {_join_labels_fr(labels)} et ne peut pas être supprimé."
         )
+
+def _normalize_name(value) -> str:
+    return " ".join(str(value or "").split()).casefold()
+
+def ensure_unique_name(db: Session, model, name, message: str, exclude_id: str | None = None) -> None:
+    wanted = _normalize_name(name)
+    if not wanted:
+        return
+    for row_id, row_name in db.query(model.id, model.name).all():
+        if exclude_id is not None and row_id == exclude_id:
+            continue
+        if _normalize_name(row_name) == wanted:
+            raise HTTPException(status_code=400, detail=message)
+
+def ensure_name_still_unique(db: Session, model, db_obj, new_name, message: str) -> None:
+    if new_name is None:
+        return
+    if _normalize_name(new_name) == _normalize_name(db_obj.name):
+        return
+    ensure_unique_name(db, model, new_name, message, exclude_id=db_obj.id)

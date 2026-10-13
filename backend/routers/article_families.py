@@ -5,7 +5,7 @@ from ..database import get_db
 from ..models import ArticleFamily
 from ..schemas import ArticleFamilyCreate, ArticleFamilyUpdate, ArticleFamilyRead
 from .. import crud
-from ..reference_guards import ensure_family_deletable
+from ..reference_guards import ensure_family_deletable, ensure_unique_name, ensure_name_still_unique
 
 router = APIRouter()
 
@@ -30,6 +30,7 @@ def create_article_family(data: ArticleFamilyCreate, db: Session = Depends(get_d
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cet identifiant existe déjà.")
     if db.query(ArticleFamily).filter(ArticleFamily.code == data.code).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Le code "{data.code}" est déjà utilisé.')
+    ensure_unique_name(db, ArticleFamily, data.name, "Ce nom de famille existe déjà.")
     return crud.create(db, ArticleFamily, data.model_dump())
 
 
@@ -38,6 +39,7 @@ def update_article_family(family_id: str, data: ArticleFamilyUpdate, db: Session
     db_obj = crud.get_by_id(db, ArticleFamily, family_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille d'articles introuvable.")
+    ensure_name_still_unique(db, ArticleFamily, db_obj, data.model_dump(exclude_unset=True).get("name"), "Ce nom de famille existe déjà.")
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 
