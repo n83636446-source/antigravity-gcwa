@@ -1,4 +1,4 @@
-ESLint run: 2026-10-13 07:43:27
+ESLint run: 2026-10-13 08:43:54
 
 > nextn@0.1.0 lint
 > next lint
@@ -85,11 +85,11 @@ ESLint run: 2026-10-13 07:43:27
 208:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/representative-dialog.tsx
-71:20  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-72:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-84:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-102:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-103:30  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+72:20  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+73:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+85:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+103:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+104:30  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/ui/DraggableHeader.tsx
 11:50  Warning: 'ref' is defined but never used.  @typescript-eslint/no-unused-vars

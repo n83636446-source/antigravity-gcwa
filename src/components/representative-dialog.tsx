@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Representative } from '@/lib/types';
 import { api } from '@/lib/api';
+import { normalizeName } from '@/lib/utils';
 
 const representativeSchema = z.object({
   code: z.string().optional(),
@@ -125,6 +126,15 @@ export function RepresentativeDialog({
       return; 
     }
 
+    const nameChanged = !isEditMode || !representative || normalizeName(data.name) !== normalizeName(representative.name);
+    const nameExists = nameChanged && representatives.some(
+      existingRep => existingRep.id !== representative?.id && normalizeName(existingRep.name) === normalizeName(data.name)
+    );
+    if (nameExists) {
+      form.setError('name', { type: 'manual', message: 'Ce nom de représentant existe déjà.' });
+      return;
+    }
+
     try {
       if (isEditMode && representative) {
         await api.updateRepresentative(representative.id, {
@@ -151,11 +161,11 @@ export function RepresentativeDialog({
         });
         onRepresentativeCreated?.({ id: created.id, name: created.name, email: created.email ?? undefined });
       }
-    } catch {
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de l\'enregistrement du représentant.',
+        description: error instanceof Error && error.message ? error.message : 'Une erreur est survenue lors de l\'enregistrement du représentant.',
       });
     }
 

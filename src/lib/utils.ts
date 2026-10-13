@@ -24,3 +24,8 @@ export function compareDocumentNumbers(a?: string | null, b?: string | null): nu
   return (a ?? '').localeCompare(b ?? '', 'fr', { numeric: true, sensitivity: 'base' });
 }
 
+export function normalizeName(value?: string | null): string {
+  return (value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+

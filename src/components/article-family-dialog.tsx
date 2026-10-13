@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { ArticleFamily } from '@/lib/types';
 import { api } from '@/lib/api';
+import { normalizeName } from '@/lib/utils';
 
 const familySchema = z.object({
   code: z.string().min(1, 'Le code de la famille est requis.'),
@@ -70,6 +71,15 @@ export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCo
       return;
     }
 
+    const nameChanged = !isEditMode || !family || normalizeName(data.name) !== normalizeName(family.name);
+    const nameExists = nameChanged && families.some(
+      f => f.id !== family?.id && normalizeName(f.name) === normalizeName(data.name)
+    );
+    if (nameExists) {
+      form.setError('name', { type: 'manual', message: 'Ce nom de famille existe déjà.' });
+      return;
+    }
+
     try {
       if (isEditMode && family) {
         await api.updateArticleFamily(family.id, {
@@ -92,11 +102,11 @@ export function ArticleFamilyDialog({ isOpen, onOpenChange, family, lastFamilyCo
           description: `La famille "${data.name}" a été ajoutée.`,
         });
       }
-    } catch {
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de l\'enregistrement de la famille.',
+        description: error instanceof Error && error.message ? error.message : 'Une erreur est survenue lors de l\'enregistrement de la famille.',
       });
     }
 
