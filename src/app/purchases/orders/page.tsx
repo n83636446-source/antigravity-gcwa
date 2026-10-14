@@ -154,8 +154,8 @@ export default function BCTestPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="BC Test"
-        description="Gérez vos bons de commande dans cet environnement de test."
+        title="Bons de commande"
+        description="Gérez vos bons de commande fournisseurs."
       >
         <Button onClick={handleOpenNewOrder}>
           <PlusCircle className="mr-2 h-4 w-4" />

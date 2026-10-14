@@ -232,8 +232,8 @@ export default function FATestPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="FA Test"
-        description="Gérez vos factures d'achat dans cet environnement de test."
+        title="Factures d'achat"
+        description="Gérez vos factures d'achat fournisseurs."
       >
         <Button onClick={handleOpenNewInvoice}>
           <PlusCircle className="mr-2 h-4 w-4" />

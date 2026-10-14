@@ -212,8 +212,8 @@ const handleTransferToInvoice = () => {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
-        title="BR Test"
-        description="Clone de test pour la validation du dialogue persistant."
+        title="Bons de réception"
+        description="Gérez vos bons de réception fournisseurs."
       >
         <Button onClick={handleOpenNewReceipt}>
           <PlusCircle className="mr-2 h-4 w-4" />

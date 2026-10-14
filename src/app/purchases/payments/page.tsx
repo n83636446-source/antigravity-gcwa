@@ -127,7 +127,7 @@ const handleCreateClick = () => {
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
         title="Règlements"
-        description="Historique complet de tous les règlements fournisseurs."
+        description="Gérez vos règlements fournisseurs."
       >
         <Button onClick={handleCreateClick}>
           <PlusCircle className="mr-2 h-4 w-4" />

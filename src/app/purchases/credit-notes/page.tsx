@@ -150,7 +150,7 @@ export default function AATestPage() {
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
         title="Avoirs d'achat"
-        description="Gérez vos avoirs fournisseurs dans cet environnement de test."
+        description="Gérez vos avoirs fournisseurs."
       >
         <Button onClick={handleOpenNewCreditNote}>
           <PlusCircle className="mr-2 h-4 w-4" />
