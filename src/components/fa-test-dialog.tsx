@@ -31,6 +31,7 @@ import {
   SupplierSearchDialog,
   ArticleSearchDialog,
   DatePickerField,
+  FieldMessage,
 } from "@/components/purchase-dialog-shared-ui"
 
 // --- TYPES LOCAUX ---
@@ -582,14 +583,12 @@ export function FaTestDialog({ invoiceToEdit, receiptToTransfer, isTransferInsta
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
-                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                       <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.invoiceNumber && "text-red-500")}>Numéro *</Label>
                           <div key={shakeTick} className={cn("w-full min-0", formErrors.invoiceNumber && "animate-shake")}>
                             <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} disabled={isLocked} className={cn("w-full min-w-0 font-mono", formErrors.invoiceNumber && "border-red-500 focus-visible:ring-red-500")} />
-                            <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">
-                                {formErrors.invoiceNumber ? (invoiceNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}
-                            </span>
                           </div>
+                          <FieldMessage isMobile={isMobileSize}>{formErrors.invoiceNumber ? (invoiceNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}</FieldMessage>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Date de facture</Label>
@@ -623,12 +622,10 @@ export function FaTestDialog({ invoiceToEdit, receiptToTransfer, isTransferInsta
                               <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
                            </Select>
                        </div>
-                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                       <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.dueDate && "text-red-500")}>Date d'échéance</Label>
-                          <div key={shakeTick} className={cn("w-full", formErrors.dueDate && "animate-shake")}>
-                              <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" disabled={isLocked} minDate={date} />
-                              {formErrors.dueDate && <span className="text-xs text-red-500 mt-1 block">La date d'échéance ne peut pas être antérieure à la date de facture.</span>}
-                          </div>
+                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" disabled={isLocked} minDate={date} warningInOwnRow isMobile={isMobileSize} />
+                          {formErrors.dueDate && (<FieldMessage isMobile={isMobileSize}>La date d'échéance ne peut pas être antérieure à la date de facture.</FieldMessage>)}
                        </div>
                     </div>
                  </div>

@@ -24,6 +24,7 @@ import {
   SupplierSelector,
   SupplierSearchDialog,
   DatePickerField,
+  FieldMessage,
 } from "@/components/purchase-dialog-shared-ui"
 
 interface ReglementTestDialogProps {
@@ -256,14 +257,12 @@ const nextNum = calculateNextNumber(existing);
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
-                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                       <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.reglementNumber && "text-red-500")}>Numéro *</Label>
                           <div key={shakeTick} className={cn("w-full min-0", formErrors.reglementNumber && "animate-shake")}>
                             <Input value={reglementNumber} onChange={(e) => setReglementNumber(e.target.value)} className={cn("w-full min-w-0 font-mono", formErrors.reglementNumber && "border-red-500 focus-visible:ring-red-500")} />
-                            <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">
-                                {formErrors.reglementNumber ? (reglementNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}
-                            </span>
                           </div>
+                          <FieldMessage isMobile={isMobileSize}>{formErrors.reglementNumber ? (reglementNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}</FieldMessage>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Date</Label>
@@ -296,9 +295,9 @@ const nextNum = calculateNextNumber(existing);
                               <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
                            </Select>
                        </div>
-                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                       <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Date d'échéance</Label>
-                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" minDate={date} reserveWarningSpace />
+                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" minDate={date} warningInOwnRow isMobile={isMobileSize} />
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Mt Règlement</Label>

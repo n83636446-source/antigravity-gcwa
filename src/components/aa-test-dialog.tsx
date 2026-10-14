@@ -31,6 +31,7 @@ import {
   SupplierSearchDialog,
   ArticleSearchDialog,
   DatePickerField,
+  FieldMessage,
 } from "@/components/purchase-dialog-shared-ui"
 
 // --- TYPES LOCAUX ---
@@ -582,14 +583,12 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
-                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                       <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.creditNoteNumber && "text-red-500")}>Numéro *</Label>
                           <div key={shakeTick} className={cn("w-full min-0", formErrors.creditNoteNumber && "animate-shake")}>
                             <Input value={creditNoteNumber} onChange={(e) => setCreditNoteNumber(e.target.value)} disabled={isValidated} className={cn("w-full min-w-0 font-mono", formErrors.creditNoteNumber && "border-red-500 focus-visible:ring-red-500")} />
-                            <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">
-                                {formErrors.creditNoteNumber ? (creditNoteNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}
-                            </span>
                           </div>
+                          <FieldMessage isMobile={isMobileSize}>{formErrors.creditNoteNumber ? (creditNoteNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}</FieldMessage>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Date de la pièce</Label>
@@ -623,12 +622,10 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                               <SelectContent><SelectItem value="cash">Espèces</SelectItem></SelectContent>
                            </Select>
                        </div>
-                       <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
+                       <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.dueDate && "text-red-500")}>Date d'échéance</Label>
-                          <div key={shakeTick} className={cn("w-full", formErrors.dueDate && "animate-shake")}>
-                              <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" disabled={isValidated} minDate={date} />
-                              {formErrors.dueDate && <span className="text-xs text-red-500 mt-1 block">La date d'échéance ne peut pas être antérieure à la date de pièce.</span>}
-                          </div>
+                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" disabled={isValidated} minDate={date} warningInOwnRow isMobile={isMobileSize} />
+                          {formErrors.dueDate && (<FieldMessage isMobile={isMobileSize}>La date d'échéance ne peut pas être antérieure à la date de pièce.</FieldMessage>)}
                        </div>
                     </div>
                  </div>

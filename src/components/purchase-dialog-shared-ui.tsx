@@ -977,7 +977,11 @@ export const SimpleCalendar = ({ selected, onSelect, onClose, minDate }: { selec
   )
 }
 
-export const DatePickerField = ({ selected, onSelect, placeholder, disabled = false, minDate, reserveWarningSpace = false }: any) => {
+export const FieldMessage = ({ children, isMobile = false }: { children?: React.ReactNode; isMobile?: boolean }) => (
+  <span className={cn("text-xs text-red-500 min-h-[1rem]", !isMobile && "col-start-2")}>{children}</span>
+)
+
+export const DatePickerField = ({ selected, onSelect, placeholder, disabled = false, minDate, warningInOwnRow = false, isMobile = false }: any) => {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const [dateWarning, setDateWarning] = useState<string | null>(null)
@@ -1044,42 +1048,54 @@ export const DatePickerField = ({ selected, onSelect, placeholder, disabled = fa
     onSelect(d)
   }
 
+  const field = (
+    <div className="relative w-full">
+        <Input
+          ref={inputRef}
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          placeholder={placeholder || "JJ/MM/AAAA"}
+          className="w-full pr-10"
+        />
+        <Popover open={isOpen && !disabled} onOpenChange={setIsOpen} modal={true}>
+          <PopoverTrigger asChild>
+            <Button 
+                type="button"
+                variant="ghost" 
+                size="icon"
+                disabled={disabled}
+                className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600 rounded-l-none"
+                tabIndex={-1} 
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="bg-white rounded-md border shadow-md relative z-[10000]">
+                <SimpleCalendar selected={selected} onSelect={handleCalendarSelect} onClose={() => setIsOpen(false)} minDate={minDate} />
+            </div>
+          </PopoverContent>
+        </Popover>
+    </div>
+  )
+
+  if (warningInOwnRow) {
+    return (
+      <>
+        {field}
+        <p className={cn("text-xs text-red-600 min-h-[1rem]", !isMobile && "col-start-2")}>{dateWarning}</p>
+      </>
+    )
+  }
   return (
     <div className="relative w-full">
-        <div className="relative w-full">
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={handleInputChange}
-              onBlur={handleBlur}
-              onKeyDown={handleKeyDown}
-              disabled={disabled}
-              placeholder={placeholder || "JJ/MM/AAAA"}
-              className="w-full pr-10"
-            />
-            <Popover open={isOpen && !disabled} onOpenChange={setIsOpen} modal={true}>
-              <PopoverTrigger asChild>
-                <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="icon"
-                    disabled={disabled}
-                    className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-blue-600 rounded-l-none"
-                    tabIndex={-1} 
-                >
-                  <CalendarIcon className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <div className="bg-white rounded-md border shadow-md relative z-[10000]">
-                    <SimpleCalendar selected={selected} onSelect={handleCalendarSelect} onClose={() => setIsOpen(false)} minDate={minDate} />
-                </div>
-              </PopoverContent>
-            </Popover>
-        </div>
-        {(dateWarning || reserveWarningSpace) && (
-          <p className={cn("text-xs text-red-600 mt-1", reserveWarningSpace && "min-h-[1rem]")}>{dateWarning}</p>
-        )}
+      {field}
+      {dateWarning && (
+        <p className="text-xs text-red-600 mt-1">{dateWarning}</p>
+      )}
     </div>
   )
 }
