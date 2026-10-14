@@ -565,11 +565,9 @@ export function BcTestDialog({ orderToEdit, onSaveSuccess }: BcTestDialogProps) 
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.orderNumber && "text-red-500")}>Numéro *</Label>
                           <div key={shakeTick} className={cn("w-full min-0", formErrors.orderNumber && "animate-shake")}>
                             <Input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} disabled={isValidated} className={cn("w-full min-w-0 font-mono", formErrors.orderNumber && "border-red-500 focus-visible:ring-red-500")} />
-                            {formErrors.orderNumber && (
-                                <span className="text-xs text-red-500 mt-1 block">
-                                    {orderNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire."}
-                                </span>
-                            )}
+                            <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">
+                                {formErrors.orderNumber ? (orderNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}
+                            </span>
                           </div>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -611,8 +609,8 @@ export function BcTestDialog({ orderToEdit, onSaveSuccess }: BcTestDialogProps) 
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.deliveryDate && "text-red-500")}>Date de livraison</Label>
                           <div key={shakeTick} className={cn("w-full", formErrors.deliveryDate && "animate-shake")}>
-                              <DatePickerField selected={deliveryDate} onSelect={setDeliveryDate} placeholder="JJ/MM/AAAA" disabled={isValidated} minDate={date} />
-                              {formErrors.deliveryDate && <span className="text-xs text-red-500 mt-1 block">La date de livraison ne peut pas être antérieure à la date de commande.</span>}
+                              <DatePickerField selected={deliveryDate} onSelect={setDeliveryDate} placeholder="JJ/MM/AAAA" disabled={isValidated} minDate={date} reserveWarningSpace />
+                              <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">{formErrors.deliveryDate ? 'La date de livraison ne peut pas être antérieure à la date de commande.' : null}</span>
                           </div>
                        </div>
                     </div>

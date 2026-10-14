@@ -977,7 +977,7 @@ export const SimpleCalendar = ({ selected, onSelect, onClose, minDate }: { selec
   )
 }
 
-export const DatePickerField = ({ selected, onSelect, placeholder, disabled = false, minDate }: any) => {
+export const DatePickerField = ({ selected, onSelect, placeholder, disabled = false, minDate, reserveWarningSpace = false }: any) => {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const [dateWarning, setDateWarning] = useState<string | null>(null)
@@ -1077,8 +1077,8 @@ export const DatePickerField = ({ selected, onSelect, placeholder, disabled = fa
               </PopoverContent>
             </Popover>
         </div>
-        {dateWarning && (
-          <p className="text-xs text-red-600 mt-1">{dateWarning}</p>
+        {(dateWarning || reserveWarningSpace) && (
+          <p className={cn("text-xs text-red-600 mt-1", reserveWarningSpace && "min-h-[1rem]")}>{dateWarning}</p>
         )}
     </div>
   )

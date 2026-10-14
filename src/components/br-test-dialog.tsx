@@ -592,11 +592,9 @@ export function BrTestDialog({ receiptToEdit, orderToTransfer, isTransferInstanc
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.receiptNumber && "text-red-500")}>Numéro *</Label>
                           <div key={shakeTick} className={cn("w-full min-0", formErrors.receiptNumber && "animate-shake")}>
                             <Input value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} disabled={isValidated} className={cn("w-full min-w-0 font-mono", formErrors.receiptNumber && "border-red-500 focus-visible:ring-red-500")} />
-                            {formErrors.receiptNumber && (
-                                <span className="text-xs text-red-500 mt-1 block">
-                                    {receiptNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire."}
-                                </span>
-                            )}
+                            <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">
+                                {formErrors.receiptNumber ? (receiptNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}
+                            </span>
                           </div>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>

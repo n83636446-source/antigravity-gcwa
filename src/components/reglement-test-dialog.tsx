@@ -260,11 +260,9 @@ const nextNum = calculateNextNumber(existing);
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.reglementNumber && "text-red-500")}>Numéro *</Label>
                           <div key={shakeTick} className={cn("w-full min-0", formErrors.reglementNumber && "animate-shake")}>
                             <Input value={reglementNumber} onChange={(e) => setReglementNumber(e.target.value)} className={cn("w-full min-w-0 font-mono", formErrors.reglementNumber && "border-red-500 focus-visible:ring-red-500")} />
-                            {formErrors.reglementNumber && (
-                                <span className="text-xs text-red-500 mt-1 block">
-                                    {reglementNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire."}
-                                </span>
-                            )}
+                            <span className="text-xs text-red-500 mt-1 block min-h-[1rem]">
+                                {formErrors.reglementNumber ? (reglementNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}
+                            </span>
                           </div>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
@@ -300,7 +298,7 @@ const nextNum = calculateNextNumber(existing);
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Date d'échéance</Label>
-                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" minDate={date} />
+                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" minDate={date} reserveWarningSpace />
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Mt Règlement</Label>
