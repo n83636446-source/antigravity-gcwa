@@ -62,18 +62,23 @@ const tiersSubMenuItems = [
   { href: '/representatives', label: 'Représentants', icon: UserCheck },
 ];
 
+type SidebarGroup = 'articles' | 'tiers' | 'achats' | null;
+
+const getGroupForPath = (path: string): SidebarGroup => {
+  if (articlesSubMenuItems.some(item => path.startsWith(item.href))) return 'articles';
+  if (achatSubMenuItems.some(item => path.startsWith(item.href))) return 'achats';
+  if (tiersSubMenuItems.some(item => path.startsWith(item.href))) return 'tiers';
+  return null;
+};
+
 export function AppSidebar() {
   const pathname = usePathname();
-  const [isArticlesOpen, setIsArticlesOpen] = React.useState(
-    articlesSubMenuItems.some(item => pathname.startsWith(item.href))
-  );
-  const [isAchatOpen, setIsAchatOpen] = React.useState(
-    achatSubMenuItems.some(item => pathname.startsWith(item.href))
-  );
+  const [openGroup, setOpenGroup] = React.useState<SidebarGroup>(() => getGroupForPath(pathname));
 
-  const [isTiersOpen, setIsTiersOpen] = React.useState(
-    tiersSubMenuItems.some(item => pathname.startsWith(item.href))
-  );
+  React.useEffect(() => {
+    const group = getGroupForPath(pathname);
+    if (group) setOpenGroup(group);
+  }, [pathname]);
 
   return (
     <>
@@ -109,7 +114,7 @@ export function AppSidebar() {
           ))}
 
           {/* Articles */}
-          <Collapsible open={isArticlesOpen} onOpenChange={setIsArticlesOpen}>
+          <Collapsible open={openGroup === 'articles'} onOpenChange={(open) => setOpenGroup(open ? 'articles' : null)}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
@@ -133,7 +138,7 @@ export function AppSidebar() {
           </Collapsible>
 
           {/* Tiers */}
-          <Collapsible open={isTiersOpen} onOpenChange={setIsTiersOpen}>
+          <Collapsible open={openGroup === 'tiers'} onOpenChange={(open) => setOpenGroup(open ? 'tiers' : null)}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
@@ -157,7 +162,7 @@ export function AppSidebar() {
           </Collapsible>
 
           {/* Achats */}
-          <Collapsible open={isAchatOpen} onOpenChange={setIsAchatOpen}>
+          <Collapsible open={openGroup === 'achats'} onOpenChange={(open) => setOpenGroup(open ? 'achats' : null)}>
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="justify-start w-full gap-2 p-2 h-8 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2">
