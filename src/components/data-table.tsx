@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTablePrefs, type SortState } from '@/hooks/use-table-prefs';
@@ -28,11 +27,35 @@ type DataTableProps<T> = {
   rowClassName?: (row: T) => string | undefined;
   defaultSort?: SortState;
   emptyMessage?: React.ReactNode;
-  showCheckboxes?: boolean;
 };
 
 const isEmptyValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === '';
+
+export function useClearSelectionOnOutsideClick(
+  containerRef: React.RefObject<HTMLElement | null>,
+  enabled: boolean,
+  onClear: () => void
+) {
+  const onClearRef = React.useRef(onClear);
+
+  React.useEffect(() => {
+    onClearRef.current = onClear;
+  });
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      const container = containerRef.current;
+      const target = e.target as Element | null;
+      if (!container || !target || container.contains(target)) return;
+      if (target.closest?.('[role="dialog"], [role="alertdialog"], [role="tooltip"], [role="alert"]')) return;
+      onClearRef.current();
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [containerRef, enabled]);
+}
 
 export function DataTable<T>({
   tableKey,
@@ -45,13 +68,16 @@ export function DataTable<T>({
   rowClassName,
   defaultSort,
   emptyMessage,
-  showCheckboxes = true,
 }: DataTableProps<T>) {
   const columnIds = React.useMemo(() => columns.map((c) => c.id), [columns]);
   const { userSort, setUserSort, resetPrefs } = useTablePrefs(tableKey, columnIds);
   const activeSortColumnId = userSort?.columnId ?? defaultSort?.columnId;
   const activeSortDirection = userSort?.direction ?? defaultSort?.direction ?? 'asc';
   const lastIndexRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (selectedIds.size === 0) lastIndexRef.current = null;
+  }, [selectedIds]);
 
   const displayRows = React.useMemo(() => {
     const column = columns.find((c) => c.id === activeSortColumnId);
@@ -69,33 +95,22 @@ export function DataTable<T>({
     });
   }, [rows, columns, activeSortColumnId, activeSortDirection]);
 
-  const toggleId = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    onSelectionChange(next);
-  };
-
   const handleRowClick = (row: T, index: number, e: React.MouseEvent) => {
-    const id = getRowId(row);
+    e.stopPropagation();
     if (e.shiftKey && lastIndexRef.current !== null) {
       const from = Math.min(lastIndexRef.current, index);
       const to = Math.max(lastIndexRef.current, index);
-      const next = e.ctrlKey || e.metaKey ? new Set(selectedIds) : new Set<string>();
+      const next = new Set(selectedIds);
       displayRows.slice(from, to + 1).forEach((r) => next.add(getRowId(r)));
       onSelectionChange(next);
       return;
     }
+    const id = getRowId(row);
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onSelectionChange(next);
     lastIndexRef.current = index;
-    if (e.ctrlKey || e.metaKey) {
-      toggleId(id);
-      return;
-    }
-    if (selectedIds.size === 1 && selectedIds.has(id)) {
-      onSelectionChange(new Set());
-      return;
-    }
-    onSelectionChange(new Set([id]));
   };
 
   const handleSortClick = (column: DataTableColumn<T>) => {
@@ -120,8 +135,6 @@ export function DataTable<T>({
     );
   }
 
-  const allSelected = displayRows.length > 0 && displayRows.every((r) => selectedIds.has(getRowId(r)));
-
   return (
     <div>
       {userSort && (
@@ -135,17 +148,6 @@ export function DataTable<T>({
       <Table>
         <TableHeader>
           <TableRow>
-            {showCheckboxes && (
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={() =>
-                    onSelectionChange(allSelected ? new Set<string>() : new Set(displayRows.map(getRowId)))
-                  }
-                  aria-label="Tout sélectionner"
-                />
-              </TableHead>
-            )}
             {columns.map((column) => {
               const sortable = !!column.sortValue;
               const isActive = sortable && column.id === activeSortColumnId;
@@ -182,24 +184,12 @@ export function DataTable<T>({
                 key={id}
                 onClick={(e) => handleRowClick(row, index, e)}
                 onDoubleClick={() => onRowDoubleClick?.(row)}
-                className={cn('cursor-pointer select-none', isSelected && 'bg-muted/50', rowClassName?.(row))}
-              >
-                {showCheckboxes && (
-                  <TableCell
-                    className="w-10"
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => {
-                        lastIndexRef.current = index;
-                        toggleId(id);
-                      }}
-                      aria-label="Sélectionner la ligne"
-                    />
-                  </TableCell>
+                className={cn(
+                  'cursor-pointer select-none transition-colors duration-150 ease-out',
+                  isSelected ? 'bg-sky-500/10 hover:bg-sky-500/20' : 'hover:bg-muted/50',
+                  rowClassName?.(row)
                 )}
+              >
                 {columns.map((column) => (
                   <TableCell key={column.id} className={column.className}>
                     {column.cell(row)}
