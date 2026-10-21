@@ -1,4 +1,4 @@
-ESLint run: 2026-10-21 09:24:32
+ESLint run: 2026-10-21 09:44:07
 
 
 > nextn@0.1.0 lint
@@ -31,11 +31,6 @@ ESLint run: 2026-10-21 09:24:32
 ./src/app/purchases/receipts/page.tsx
 118:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 203:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-
-./src/app/suppliers/page.tsx
-115:57  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-116:55  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-190:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/aa-test-dialog.tsx
 110:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
