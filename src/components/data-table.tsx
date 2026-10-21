@@ -2,6 +2,23 @@
 
 import * as React from 'react';
 import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,7 +37,10 @@ export type DataTableColumn<T> = {
 export type TablePrefs = {
   userSort: SortState | null;
   setUserSort: (next: SortState | null) => void;
+  columnOrder: string[] | null;
+  setColumnOrder: (next: string[] | null) => void;
   resetPrefs: () => void;
+  isCustomized: boolean;
 };
 
 type DataTableProps<T> = {
@@ -55,10 +75,10 @@ export function ResetSortButton({ visible, onClick }: { visible: boolean; onClic
           onClick={onClick}
         >
           <RotateCcw className="h-4 w-4" />
-          <span className="sr-only">Réinitialiser le tri</span>
+          <span className="sr-only">Réinitialiser le tri et les colonnes</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent>Réinitialiser le tri</TooltipContent>
+      <TooltipContent>Réinitialiser le tri et les colonnes</TooltipContent>
     </Tooltip>
   );
 }
@@ -88,6 +108,36 @@ export function useClearSelectionOnOutsideClick(
   }, [containerRef, enabled]);
 }
 
+function SortableHeadCell({
+  id,
+  className,
+  onClick,
+  children,
+}: {
+  id: string;
+  className?: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <TableHead
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      className={className}
+      onClick={onClick}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </TableHead>
+  );
+}
+
 export function DataTable<T>({
   prefs,
   columns,
@@ -100,10 +150,27 @@ export function DataTable<T>({
   defaultSort,
   emptyMessage,
 }: DataTableProps<T>) {
-  const { userSort, setUserSort } = prefs;
+  const { userSort, setUserSort, columnOrder, setColumnOrder } = prefs;
   const activeSortColumnId = userSort?.columnId ?? defaultSort?.columnId;
   const activeSortDirection = userSort?.direction ?? defaultSort?.direction ?? 'asc';
   const lastIndexRef = React.useRef<number | null>(null);
+  const suppressClickRef = React.useRef(false);
+  const dndId = React.useId();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const orderedColumns = React.useMemo(() => {
+    if (!columnOrder) return columns;
+    const byId = new Map(columns.map((c) => [c.id, c]));
+    const ordered = columnOrder.map((id) => byId.get(id)).filter((c): c is DataTableColumn<T> => !!c);
+    const missing = columns.filter((c) => !columnOrder.includes(c.id));
+    return [...ordered, ...missing];
+  }, [columns, columnOrder]);
+
+  const orderedIds = React.useMemo(() => orderedColumns.map((c) => c.id), [orderedColumns]);
 
   React.useEffect(() => {
     if (selectedIds.size === 0) lastIndexRef.current = null;
@@ -144,6 +211,7 @@ export function DataTable<T>({
   };
 
   const handleSortClick = (column: DataTableColumn<T>) => {
+    if (suppressClickRef.current) return;
     if (!column.sortValue) return;
     lastIndexRef.current = null;
     if (column.id === activeSortColumnId) {
@@ -151,6 +219,19 @@ export function DataTable<T>({
     } else {
       setUserSort({ columnId: column.id, direction: 'asc' });
     }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    suppressClickRef.current = true;
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedIds.indexOf(String(active.id));
+    const newIndex = orderedIds.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    setColumnOrder(arrayMove(orderedIds, oldIndex, newIndex));
   };
 
   if (rows.length === 0) {
@@ -167,61 +248,66 @@ export function DataTable<T>({
 
   return (
     <div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column) => {
-              const sortable = !!column.sortValue;
-              const isActive = sortable && column.id === activeSortColumnId;
+      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <SortableContext items={orderedIds} strategy={horizontalListSortingStrategy}>
+                {orderedColumns.map((column) => {
+                  const sortable = !!column.sortValue;
+                  const isActive = sortable && column.id === activeSortColumnId;
+                  return (
+                    <SortableHeadCell
+                      key={column.id}
+                      id={column.id}
+                      className={cn(sortable && 'cursor-pointer', 'select-none', column.headClassName)}
+                      onClick={() => handleSortClick(column)}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {column.label}
+                        {sortable &&
+                          (isActive ? (
+                            activeSortDirection === 'asc' ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : (
+                              <ArrowDown className="h-3 w-3" />
+                            )
+                          ) : (
+                            <ChevronsUpDown className="h-3 w-3 text-muted-foreground/50" />
+                          ))}
+                      </span>
+                    </SortableHeadCell>
+                  );
+                })}
+              </SortableContext>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayRows.map((row, index) => {
+              const id = getRowId(row);
+              const isSelected = selectedIds.has(id);
               return (
-                <TableHead
-                  key={column.id}
-                  className={cn(sortable && 'cursor-pointer select-none', column.headClassName)}
-                  onClick={() => handleSortClick(column)}
+                <TableRow
+                  key={id}
+                  onClick={(e) => handleRowClick(row, index, e)}
+                  onDoubleClick={() => onRowDoubleClick?.(row)}
+                  className={cn(
+                    'cursor-pointer select-none transition-colors duration-150 ease-out',
+                    isSelected ? 'bg-sky-500/10 hover:bg-sky-500/20' : 'hover:bg-muted/50',
+                    rowClassName?.(row)
+                  )}
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {column.label}
-                    {sortable &&
-                      (isActive ? (
-                        activeSortDirection === 'asc' ? (
-                          <ArrowUp className="h-3 w-3" />
-                        ) : (
-                          <ArrowDown className="h-3 w-3" />
-                        )
-                      ) : (
-                        <ChevronsUpDown className="h-3 w-3 text-muted-foreground/50" />
-                      ))}
-                  </span>
-                </TableHead>
+                  {orderedColumns.map((column) => (
+                    <TableCell key={column.id} className={column.className}>
+                      {column.cell(row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
               );
             })}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {displayRows.map((row, index) => {
-            const id = getRowId(row);
-            const isSelected = selectedIds.has(id);
-            return (
-              <TableRow
-                key={id}
-                onClick={(e) => handleRowClick(row, index, e)}
-                onDoubleClick={() => onRowDoubleClick?.(row)}
-                className={cn(
-                  'cursor-pointer select-none transition-colors duration-150 ease-out',
-                  isSelected ? 'bg-sky-500/10 hover:bg-sky-500/20' : 'hover:bg-muted/50',
-                  rowClassName?.(row)
-                )}
-              >
-                {columns.map((column) => (
-                  <TableCell key={column.id} className={column.className}>
-                    {column.cell(row)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      </DndContext>
     </div>
   );
 }

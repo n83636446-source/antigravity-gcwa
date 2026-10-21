@@ -178,7 +178,7 @@ export default function RepresentativesPage() {
                   <TooltipContent>Supprimer la sélection</TooltipContent>
                 </Tooltip>
               </div>
-              <ResetSortButton visible={tablePrefs.userSort !== null} onClick={tablePrefs.resetPrefs} />
+              <ResetSortButton visible={tablePrefs.isCustomized} onClick={tablePrefs.resetPrefs} />
             </div>
           </CardHeader>
           <CardContent>
