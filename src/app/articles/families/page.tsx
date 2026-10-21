@@ -10,7 +10,8 @@ import type { ArticleFamily } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArticleFamilyDialog } from '@/components/article-family-dialog';
-import { DataTable, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
+import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
+import { useTablePrefs } from '@/hooks/use-table-prefs';
 import { useBulkAction } from '@/hooks/use-bulk-action';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -30,6 +31,8 @@ const columns: DataTableColumn<ArticleFamily>[] = [
   { id: 'name', label: 'Nom', cell: (f) => f.name, sortValue: (f) => f.name },
 ];
 
+const columnIds = columns.map((c) => c.id);
+
 export default function ArticleFamiliesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFamily, setEditingFamily] = useState<ArticleFamily | undefined>();
@@ -37,6 +40,7 @@ export default function ArticleFamiliesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { runBulk, isRunning } = useBulkAction();
+  const tablePrefs = useTablePrefs('article-families', columnIds);
 
   useClearSelectionOnOutsideClick(cardRef, !isDialogOpen && !deleteDialogOpen, () => setSelectedIds(new Set()));
 
@@ -116,44 +120,47 @@ export default function ArticleFamiliesPage() {
                 — {selectedFamilies.length} sélectionnée{selectedFamilies.length > 1 ? 's' : ''}
               </span>
             </CardTitle>
-            <div className={cn(
-              'flex items-center gap-2 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
-              selectedFamilies.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            )}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={cn('h-8 w-8 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]', singleSelected ? 'opacity-100' : 'opacity-0 pointer-events-none')}
-                    onClick={() => singleSelected && handleEditFamily(singleSelected)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Modifier</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Modifier</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-8 gap-1"
-                    disabled={isRunning}
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Supprimer {selectedFamilies.length > 1 ? `(${selectedFamilies.length})` : ''}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Supprimer la sélection</TooltipContent>
-              </Tooltip>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                'flex items-center gap-2 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+                selectedFamilies.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              )}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={cn('h-8 w-8 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]', singleSelected ? 'opacity-100' : 'opacity-0 pointer-events-none')}
+                      onClick={() => singleSelected && handleEditFamily(singleSelected)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Modifier</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Modifier</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-8 gap-1"
+                      disabled={isRunning}
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Supprimer {selectedFamilies.length > 1 ? `(${selectedFamilies.length})` : ''}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Supprimer la sélection</TooltipContent>
+                </Tooltip>
+              </div>
+              <ResetSortButton visible={tablePrefs.userSort !== null} onClick={tablePrefs.resetPrefs} />
             </div>
           </CardHeader>
           <CardContent>
             <DataTable
-              tableKey="article-families"
+              prefs={tablePrefs}
               columns={columns}
               rows={families || []}
               getRowId={(f) => f.id}

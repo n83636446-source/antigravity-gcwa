@@ -5,7 +5,8 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useTablePrefs, type SortState } from '@/hooks/use-table-prefs';
+import { type SortState } from '@/hooks/use-table-prefs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type DataTableColumn<T> = {
   id: string;
@@ -16,8 +17,14 @@ export type DataTableColumn<T> = {
   headClassName?: string;
 };
 
+export type TablePrefs = {
+  userSort: SortState | null;
+  setUserSort: (next: SortState | null) => void;
+  resetPrefs: () => void;
+};
+
 type DataTableProps<T> = {
-  tableKey: string;
+  prefs: TablePrefs;
   columns: DataTableColumn<T>[];
   rows: T[];
   getRowId: (row: T) => string;
@@ -31,6 +38,30 @@ type DataTableProps<T> = {
 
 const isEmptyValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === '';
+
+export function ResetSortButton({ visible, onClick }: { visible: boolean; onClick: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn(
+            'h-8 w-8 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+            visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          )}
+          aria-hidden={!visible}
+          tabIndex={visible ? 0 : -1}
+          onClick={onClick}
+        >
+          <RotateCcw className="h-4 w-4" />
+          <span className="sr-only">Réinitialiser le tri</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Réinitialiser le tri</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function useClearSelectionOnOutsideClick(
   containerRef: React.RefObject<HTMLElement | null>,
@@ -58,7 +89,7 @@ export function useClearSelectionOnOutsideClick(
 }
 
 export function DataTable<T>({
-  tableKey,
+  prefs,
   columns,
   rows,
   getRowId,
@@ -69,8 +100,7 @@ export function DataTable<T>({
   defaultSort,
   emptyMessage,
 }: DataTableProps<T>) {
-  const columnIds = React.useMemo(() => columns.map((c) => c.id), [columns]);
-  const { userSort, setUserSort, resetPrefs } = useTablePrefs(tableKey, columnIds);
+  const { userSort, setUserSort } = prefs;
   const activeSortColumnId = userSort?.columnId ?? defaultSort?.columnId;
   const activeSortDirection = userSort?.direction ?? defaultSort?.direction ?? 'asc';
   const lastIndexRef = React.useRef<number | null>(null);
@@ -137,14 +167,6 @@ export function DataTable<T>({
 
   return (
     <div>
-      {userSort && (
-        <div className="mb-2 flex justify-end">
-          <Button variant="ghost" size="sm" onClick={resetPrefs}>
-            <RotateCcw className="mr-1 h-3 w-3" />
-            Réinitialiser
-          </Button>
-        </div>
-      )}
       <Table>
         <TableHeader>
           <TableRow>
