@@ -1,12 +1,9 @@
-ESLint run: 2026-10-21 09:44:07
+ESLint run: 2026-10-21 10:07:57
 
 
 > nextn@0.1.0 lint
 > next lint
 
-
-./src/app/articles/page.tsx
-121:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/layout.tsx
 29:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
