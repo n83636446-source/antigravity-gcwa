@@ -1,4 +1,4 @@
-ESLint run: 2026-10-21 10:07:57
+ESLint run: 2026-10-22 09:13:23
 
 
 > nextn@0.1.0 lint
@@ -24,10 +24,6 @@ ESLint run: 2026-10-21 10:07:57
 
 ./src/app/purchases/payments/page.tsx
 95:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-
-./src/app/purchases/receipts/page.tsx
-118:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-203:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/aa-test-dialog.tsx
 110:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
@@ -68,11 +64,6 @@ ESLint run: 2026-10-21 10:07:57
 ./src/components/purchase-dialog-shared-ui.tsx
 984:140  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
-./src/components/purchase-receipts-table.tsx
-124:57  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-125:55  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-160:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-
 ./src/components/reglement-test-dialog.tsx
 68:35  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 209:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
@@ -83,9 +74,6 @@ ESLint run: 2026-10-21 10:07:57
 85:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 103:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 104:30  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-
-./src/components/ui/DraggableHeader.tsx
-11:50  Warning: 'ref' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./src/components/ui/sidebar.tsx
 6:16  Warning: 'List' is defined but never used.  @typescript-eslint/no-unused-vars
