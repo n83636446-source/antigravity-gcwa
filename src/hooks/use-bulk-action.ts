@@ -14,6 +14,9 @@ type RunBulkOptions<T> = {
   failureTitle: string;
 };
 
+const MAX_FAILURE_LINES = 5;
+const FAILURE_TOAST_DURATION_MS = 15000;
+
 export function useBulkAction() {
   const { toast } = useToast();
   const [isRunning, setIsRunning] = React.useState(false);
@@ -38,10 +41,24 @@ export function useBulkAction() {
 
     setIsRunning(false);
 
-    const describe = () => {
-      const shown = failures.slice(0, 3).map((f) => `"${f.name}" : ${f.message}`).join(' | ');
-      const rest = failures.length - 3;
-      return rest > 0 ? `${shown} | … et ${rest} autre${rest > 1 ? 's' : ''}` : shown;
+    const renderFailures = () => {
+      const shown = failures.slice(0, MAX_FAILURE_LINES);
+      const rest = failures.length - shown.length;
+      return React.createElement(
+        'ul',
+        { className: 'mt-1 space-y-1' },
+        ...shown.map((f, index) =>
+          React.createElement(
+            'li',
+            { key: `failure-${index}` },
+            React.createElement('span', { className: 'font-semibold' }, f.name),
+            ` : ${f.message}`
+          )
+        ),
+        rest > 0
+          ? React.createElement('li', { key: 'rest', className: 'italic' }, `… et ${rest} autre${rest > 1 ? 's' : ''}`)
+          : null
+      );
     };
 
     if (failures.length === 0) {
@@ -49,11 +66,17 @@ export function useBulkAction() {
     } else if (successCount > 0) {
       toast({
         variant: 'destructive',
-        title: `${successLabel(successCount)}, ${failures.length} échec${failures.length > 1 ? 's' : ''}`,
-        description: describe(),
+        title: `${successLabel(successCount)}, ${failures.length} refusé${failures.length > 1 ? 's' : ''}`,
+        description: renderFailures(),
+        duration: FAILURE_TOAST_DURATION_MS,
       });
     } else {
-      toast({ variant: 'destructive', title: failureTitle, description: describe() });
+      toast({
+        variant: 'destructive',
+        title: failureTitle,
+        description: renderFailures(),
+        duration: FAILURE_TOAST_DURATION_MS,
+      });
     }
 
     return { successCount, failures };
