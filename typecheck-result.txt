@@ -1,4 +1,4 @@
-Typecheck run: 2026-10-22 09:59:51
+Typecheck run: 2026-10-22 10:18:50
 
 
 > nextn@0.1.0 typecheck
