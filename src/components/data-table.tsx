@@ -102,7 +102,6 @@ export function useClearSelectionOnOutsideClick(
       if (!container || !target || container.contains(target)) return;
       // Dialog overlays (class "bg-black/50") are plain divs without a dialog role: clicks on them must not clear the selection.
       if (target.closest?.('[role="dialog"], [role="alertdialog"], [role="tooltip"], [role="alert"], [class*="bg-black/50"]')) return;
-      console.log('[selection-clear]', target.tagName, String((target as HTMLElement).className ?? ''), (target.outerHTML ?? '').slice(0, 300)); // TEMP DIAGNOSTIC: remove later
       onClearRef.current();
     };
     document.addEventListener('mousedown', handleMouseDown);
