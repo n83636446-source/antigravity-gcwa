@@ -4,16 +4,17 @@ import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { api } from "@/lib/api";
-import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseInvoiceFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseInvoiceFromApi, purchaseInvoiceToApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
 import { useBulkAction } from '@/hooks/use-bulk-action';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseReceipt } from '@/lib/types';
+import type { PurchaseReceipt, PurchaseInvoice } from '@/lib/types';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { ArrowRightCircle, Pencil, Trash2, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -29,7 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { FaTestDialog } from '@/components/fa-test-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn, compareDocumentNumbers } from '@/lib/utils';
+import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils';
 import { BrTestDialog } from '@/components/br-test-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
@@ -43,6 +44,22 @@ const MULTI_SELECTION_MESSAGE = 'Sélectionnez un seul bon de réception pour ut
 
 const sortByReceiptNumber = <T extends { receiptNumber: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => compareDocumentNumbers(a.receiptNumber, b.receiptNumber));
+
+const parseInvoiceNumber = (value: string): { prefix: string; digits: string } | null => {
+  const match = value.trim().match(/^(.*?)(\d+)$/);
+  return match ? { prefix: match[1], digits: match[2] } : null;
+};
+
+const formatInvoiceNumber = (prefix: string, digits: string, offset: number): string =>
+  `${prefix}${(parseInt(digits, 10) + offset).toString().padStart(digits.length, '0')}`;
+
+const suggestNextInvoiceNumber = (existing: { invoiceNumber: string }[]): string => {
+  const maxValue = existing.reduce((max, inv) => {
+    const n = parseInt(inv.invoiceNumber.replace('FA', '').trim(), 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  return `FA${(maxValue + 1).toString().padStart(4, '0')}`;
+};
 
 const columns: DataTableColumn<EnrichedReceipt>[] = [
   {
@@ -126,10 +143,12 @@ export default function BRTestPage() {
   const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
   const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
   const { runBulk, isRunning: isBulkRunning } = useBulkAction();
+  const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
+  const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
   useClearSelectionOnOutsideClick(
     cardRef,
-    !deleteDialogOpen && !validateThenTransferOpen && !bulkValidateOpen,
+    !deleteDialogOpen && !validateThenTransferOpen && !bulkValidateOpen && !bulkTransferOpen,
     () => setSelectedIds(new Set())
   );
 
@@ -168,6 +187,26 @@ export default function BRTestPage() {
   const toolbarVisible = selectedReceipts.length > 0;
   const selectedDrafts = selectedReceipts.filter((r) => r.status === 'Brouillon');
   const selectedAlreadyValidatedCount = selectedReceipts.length - selectedDrafts.length;
+  const transferableReceipts = sortByReceiptNumber(selectedReceipts.filter((r) => !r.invoiceNumber));
+  const alreadyInvoicedCount = selectedReceipts.length - transferableReceipts.length;
+  const toValidateFirstCount = transferableReceipts.filter((r) => r.status === 'Brouillon').length;
+  const parsedFirstNumber = parseInvoiceNumber(bulkTransferFirstNumber);
+  const plannedInvoiceNumbers = parsedFirstNumber
+    ? transferableReceipts.map((_, index) => formatInvoiceNumber(parsedFirstNumber.prefix, parsedFirstNumber.digits, index))
+    : [];
+  const existingInvoiceNumbers = new Set((invoices ?? []).map((inv) => inv.invoiceNumber));
+  const conflictingInvoiceNumber = plannedInvoiceNumbers.find((n) => existingInvoiceNumbers.has(n));
+  const transferNumberError = !bulkTransferFirstNumber.trim()
+    ? 'Le numéro est obligatoire.'
+    : !parsedFirstNumber
+      ? 'Le numéro doit se terminer par des chiffres (par exemple FA0007).'
+      : conflictingInvoiceNumber
+        ? `Le numéro ${conflictingInvoiceNumber} est déjà utilisé.`
+        : null;
+  const transferPreview =
+    plannedInvoiceNumbers.length > 1
+      ? `${plannedInvoiceNumbers[0]} à ${plannedInvoiceNumbers[plannedInvoiceNumbers.length - 1]}`
+      : plannedInvoiceNumbers[0] ?? '';
 
   const receiptAlreadyInvoiced = !!singleSelected && !!singleSelected.invoiceNumber;
 
@@ -257,7 +296,82 @@ export default function BRTestPage() {
     setSelectedIds(new Set());
   };
 
+  const handleBulkTransferRequest = () => {
+    if (isBulkRunning) return;
+    if (transferableReceipts.length === 0) {
+      showWarning('transfer', 'Les bons de réception sélectionnés ont déjà été transférés en facture.', 'Transfert impossible');
+      return;
+    }
+    setBulkTransferFirstNumber(suggestNextInvoiceNumber(invoices ?? []));
+    setBulkTransferOpen(true);
+  };
+
+  const handleBulkTransferConfirm = async () => {
+    if (transferNumberError || !parsedFirstNumber) return;
+    const { prefix, digits } = parsedFirstNumber;
+    const sources = transferableReceipts;
+    let nextOffset = 0;
+    setBulkTransferOpen(false);
+    await runBulk({
+      items: sources,
+      getName: (r) => r.receiptNumber,
+      action: async (receipt) => {
+        if (receipt.status === 'Brouillon') {
+          await api.validatePurchaseReceipt(receipt.id);
+        }
+        const invoiceItems = receipt.items
+          .filter((item) => item.quantityReceived > 0)
+          .map((item) => ({
+            productId: item.productId,
+            quantity: item.quantityReceived,
+            price: item.price,
+            tvaRate: item.tvaRate,
+          }));
+        if (invoiceItems.length === 0) {
+          throw new Error('Aucune ligne à facturer.');
+        }
+        const totals = invoiceItems.reduce(
+          (acc, item) => {
+            const lineHT = roundMoney(item.price * item.quantity);
+            const lineTVA = roundMoney(lineHT * (item.tvaRate / 100));
+            return {
+              totalHT: roundMoney(acc.totalHT + lineHT),
+              totalTTC: roundMoney(acc.totalTTC + lineHT + lineTVA),
+            };
+          },
+          { totalHT: 0, totalTTC: 0 }
+        );
+        const invoice: PurchaseInvoice = {
+          id: `fa-${generateId()}`,
+          invoiceNumber: formatInvoiceNumber(prefix, digits, nextOffset),
+          purchaseReceiptId: receipt.id,
+          supplierId: receipt.supplierId,
+          items: invoiceItems,
+          invoiceDate: new Date().toISOString(),
+          status: 'Brouillon',
+          totalHT: totals.totalHT,
+          totalTTC: totals.totalTTC,
+          paymentMode: receipt.paymentMode,
+          dueDate: receipt.dueDate,
+          representativeId: receipt.representativeId,
+          reference: receipt.reference,
+          remarks: receipt.remarks,
+        };
+        await api.createPurchaseInvoice(purchaseInvoiceToApi(invoice));
+        nextOffset++;
+      },
+      successLabel: (n) => `${n} facture${n > 1 ? 's' : ''} créée${n > 1 ? 's' : ''}`,
+      failureTitle: 'Transfert impossible',
+    });
+    refetchReceipts();
+    refetchInvoices();
+  };
+
   const handleTransferToInvoice = () => {
+    if (multiSelected) {
+      handleBulkTransferRequest();
+      return;
+    }
     const receipt = requireSingle('transfer');
     if (!receipt) return;
     if (receipt.status !== 'Validé') {
@@ -373,7 +487,9 @@ export default function BRTestPage() {
   const showCancelButton = singleSelected?.status === 'Validé';
   const validateBlocked = multiSelected && selectedDrafts.length === 0;
   const editBlocked = multiSelected;
-  const transferBlocked = multiSelected || singleSelected?.status !== 'Validé' || receiptAlreadyInvoiced;
+  const transferBlocked = multiSelected
+    ? transferableReceipts.length === 0
+    : singleSelected?.status !== 'Validé' || receiptAlreadyInvoiced;
   const deleteBlocked = singleSelected?.status === 'Validé' || (multiSelected && selectedDrafts.length === 0);
   const cancelValidationBlocked = receiptAlreadyInvoiced;
 
@@ -496,7 +612,7 @@ export default function BRTestPage() {
                         <span className="sr-only">Transférer en Facture</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Transférer en Facture</TooltipContent>
+                    <TooltipContent>{multiSelected && transferableReceipts.length > 0 ? `Transférer en Facture (${transferableReceipts.length})` : 'Transférer en Facture'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -618,6 +734,51 @@ export default function BRTestPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleBulkValidateConfirm}>Valider</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkTransferOpen} onOpenChange={(open) => { if (!isBulkRunning) setBulkTransferOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Transférer ${transferableReceipts.length} bon${transferableReceipts.length > 1 ? 's' : ''} de réception en facture${transferableReceipts.length > 1 ? 's' : ''} ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Une facture brouillon sera créée pour chaque bon, avec toutes ses lignes.</p>
+                {toValidateFirstCount > 0 && (
+                  <p>
+                    {`${toValidateFirstCount} bon${toValidateFirstCount > 1 ? 's' : ''} non validé${toValidateFirstCount > 1 ? 's seront d\'abord validés' : ' sera d\'abord validé'} : la validation ajoutera les quantités au stock.`}
+                  </p>
+                )}
+                {alreadyInvoicedCount > 0 && (
+                  <p>
+                    {`${alreadyInvoicedCount} bon${alreadyInvoicedCount > 1 ? 's' : ''} déjà transféré${alreadyInvoicedCount > 1 ? 's seront ignorés' : ' sera ignoré'}.`}
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1">
+            <label htmlFor="bulk-transfer-first-number" className="text-sm font-medium">
+              Numéro de la première facture
+            </label>
+            <Input
+              id="bulk-transfer-first-number"
+              value={bulkTransferFirstNumber}
+              onChange={(e) => setBulkTransferFirstNumber(e.target.value)}
+              className={cn('font-mono', transferNumberError && 'border-red-500 focus-visible:ring-red-500')}
+            />
+            <p className={cn('min-h-5 text-sm', transferNumberError ? 'text-red-500' : 'text-muted-foreground')}>
+              {transferNumberError ?? (transferPreview ? `Factures créées : ${transferPreview}` : '')}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={!!transferNumberError} onClick={handleBulkTransferConfirm}>
+              {toValidateFirstCount > 0 ? 'Valider et transférer' : 'Transférer'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
