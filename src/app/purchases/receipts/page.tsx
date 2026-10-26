@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
+import { useBulkAction } from '@/hooks/use-bulk-action';
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseReceipt } from '@/lib/types';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
@@ -28,7 +29,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { FaTestDialog } from '@/components/fa-test-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 import { BrTestDialog } from '@/components/br-test-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
@@ -39,6 +40,9 @@ type EnrichedReceipt = PurchaseReceipt & {
 };
 
 const MULTI_SELECTION_MESSAGE = 'Sélectionnez un seul bon de réception pour utiliser cette action.';
+
+const sortByReceiptNumber = <T extends { receiptNumber: string }>(list: T[]): T[] =>
+  [...list].sort((a, b) => compareDocumentNumbers(a.receiptNumber, b.receiptNumber));
 
 const columns: DataTableColumn<EnrichedReceipt>[] = [
   {
@@ -120,10 +124,12 @@ export default function BRTestPage() {
   const [receiptToTransfer, setReceiptToTransfer] = useState<PurchaseReceipt | null>(null);
   const [validateThenTransferOpen, setValidateThenTransferOpen] = useState(false);
   const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
+  const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
+  const { runBulk, isRunning: isBulkRunning } = useBulkAction();
 
   useClearSelectionOnOutsideClick(
     cardRef,
-    !deleteDialogOpen && !validateThenTransferOpen,
+    !deleteDialogOpen && !validateThenTransferOpen && !bulkValidateOpen,
     () => setSelectedIds(new Set())
   );
 
@@ -160,6 +166,8 @@ export default function BRTestPage() {
   const singleSelected = selectedReceipts.length === 1 ? selectedReceipts[0] : null;
   const multiSelected = selectedReceipts.length > 1;
   const toolbarVisible = selectedReceipts.length > 0;
+  const selectedDrafts = selectedReceipts.filter((r) => r.status === 'Brouillon');
+  const selectedAlreadyValidatedCount = selectedReceipts.length - selectedDrafts.length;
 
   const receiptAlreadyInvoiced = !!singleSelected && !!singleSelected.invoiceNumber;
 
@@ -195,6 +203,11 @@ export default function BRTestPage() {
   };
 
   const handleDeleteRequest = () => {
+    if (isBulkRunning) return;
+    if (multiSelected) {
+      setDeleteDialogOpen(true);
+      return;
+    }
     const receipt = requireSingle('delete');
     if (!receipt) return;
     if (receipt.status === 'Validé') {
@@ -206,6 +219,20 @@ export default function BRTestPage() {
   };
 
   const handleDeleteConfirm = async () => {
+    if (multiSelected) {
+      const toDelete = sortByReceiptNumber(selectedReceipts);
+      setDeleteDialogOpen(false);
+      await runBulk({
+        items: toDelete,
+        getName: (r) => r.receiptNumber,
+        action: (r) => api.deletePurchaseReceipt(r.id),
+        successLabel: (n) => `${n} bon${n > 1 ? 's' : ''} de réception supprimé${n > 1 ? 's' : ''}`,
+        failureTitle: 'Suppression impossible',
+      });
+      refetchReceipts();
+      setSelectedIds(new Set());
+      return;
+    }
     if (!receiptToDelete) return;
     try {
       await api.deletePurchaseReceipt(receiptToDelete.id);
@@ -267,7 +294,33 @@ export default function BRTestPage() {
     }
   };
 
+  const handleBulkValidateRequest = () => {
+    if (isBulkRunning) return;
+    if (selectedDrafts.length === 0) {
+      showWarning('validate', 'Les bons de réception sélectionnés sont déjà validés.');
+      return;
+    }
+    setBulkValidateOpen(true);
+  };
+
+  const handleBulkValidateConfirm = async () => {
+    const toValidate = sortByReceiptNumber(selectedDrafts);
+    setBulkValidateOpen(false);
+    await runBulk({
+      items: toValidate,
+      getName: (r) => r.receiptNumber,
+      action: (r) => api.validatePurchaseReceipt(r.id),
+      successLabel: (n) => `${n} bon${n > 1 ? 's' : ''} de réception validé${n > 1 ? 's' : ''}`,
+      failureTitle: 'Validation impossible',
+    });
+    refetchReceipts();
+  };
+
   const handleValidateReceipt = async () => {
+    if (multiSelected) {
+      handleBulkValidateRequest();
+      return;
+    }
     const receipt = requireSingle('validate');
     if (!receipt || receipt.status === 'Validé') return;
     try {
@@ -307,10 +360,10 @@ export default function BRTestPage() {
 
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = singleSelected?.status === 'Validé';
-  const validateBlocked = multiSelected;
+  const validateBlocked = multiSelected && selectedDrafts.length === 0;
   const editBlocked = multiSelected;
   const transferBlocked = multiSelected || singleSelected?.status !== 'Validé' || receiptAlreadyInvoiced;
-  const deleteBlocked = multiSelected || singleSelected?.status === 'Validé';
+  const deleteBlocked = singleSelected?.status === 'Validé';
   const cancelValidationBlocked = receiptAlreadyInvoiced;
 
   return (
@@ -364,7 +417,7 @@ export default function BRTestPage() {
                           <span className="sr-only">Valider</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Valider</TooltipContent>
+                      <TooltipContent>{multiSelected && selectedDrafts.length > 0 ? `Valider (${selectedDrafts.length})` : 'Valider'}</TooltipContent>
                     </Tooltip>
                   </ActionWarning>
                 )}
@@ -453,7 +506,7 @@ export default function BRTestPage() {
                         <span className="sr-only">Supprimer</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
+                    <TooltipContent>{multiSelected ? `Supprimer (${selectedReceipts.length})` : 'Supprimer'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -505,9 +558,13 @@ export default function BRTestPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce bon de réception ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {multiSelected ? `Supprimer ${selectedReceipts.length} bons de réception ?` : 'Supprimer ce bon de réception ?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le bon "{receiptToDelete?.receiptNumber}" sera supprimé.
+              {multiSelected
+                ? `Cette action est irréversible. Les ${selectedReceipts.length} bons de réception sélectionnés seront supprimés. Les bons validés seront refusés.`
+                : `Cette action est irréversible. Le bon "${receiptToDelete?.receiptNumber ?? ''}" sera supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -530,6 +587,26 @@ export default function BRTestPage() {
             <AlertDialogAction disabled={isValidatingForTransfer} onClick={(e) => { e.preventDefault(); handleValidateAndTransfer(); }}>
               Valider et transférer
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkValidateOpen} onOpenChange={(open) => { if (!isBulkRunning) setBulkValidateOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Valider ${selectedDrafts.length} bon${selectedDrafts.length > 1 ? 's' : ''} de réception ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              La validation ajoutera les quantités au stock.
+              {selectedAlreadyValidatedCount > 0
+                ? ` ${selectedAlreadyValidatedCount} bon${selectedAlreadyValidatedCount > 1 ? 's' : ''} déjà validé${selectedAlreadyValidatedCount > 1 ? 's' : ''} ${selectedAlreadyValidatedCount > 1 ? 'seront ignorés' : 'sera ignoré'}.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkValidateConfirm}>Valider</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
