@@ -563,7 +563,7 @@ export default function BRTestPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {multiSelected
-                ? `Cette action est irréversible. Les ${selectedReceipts.length} bons de réception sélectionnés seront supprimés. Les bons validés seront refusés.`
+                ? `Cette action est irréversible. Les ${selectedReceipts.length} bons de réception sélectionnés seront supprimés.${selectedAlreadyValidatedCount > 0 ? ` ${selectedAlreadyValidatedCount} bon${selectedAlreadyValidatedCount > 1 ? 's validés seront refusés' : ' validé sera refusé'}.` : ''}`
                 : `Cette action est irréversible. Le bon "${receiptToDelete?.receiptNumber ?? ''}" sera supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
