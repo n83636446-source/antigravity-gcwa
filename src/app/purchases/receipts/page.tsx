@@ -205,13 +205,17 @@ export default function BRTestPage() {
   const handleDeleteRequest = () => {
     if (isBulkRunning) return;
     if (multiSelected) {
+      if (selectedDrafts.length === 0) {
+        showWarning('delete', 'Les bons de réception sélectionnés sont déjà validés.', 'Suppression impossible');
+        return;
+      }
       setDeleteDialogOpen(true);
       return;
     }
     const receipt = requireSingle('delete');
     if (!receipt) return;
     if (receipt.status === 'Validé') {
-      showWarning('delete', "Vous ne pouvez pas supprimer un bon de réception validé. Annulez d'abord la validation.");
+      showWarning('delete', 'Vous ne pouvez pas supprimer un bon de réception validé.');
       return;
     }
     setReceiptToDelete(receipt);
@@ -358,12 +362,19 @@ export default function BRTestPage() {
     }
   };
 
+  const deletableCount = selectedDrafts.length;
+  const refusedText = `${selectedAlreadyValidatedCount} bon${selectedAlreadyValidatedCount > 1 ? 's validés seront refusés' : ' validé sera refusé'}.`;
+  const bulkDeleteDescription =
+    selectedAlreadyValidatedCount === 0
+      ? `Cette action est irréversible. Les ${selectedReceipts.length} bons de réception sélectionnés seront supprimés.`
+      : `Cette action est irréversible. ${deletableCount} des ${selectedReceipts.length} bons de réception sélectionnés ${deletableCount > 1 ? 'seront supprimés' : 'sera supprimé'}. ${refusedText}`;
+
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = singleSelected?.status === 'Validé';
   const validateBlocked = multiSelected && selectedDrafts.length === 0;
   const editBlocked = multiSelected;
   const transferBlocked = multiSelected || singleSelected?.status !== 'Validé' || receiptAlreadyInvoiced;
-  const deleteBlocked = singleSelected?.status === 'Validé';
+  const deleteBlocked = singleSelected?.status === 'Validé' || (multiSelected && selectedDrafts.length === 0);
   const cancelValidationBlocked = receiptAlreadyInvoiced;
 
   return (
@@ -563,7 +574,7 @@ export default function BRTestPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {multiSelected
-                ? `Cette action est irréversible. Les ${selectedReceipts.length} bons de réception sélectionnés seront supprimés.${selectedAlreadyValidatedCount > 0 ? ` ${selectedAlreadyValidatedCount} bon${selectedAlreadyValidatedCount > 1 ? 's validés seront refusés' : ' validé sera refusé'}.` : ''}`
+                ? bulkDeleteDescription
                 : `Cette action est irréversible. Le bon "${receiptToDelete?.receiptNumber ?? ''}" sera supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
