@@ -37,6 +37,11 @@ def update_purchase_order(order_id: str, data: PurchaseOrderUpdate, db: Session 
     db_obj = crud.get_by_id(db, PurchaseOrder, order_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bon de commande introuvable.")
+    if db.query(PurchaseReceipt).filter(PurchaseReceipt.purchase_order_id == order_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette commande a déjà été transférée en bon de réception et ne peut pas être modifiée.",
+        )
     return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
 
 
