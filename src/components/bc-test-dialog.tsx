@@ -88,9 +88,10 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
 interface BcTestDialogProps {
     orderToEdit?: PurchaseOrder | null;
     onSaveSuccess?: () => void;
+    transferredReceiptNumber?: string | null;
 }
 
-export function BcTestDialog({ orderToEdit, onSaveSuccess }: BcTestDialogProps) {
+export function BcTestDialog({ orderToEdit, onSaveSuccess, transferredReceiptNumber }: BcTestDialogProps) {
   const [open, setOpen] = useState<boolean>((() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('bcTestDialogState');
@@ -168,7 +169,8 @@ export function BcTestDialog({ orderToEdit, onSaveSuccess }: BcTestDialogProps) 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const isEditMode = !!orderToEdit;
-  const isValidated = orderToEdit?.status === 'Validé';
+  // Locked when validated, or when the order has already been transferred to a receipt.
+  const isValidated = orderToEdit?.status === 'Validé' || !!transferredReceiptNumber;
 
   const calculateNextNumber = (orders: PurchaseOrder[]) => {
     if (!orders || orders.length === 0) return "BC0001";
@@ -557,6 +559,11 @@ export function BcTestDialog({ orderToEdit, onSaveSuccess }: BcTestDialogProps) 
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden p-6 pt-6 text-left">
         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          {transferredReceiptNumber && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {`Ce bon de commande a été transféré en bon de réception ${transferredReceiptNumber} et ne peut plus être modifié.`}
+            </p>
+          )}
           <div className="flex flex-col gap-6">
              <div className={cn("flex w-full gap-6", isMobileSize && "flex-col")}>
                  <div className={cn("border border-blue-800 p-4 rounded-md relative", isMobileSize ? "w-full" : "w-[40%]")}>

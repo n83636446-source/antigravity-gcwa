@@ -357,7 +357,7 @@ export default function BCTestPage() {
 
       {/* Rendu masqué des dialogues pour permettre leur déclenchement externe */}
       <div className="hidden">
-        <BcTestDialog key={`${dialogToken}-${orderToEdit?.id ?? 'new'}`} orderToEdit={orderToEdit} onSaveSuccess={() => refetchOrders()} />
+        <BcTestDialog key={`${dialogToken}-${orderToEdit?.id ?? 'new'}`} orderToEdit={orderToEdit} transferredReceiptNumber={orderToEdit ? rows.find((o) => o.id === orderToEdit.id)?.receiptNumber ?? null : null} onSaveSuccess={() => refetchOrders()} />
         <BrTestDialog key={`transfer-${dialogToken}-${orderToTransfer?.id ?? 'none'}`} orderToTransfer={orderToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchOrders(); refetchReceipts(); }} />
       </div>
 
