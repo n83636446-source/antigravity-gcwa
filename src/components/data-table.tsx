@@ -193,22 +193,127 @@ export function DataTable<T>({
     });
   }, [rows, columns, activeSortColumnId, activeSortDirection]);
 
-  const handleRowClick = (row: T, index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const latestRef = React.useRef({ displayRows, getRowId, selectedIds, onSelectionChange });
+  React.useEffect(() => {
+    latestRef.current = { displayRows, getRowId, selectedIds, onSelectionChange };
+  });
+  const dragCleanupRef = React.useRef<(() => void) | null>(null);
+
+  React.useEffect(() => {
+    return () => dragCleanupRef.current?.();
+  }, []);
+
+  const handleRowMouseDown = (index: number, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const current = latestRef.current;
+
     if (e.shiftKey && lastIndexRef.current !== null) {
+      e.preventDefault();
       const from = Math.min(lastIndexRef.current, index);
       const to = Math.max(lastIndexRef.current, index);
-      const next = new Set(selectedIds);
-      displayRows.slice(from, to + 1).forEach((r) => next.add(getRowId(r)));
-      onSelectionChange(next);
+      const next = new Set(current.selectedIds);
+      current.displayRows.slice(from, to + 1).forEach((r) => next.add(current.getRowId(r)));
+      current.onSelectionChange(next);
       return;
     }
-    const id = getRowId(row);
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    onSelectionChange(next);
-    lastIndexRef.current = index;
+
+    const additive = e.ctrlKey || e.metaKey;
+    const base = new Set<string>(current.selectedIds);
+    const startIndex = index;
+    let lastDragIndex = index;
+    let moved = false;
+    let pointerX = e.clientX;
+    let pointerY = e.clientY;
+    let scrollSpeed = 0;
+    let frameId: number | null = null;
+
+    const applyDragSelection = () => {
+      const { displayRows: list, getRowId: idOf, onSelectionChange: notify } = latestRef.current;
+      const from = Math.min(startIndex, lastDragIndex);
+      const to = Math.max(startIndex, lastDragIndex);
+      const next = new Set<string>(additive ? base : []);
+      list.slice(from, to + 1).forEach((r) => next.add(idOf(r)));
+      notify(next);
+    };
+
+    const updateFromPointer = () => {
+      const el = document.elementFromPoint(pointerX, pointerY);
+      const rowEl = el?.closest('tr[data-row-index]');
+      if (!rowEl) return;
+      const idx = Number(rowEl.getAttribute('data-row-index'));
+      if (Number.isNaN(idx) || idx === lastDragIndex) return;
+      lastDragIndex = idx;
+      moved = true;
+      applyDragSelection();
+    };
+
+    const tick = () => {
+      if (scrollSpeed === 0) {
+        frameId = null;
+        return;
+      }
+      window.scrollBy(0, scrollSpeed);
+      updateFromPointer();
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    const updateAutoScroll = () => {
+      const edge = 60;
+      const maxSpeed = 24;
+      const height = window.innerHeight;
+      if (pointerY < edge) {
+        scrollSpeed = -Math.max(2, Math.round(((edge - Math.max(pointerY, 0)) / edge) * maxSpeed));
+      } else if (pointerY > height - edge) {
+        scrollSpeed = Math.max(2, Math.round(((Math.min(pointerY, height) - (height - edge)) / edge) * maxSpeed));
+      } else {
+        scrollSpeed = 0;
+      }
+      if (scrollSpeed !== 0 && frameId === null) {
+        frameId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    const handleMove = (ev: MouseEvent) => {
+      pointerX = ev.clientX;
+      pointerY = ev.clientY;
+      updateFromPointer();
+      updateAutoScroll();
+    };
+
+    function cleanup() {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+      scrollSpeed = 0;
+      dragCleanupRef.current = null;
+    }
+
+    function handleUp() {
+      cleanup();
+      const { displayRows: list, getRowId: idOf, onSelectionChange: notify } = latestRef.current;
+      if (!moved) {
+        const row = list[startIndex];
+        if (row) {
+          const id = idOf(row);
+          if (additive) {
+            const next = new Set<string>(base);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            notify(next);
+          } else {
+            notify(new Set<string>([id]));
+          }
+        }
+      }
+      lastIndexRef.current = startIndex;
+    }
+
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+    dragCleanupRef.current = cleanup;
   };
 
   const handleSortClick = (column: DataTableColumn<T>) => {
@@ -290,7 +395,8 @@ export function DataTable<T>({
               return (
                 <TableRow
                   key={id}
-                  onClick={(e) => handleRowClick(row, index, e)}
+                  onMouseDown={(e) => handleRowMouseDown(index, e)}
+                  data-row-index={index}
                   onDoubleClick={() => onRowDoubleClick?.(row)}
                   className={cn(
                     'cursor-pointer select-none transition-colors duration-150 ease-out',
