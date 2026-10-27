@@ -1,4 +1,4 @@
-ESLint run: 2026-10-27 09:01:21
+ESLint run: 2026-10-27 09:32:21
 
 > nextn@0.1.0 lint
 > next lint
@@ -17,9 +17,6 @@ ESLint run: 2026-10-27 09:01:21
 143:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 170:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 215:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-
-./src/app/purchases/orders/page.tsx
-140:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/purchases/payments/page.tsx
 95:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
