@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
+import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 import { BcTestDialog } from '@/components/bc-test-dialog';
 import { BrTestDialog } from '@/components/br-test-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
@@ -38,6 +39,9 @@ type EnrichedOrder = PurchaseOrder & {
 };
 
 const MULTI_SELECTION_MESSAGE = 'Sélectionnez un seul bon de commande pour utiliser cette action.';
+
+const sortByOrderNumber = <T extends { orderNumber: string }>(list: T[]): T[] =>
+  [...list].sort((a, b) => compareDocumentNumbers(a.orderNumber, b.orderNumber));
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -78,6 +82,7 @@ export default function BCTestPage() {
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
   const tablePrefs = useTablePrefs('purchase-orders', columnIds);
+  const { runBulk, isRunning: isBulkRunning } = useBulkAction();
 
   // --- STATES ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -125,6 +130,14 @@ export default function BCTestPage() {
   const multiSelected = selectedOrders.length > 1;
   const toolbarVisible = selectedOrders.length > 0;
   const singleTransferred = !!singleSelected && transferredOrderIds.has(singleSelected.id);
+  const deletableOrders = selectedOrders.filter((o) => !transferredOrderIds.has(o.id));
+  const transferredSelectedCount = selectedOrders.length - deletableOrders.length;
+  const deletableCount = deletableOrders.length;
+  const refusedText = `${transferredSelectedCount} bon${transferredSelectedCount > 1 ? 's transférés seront refusés' : ' transféré sera refusé'}.`;
+  const bulkDeleteDescription =
+    transferredSelectedCount === 0
+      ? `Cette action est irréversible. Les ${selectedOrders.length} bons de commande sélectionnés seront supprimés.`
+      : `Cette action est irréversible. ${deletableCount} des ${selectedOrders.length} bons de commande sélectionnés ${deletableCount > 1 ? 'seront supprimés' : 'sera supprimé'}. ${refusedText}`;
 
   const requireSingle = (key: string): EnrichedOrder | null => {
     if (singleSelected) return singleSelected;
@@ -169,6 +182,15 @@ export default function BCTestPage() {
   };
 
   const handleDeleteRequest = () => {
+    if (isBulkRunning) return;
+    if (multiSelected) {
+      if (deletableOrders.length === 0) {
+        showWarning('delete', 'Les bons de commande sélectionnés ont déjà été transférés en bon de réception.', 'Suppression impossible');
+        return;
+      }
+      setDeleteDialogOpen(true);
+      return;
+    }
     const order = requireSingle('delete');
     if (!order) return;
     if (transferredOrderIds.has(order.id)) {
@@ -180,6 +202,20 @@ export default function BCTestPage() {
   };
 
   const handleDeleteConfirm = async () => {
+    if (multiSelected) {
+      const toDelete = sortByOrderNumber(selectedOrders);
+      setDeleteDialogOpen(false);
+      await runBulk({
+        items: toDelete,
+        getName: (o) => o.orderNumber,
+        action: (o) => api.deletePurchaseOrder(o.id),
+        successLabel: (n) => `${n} bon${n > 1 ? 's' : ''} de commande supprimé${n > 1 ? 's' : ''}`,
+        failureTitle: 'Suppression impossible',
+      });
+      refetchOrders();
+      setSelectedIds(new Set());
+      return;
+    }
     if (!orderToDelete) return;
 
     if (transferredOrderIds.has(orderToDelete.id)) {
@@ -213,7 +249,7 @@ export default function BCTestPage() {
 
   const editBlocked = multiSelected;
   const transferBlocked = multiSelected || singleTransferred;
-  const deleteBlocked = multiSelected || singleTransferred;
+  const deleteBlocked = multiSelected ? deletableOrders.length === 0 : singleTransferred;
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -313,7 +349,7 @@ export default function BCTestPage() {
                         <span className="sr-only">Supprimer</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
+                    <TooltipContent>{multiSelected ? `Supprimer (${selectedOrders.length})` : 'Supprimer'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -364,9 +400,13 @@ export default function BCTestPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce bon de commande ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {multiSelected ? `Supprimer ${selectedOrders.length} bons de commande ?` : 'Supprimer ce bon de commande ?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le bon "{orderToDelete?.orderNumber}" sera supprimé.
+              {multiSelected
+                ? bulkDeleteDescription
+                : `Cette action est irréversible. Le bon "${orderToDelete?.orderNumber ?? ''}" sera supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
