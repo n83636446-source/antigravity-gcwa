@@ -4,9 +4,9 @@ import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseOrder } from '@/lib/types';
+import type { PurchaseOrder, PurchaseReceipt } from '@/lib/types';
 import { api } from "@/lib/api";
-import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseOrderFromApi, purchaseReceiptFromApi, purchaseReceiptToApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
 import { useBulkAction } from '@/hooks/use-bulk-action';
@@ -14,6 +14,7 @@ import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataT
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Pencil, Trash2, PlusCircle, ArrowRightCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -28,7 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn, compareDocumentNumbers } from '@/lib/utils';
+import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils';
 import { BcTestDialog } from '@/components/bc-test-dialog';
 import { BrTestDialog } from '@/components/br-test-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
@@ -42,6 +43,22 @@ const MULTI_SELECTION_MESSAGE = 'Sélectionnez un seul bon de commande pour util
 
 const sortByOrderNumber = <T extends { orderNumber: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => compareDocumentNumbers(a.orderNumber, b.orderNumber));
+
+const parseReceiptNumber = (value: string): { prefix: string; digits: string } | null => {
+  const match = value.trim().match(/^(.*?)(\d+)$/);
+  return match ? { prefix: match[1], digits: match[2] } : null;
+};
+
+const formatReceiptNumber = (prefix: string, digits: string, offset: number): string =>
+  `${prefix}${(parseInt(digits, 10) + offset).toString().padStart(digits.length, '0')}`;
+
+const suggestNextReceiptNumber = (existing: { receiptNumber: string }[]): string => {
+  const maxValue = existing.reduce((max, r) => {
+    const n = parseInt(r.receiptNumber.replace('BR', '').trim(), 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  return `BR${(maxValue + 1).toString().padStart(4, '0')}`;
+};
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -92,8 +109,10 @@ export default function BCTestPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
+  const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
+  const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !bulkTransferOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: orders, isLoading: isLoadingOrders, refetch: refetchOrders } = useApiCollection(() => api.getPurchaseOrders().then(r => r.map(purchaseOrderFromApi)));
@@ -134,6 +153,25 @@ export default function BCTestPage() {
   const transferredSelectedCount = selectedOrders.length - deletableOrders.length;
   const deletableCount = deletableOrders.length;
   const refusedText = `${transferredSelectedCount} bon${transferredSelectedCount > 1 ? 's transférés seront refusés' : ' transféré sera refusé'}.`;
+  const transferableOrders = sortByOrderNumber(selectedOrders.filter((o) => !transferredOrderIds.has(o.id)));
+  const alreadyTransferredCount = selectedOrders.length - transferableOrders.length;
+  const parsedFirstNumber = parseReceiptNumber(bulkTransferFirstNumber);
+  const plannedReceiptNumbers = parsedFirstNumber
+    ? transferableOrders.map((_, index) => formatReceiptNumber(parsedFirstNumber.prefix, parsedFirstNumber.digits, index))
+    : [];
+  const existingReceiptNumbers = new Set((receipts ?? []).map((r) => r.receiptNumber));
+  const conflictingReceiptNumber = plannedReceiptNumbers.find((n) => existingReceiptNumbers.has(n));
+  const transferNumberError = !bulkTransferFirstNumber.trim()
+    ? 'Le numéro est obligatoire.'
+    : !parsedFirstNumber
+      ? 'Le numéro doit se terminer par des chiffres (par exemple BR0007).'
+      : conflictingReceiptNumber
+        ? `Le numéro ${conflictingReceiptNumber} est déjà utilisé.`
+        : null;
+  const transferPreview =
+    plannedReceiptNumbers.length > 1
+      ? `${plannedReceiptNumbers[0]} à ${plannedReceiptNumbers[plannedReceiptNumbers.length - 1]}`
+      : plannedReceiptNumbers[0] ?? '';
   const bulkDeleteDescription =
     transferredSelectedCount === 0
       ? `Cette action est irréversible. Les ${selectedOrders.length} bons de commande sélectionnés seront supprimés.`
@@ -167,7 +205,78 @@ export default function BCTestPage() {
     handleRowDoubleClick(order);
   };
 
+  const handleBulkTransferRequest = () => {
+    if (isBulkRunning) return;
+    if (transferableOrders.length === 0) {
+      showWarning('transfer', 'Les bons de commande sélectionnés ont déjà été transférés en bon de réception.', 'Transfert impossible');
+      return;
+    }
+    setBulkTransferFirstNumber(suggestNextReceiptNumber(receipts ?? []));
+    setBulkTransferOpen(true);
+  };
+
+  const handleBulkTransferConfirm = async () => {
+    if (transferNumberError || !parsedFirstNumber) return;
+    const { prefix, digits } = parsedFirstNumber;
+    const sources = transferableOrders;
+    let nextOffset = 0;
+    setBulkTransferOpen(false);
+    await runBulk({
+      items: sources,
+      getName: (o) => o.orderNumber,
+      action: async (order) => {
+        if (order.items.length === 0) {
+          throw new Error('Aucune ligne à transférer.');
+        }
+        const receiptItems = order.items.map((item) => ({
+          productId: item.productId,
+          quantityOrdered: item.quantity,
+          quantityReceived: item.quantity,
+          price: item.price,
+          tvaRate: item.tvaRate,
+        }));
+        const totals = receiptItems.reduce(
+          (acc, item) => {
+            const lineHT = roundMoney(item.price * item.quantityReceived);
+            const lineTVA = roundMoney(lineHT * (item.tvaRate / 100));
+            return {
+              totalHT: roundMoney(acc.totalHT + lineHT),
+              totalTTC: roundMoney(acc.totalTTC + lineHT + lineTVA),
+            };
+          },
+          { totalHT: 0, totalTTC: 0 }
+        );
+        const receipt: PurchaseReceipt = {
+          id: `br-${generateId()}`,
+          receiptNumber: formatReceiptNumber(prefix, digits, nextOffset),
+          purchaseOrderId: order.id,
+          supplierId: order.supplierId,
+          receiptDate: new Date().toISOString(),
+          items: receiptItems,
+          status: 'Brouillon',
+          totalHT: totals.totalHT,
+          totalTTC: totals.totalTTC,
+          paymentMode: order.paymentMode,
+          dueDate: undefined,
+          representativeId: order.representativeId,
+          reference: order.reference,
+          remarks: order.remarks,
+        };
+        await api.createPurchaseReceipt(purchaseReceiptToApi(receipt));
+        nextOffset++;
+      },
+      successLabel: (n) => `${n} bon${n > 1 ? 's' : ''} de réception créé${n > 1 ? 's' : ''}`,
+      failureTitle: 'Transfert impossible',
+    });
+    refetchOrders();
+    refetchReceipts();
+  };
+
   const handleTransferToReceipt = () => {
+    if (multiSelected) {
+      handleBulkTransferRequest();
+      return;
+    }
     const order = requireSingle('transfer');
     if (!order) return;
     if (transferredOrderIds.has(order.id)) {
@@ -248,7 +357,7 @@ export default function BCTestPage() {
   };
 
   const editBlocked = multiSelected;
-  const transferBlocked = multiSelected || singleTransferred;
+  const transferBlocked = multiSelected ? transferableOrders.length === 0 : singleTransferred;
   const deleteBlocked = multiSelected ? deletableOrders.length === 0 : singleTransferred;
 
   return (
@@ -328,7 +437,7 @@ export default function BCTestPage() {
                         <span className="sr-only">Transférer en BR</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Transférer en Bon de Réception</TooltipContent>
+                    <TooltipContent>{multiSelected ? `Transférer (${selectedOrders.length})` : 'Transférer en Bon de Réception'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -412,6 +521,46 @@ export default function BCTestPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkTransferOpen} onOpenChange={(open) => { if (!isBulkRunning) setBulkTransferOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Transférer ${transferableOrders.length} bon${transferableOrders.length > 1 ? 's' : ''} de commande en bon${transferableOrders.length > 1 ? 's' : ''} de réception ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Un bon de réception brouillon sera créé pour chaque bon de commande, avec toutes ses lignes.</p>
+                {alreadyTransferredCount > 0 && (
+                  <p>
+                    {`${alreadyTransferredCount} bon${alreadyTransferredCount > 1 ? 's' : ''} déjà transféré${alreadyTransferredCount > 1 ? 's seront ignorés' : ' sera ignoré'}.`}
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1">
+            <label htmlFor="bulk-transfer-first-number" className="text-sm font-medium">
+              Numéro du premier bon de réception
+            </label>
+            <Input
+              id="bulk-transfer-first-number"
+              value={bulkTransferFirstNumber}
+              onChange={(e) => setBulkTransferFirstNumber(e.target.value)}
+              className={cn('font-mono', transferNumberError && 'border-red-500 focus-visible:ring-red-500')}
+            />
+            <p className={cn('min-h-5 text-sm', transferNumberError ? 'text-red-500' : 'text-muted-foreground')}>
+              {transferNumberError ?? (transferPreview ? `Bons de réception créés : ${transferPreview}` : '')}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={!!transferNumberError} onClick={handleBulkTransferConfirm}>
+              Transférer
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
