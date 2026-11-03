@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { api } from "@/lib/api";
 import { supplierFromApi, purchaseCreditNoteFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
+import { useTablePrefs } from '@/hooks/use-table-prefs';
+import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseCreditNote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -24,38 +29,90 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AaTestDialog } from '@/components/aa-test-dialog';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
+type EnrichedCreditNote = PurchaseCreditNote & {
+  supplierName: string;
+  invoiceNumber?: string;
+};
+
+const MULTI_SELECTION_MESSAGE = 'Sélectionnez un seul avoir pour utiliser cette action.';
+
+const columns: DataTableColumn<EnrichedCreditNote>[] = [
+  { id: 'creditNoteNumber', label: 'Numéro', cell: (c) => c.creditNoteNumber, sortValue: (c) => c.creditNoteNumber, className: 'font-medium' },
+  {
+    id: 'creditNoteDate',
+    label: 'Date',
+    cell: (c) => format(new Date(c.creditNoteDate), 'dd/MM/yyyy', { locale: fr }),
+    sortValue: (c) => c.creditNoteDate,
+  },
+  { id: 'supplierName', label: 'Fournisseur', cell: (c) => c.supplierName, sortValue: (c) => c.supplierName },
+  {
+    id: 'origin',
+    label: 'Origine',
+    cell: (c) => <span className="font-mono text-xs">{c.invoiceNumber ?? '—'}</span>,
+    sortValue: (c) => c.invoiceNumber ?? null,
+  },
+  {
+    id: 'validated',
+    label: 'Validée',
+    cell: (c) =>
+      c.status === 'Brouillon' ? (
+        <Badge variant="outline" className="text-muted-foreground">Non</Badge>
+      ) : (
+        <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge>
+      ),
+    sortValue: (c) => (c.status === 'Validé' ? 1 : 0),
+  },
+];
+
+const columnIds = columns.map((c) => c.id);
+
 export default function AATestPage() {
-    const { toast } = useToast();
-    const { warning, showWarning, clearWarning } = useActionWarning();
-  
+  const { toast } = useToast();
+  const { warning, showWarning, clearWarning } = useActionWarning();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const tablePrefs = useTablePrefs('purchase-credit-notes', columnIds);
+
   // --- STATES ---
-  const [selectedCreditNote, setSelectedCreditNote] = useState<PurchaseCreditNote | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [creditNoteToEdit, setCreditNoteToEdit] = useState<PurchaseCreditNote | null>(null);
   const [dialogToken, setDialogToken] = useState(0);
-  
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [creditNoteToDelete, setCreditNoteToDelete] = useState<PurchaseCreditNote | null>(null);
 
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen, () => setSelectedIds(new Set()));
+
   // --- DATA FETCHING ---
-    const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
-  
-    const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
-    const { data: invoices, isLoading: isLoadingInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
-  
+  const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
+
+  const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
+  const { data: invoices, isLoading: isLoadingInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
+
   const isLoading = isLoadingCreditNotes || isLoadingSuppliers || isLoadingInvoices;
+
+  // --- DERIVED STATE ---
+  const rows: EnrichedCreditNote[] = useMemo(() => {
+    const supplierNameById = new Map((suppliers ?? []).map((s) => [s.id, s.name]));
+    const invoiceNumberById = new Map((invoices ?? []).map((i) => [i.id, i.invoiceNumber]));
+    return (creditNotes ?? []).map((c) => ({
+      ...c,
+      supplierName: supplierNameById.get(c.supplierId) ?? 'Inconnu',
+      invoiceNumber: c.purchaseInvoiceId ? invoiceNumberById.get(c.purchaseInvoiceId) : undefined,
+    }));
+  }, [creditNotes, suppliers, invoices]);
+
+  const selectedCreditNotes = useMemo(() => rows.filter((c) => selectedIds.has(c.id)), [rows, selectedIds]);
+  const singleSelected = selectedCreditNotes.length === 1 ? selectedCreditNotes[0] : null;
+  const multiSelected = selectedCreditNotes.length > 1;
+  const toolbarVisible = selectedCreditNotes.length > 0;
+
+  const requireSingle = (key: string): EnrichedCreditNote | null => {
+    if (singleSelected) return singleSelected;
+    if (multiSelected) showWarning(key, MULTI_SELECTION_MESSAGE);
+    return null;
+  };
 
   // --- HANDLERS ---
 
@@ -65,32 +122,29 @@ export default function AATestPage() {
     setDialogToken(prev => prev + 1);
   };
 
-  const handleRowClick = (creditNote: PurchaseCreditNote) => {
-    clearWarning();
-    if (selectedCreditNote?.id === creditNote.id) {
-      setSelectedCreditNote(null);
-    } else {
-      setSelectedCreditNote(creditNote);
-    }
-  };
-
   const handleRowDoubleClick = (creditNote: PurchaseCreditNote) => {
     setCreditNoteToEdit(creditNote);
     sessionStorage.setItem('aaTestDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
-  
-  const handleDeleteRequest = () => {
-    if (selectedCreditNote) {
-      if (selectedCreditNote.status === 'Validé') {
-        showWarning('delete', "Vous ne pouvez pas supprimer un avoir validé. Annulez d'abord la validation.");
-        return;
-      }
-      setCreditNoteToDelete(selectedCreditNote);
-      setDeleteDialogOpen(true);
-    }
+
+  const handleEditRequest = () => {
+    const creditNote = requireSingle('edit');
+    if (!creditNote) return;
+    handleRowDoubleClick(creditNote);
   };
-  
+
+  const handleDeleteRequest = () => {
+    const creditNote = requireSingle('delete');
+    if (!creditNote) return;
+    if (creditNote.status === 'Validé') {
+      showWarning('delete', "Vous ne pouvez pas supprimer un avoir validé. Annulez d'abord la validation.");
+      return;
+    }
+    setCreditNoteToDelete(creditNote);
+    setDeleteDialogOpen(true);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!creditNoteToDelete) return;
     try {
@@ -100,51 +154,55 @@ export default function AATestPage() {
         title: 'Avoir supprimé',
         description: `L'avoir "${creditNoteToDelete.creditNoteNumber}" a été supprimé.`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Suppression impossible',
-        description: error.message || 'La suppression a échoué.',
+        description: (error instanceof Error && error.message) || 'La suppression a échoué.',
       });
     }
     setDeleteDialogOpen(false);
     setCreditNoteToDelete(null);
-    setSelectedCreditNote(null);
+    setSelectedIds(new Set());
   };
 
   const handleValidateCreditNote = async () => {
-    if (!selectedCreditNote) return;
+    const creditNote = requireSingle('validate');
+    if (!creditNote) return;
     try {
-      await api.validatePurchaseCreditNote(selectedCreditNote.id);
+      await api.validatePurchaseCreditNote(creditNote.id);
       refetchCreditNotes();
-      toast({ title: 'Avoir validé', description: `L'avoir ${selectedCreditNote.creditNoteNumber} a été validé.` });
-      setSelectedCreditNote({ ...selectedCreditNote, status: 'Validé' } as PurchaseCreditNote);
-    } catch (error: any) {
+      toast({ title: 'Avoir validé', description: `L'avoir ${creditNote.creditNoteNumber} a été validé.` });
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: "Erreur de validation",
-        description: error.message || "La validation a échoué.",
-      });
-    }
-  };
-  
-  const handleCancelValidation = async () => {
-    if (!selectedCreditNote) return;
-    try {
-      await api.cancelPurchaseCreditNoteValidation(selectedCreditNote.id);
-      refetchCreditNotes();
-      toast({ title: 'Validation annulée', description: `L'avoir ${selectedCreditNote.creditNoteNumber} est de retour en brouillon.` });
-      setSelectedCreditNote({ ...selectedCreditNote, status: 'Brouillon' } as PurchaseCreditNote);
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: "Erreur d'annulation",
-        description: error.message || "L'annulation a échoué.",
+        description: (error instanceof Error && error.message) || "La validation a échoué.",
       });
     }
   };
 
-  const deleteBlocked = selectedCreditNote?.status === 'Validé';
+  const handleCancelValidation = async () => {
+    const creditNote = requireSingle('cancel');
+    if (!creditNote) return;
+    try {
+      await api.cancelPurchaseCreditNoteValidation(creditNote.id);
+      refetchCreditNotes();
+      toast({ title: 'Validation annulée', description: `L'avoir ${creditNote.creditNoteNumber} est de retour en brouillon.` });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: "Erreur d'annulation",
+        description: (error instanceof Error && error.message) || "L'annulation a échoué.",
+      });
+    }
+  };
+
+  const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
+  const showCancelButton = singleSelected?.status === 'Validé';
+  const validateBlocked = multiSelected;
+  const editBlocked = multiSelected;
+  const deleteBlocked = multiSelected || singleSelected?.status === 'Validé';
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -158,128 +216,130 @@ export default function AATestPage() {
         </Button>
       </PageHeader>
 
-       {isLoading ? (
+      {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-48 w-full" />
         </div>
       ) : (
-        <Card>
+        <Card ref={cardRef}>
           <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Avoirs récents</CardTitle>
-              <div className="flex items-center gap-2 h-10">
-                  {/* Valider / Annuler validation */}
-                  <div
-                    className={cn(
-                      "transition-all duration-300",
-                      selectedCreditNote ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
-                    )}
-                  >
-                    {selectedCreditNote?.status === 'Brouillon' && (
-                        <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleValidateCreditNote}>
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="sr-only">Valider</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Valider</TooltipContent>
-                        </Tooltip>
-                    )}
-                    {selectedCreditNote?.status === 'Validé' && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
-                                <XCircle className="h-4 w-4 text-orange-500" />
-                                <span className="sr-only">Annuler la validation</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Annuler la validation</TooltipContent>
-                        </Tooltip>
-                    )}
-                  </div>
-
-                  {/* Modifier */}
-                  <div
-                    className={cn(
-                      "transition-all duration-300",
-                      selectedCreditNote ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
-                    )}
-                    style={{ transitionDelay: selectedCreditNote ? '75ms' : '0ms' }}
-                  >
+            <CardTitle>
+              Avoirs récents
+              <span className={cn(
+                'ml-2 text-sm font-normal text-muted-foreground transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]',
+                selectedCreditNotes.length > 0 ? 'opacity-100' : 'opacity-0 select-none'
+              )}>
+                — {selectedCreditNotes.length} sélectionné{selectedCreditNotes.length > 1 ? 's' : ''}
+              </span>
+            </CardTitle>
+            <div className="flex items-center gap-2 h-10">
+              {/* Valider / Annuler validation */}
+              <div
+                className={cn(
+                  "transition-all duration-300",
+                  toolbarVisible ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                )}
+              >
+                {showValidateButton && (
+                  <ActionWarning id="validate" warning={warning} onClose={clearWarning}>
                     <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => selectedCreditNote && handleRowDoubleClick(selectedCreditNote)}
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={cn("h-8 w-8", validateBlocked && "opacity-50")}
+                          aria-disabled={validateBlocked}
+                          onClick={handleValidateCreditNote}
                         >
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="sr-only">Valider</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Valider</TooltipContent>
+                    </Tooltip>
+                  </ActionWarning>
+                )}
+                {showCancelButton && (
+                  <ActionWarning id="cancel" warning={warning} onClose={clearWarning}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleCancelValidation}>
+                          <XCircle className="h-4 w-4 text-orange-500" />
+                          <span className="sr-only">Annuler la validation</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Annuler la validation</TooltipContent>
+                    </Tooltip>
+                  </ActionWarning>
+                )}
+              </div>
+
+              {/* Modifier */}
+              <div
+                className={cn(
+                  "transition-all duration-300",
+                  toolbarVisible ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                )}
+                style={{ transitionDelay: toolbarVisible ? '75ms' : '0ms' }}
+              >
+                <ActionWarning id="edit" warning={warning} onClose={clearWarning}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={cn("h-8 w-8", editBlocked && "opacity-50")}
+                        aria-disabled={editBlocked}
+                        onClick={handleEditRequest}
+                      >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Modifier</span>
-                        </Button>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>Modifier</TooltipContent>
-                    </Tooltip>
-                  </div>
-
-                  {/* Supprimer */}
-                  <div
-                    className={cn(
-                      "transition-all duration-300",
-                      selectedCreditNote ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
-                    )}
-                    style={{ transitionDelay: selectedCreditNote ? '150ms' : '0ms' }}
-                  >
-                    <ActionWarning id="delete" warning={warning} onClose={clearWarning}>
-                      <Tooltip>
-                      <TooltipTrigger asChild>
-                          <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} onClick={handleDeleteRequest} aria-disabled={deleteBlocked}>
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Supprimer</span>
-                          </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Supprimer</TooltipContent>
-                      </Tooltip>
-                    </ActionWarning>
-                  </div>
+                  </Tooltip>
+                </ActionWarning>
               </div>
+
+              {/* Supprimer */}
+              <div
+                className={cn(
+                  "transition-all duration-300",
+                  toolbarVisible ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                )}
+                style={{ transitionDelay: toolbarVisible ? '150ms' : '0ms' }}
+              >
+                <ActionWarning id="delete" warning={warning} onClose={clearWarning}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="destructive" size="icon" className={cn("h-8 w-8", deleteBlocked && "opacity-50")} aria-disabled={deleteBlocked} onClick={handleDeleteRequest}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Supprimer</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Supprimer</TooltipContent>
+                  </Tooltip>
+                </ActionWarning>
+              </div>
+
+              <ResetSortButton visible={tablePrefs.isCustomized} onClick={tablePrefs.resetPrefs} />
+            </div>
           </CardHeader>
           <CardContent>
-              {creditNotes && creditNotes.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Numéro</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Fournisseur</TableHead>
-                      <TableHead>Origine</TableHead>
-                      <TableHead>Validée</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {creditNotes.map((creditNote) => (
-                      <TableRow
-                        key={creditNote.id}
-                        onClick={() => handleRowClick(creditNote)}
-                        onDoubleClick={() => handleRowDoubleClick(creditNote)}
-                        className={cn("cursor-pointer", selectedCreditNote?.id === creditNote.id && 'bg-muted/50', creditNote.status === 'Validé' && '[&>td]:font-semibold')}
-                      >
-                        <TableCell className="font-medium">{creditNote.creditNoteNumber}</TableCell>
-                        <TableCell>{format(new Date(creditNote.creditNoteDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                        <TableCell>{suppliers?.find(s => s.id === creditNote.supplierId)?.name || 'Inconnu'}</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {creditNote.purchaseInvoiceId ? (invoices || []).find((i) => i.id === creditNote.purchaseInvoiceId)?.invoiceNumber || '—' : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {creditNote.status === 'Brouillon'
-                            ? <Badge variant="outline" className="text-muted-foreground">Non</Badge>
-                            : <Badge variant="outline" className="border-green-600 text-green-700">Oui</Badge>}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+            <DataTable
+              prefs={tablePrefs}
+              columns={columns}
+              rows={rows}
+              getRowId={(c) => c.id}
+              selectedIds={selectedIds}
+              onSelectionChange={(ids) => {
+                clearWarning();
+                setSelectedIds(ids);
+              }}
+              onRowDoubleClick={handleRowDoubleClick}
+              rowClassName={(c) => (c.status === 'Validé' ? '[&>td]:font-semibold' : undefined)}
+              defaultSort={{ columnId: 'creditNoteNumber', direction: 'asc' }}
+              emptyMessage={
                 <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
                   <div className="flex flex-col items-center gap-1 text-center">
                     <h3 className="text-2xl font-bold tracking-tight">
@@ -294,14 +354,15 @@ export default function AATestPage() {
                     </Button>
                   </div>
                 </div>
-              )}
+              }
+            />
           </CardContent>
         </Card>
       )}
 
       {/* Rendu masqué du dialogue pour permettre son déclenchement externe */}
       <div className="hidden">
-          <AaTestDialog key={`${dialogToken}-${creditNoteToEdit?.id ?? 'new'}`} creditNoteToEdit={creditNoteToEdit} onSaveSuccess={() => refetchCreditNotes()} />
+        <AaTestDialog key={`${dialogToken}-${creditNoteToEdit?.id ?? 'new'}`} creditNoteToEdit={creditNoteToEdit} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -321,4 +382,3 @@ export default function AATestPage() {
     </div>
   );
 }
-
