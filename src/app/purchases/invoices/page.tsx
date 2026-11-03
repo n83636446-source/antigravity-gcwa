@@ -132,8 +132,10 @@ export default function FATestPage() {
   const [invoiceToTransfer, setInvoiceToTransfer] = useState<PurchaseInvoice | null>(null);
   const [validateThenTransferOpen, setValidateThenTransferOpen] = useState(false);
   const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
+  const [validateThenPayOpen, setValidateThenPayOpen] = useState(false);
+  const [isValidatingForPay, setIsValidatingForPay] = useState(false);
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
@@ -280,6 +282,14 @@ export default function FATestPage() {
   const handleReglerClick = () => {
     const invoice = requireSingle('pay');
     if (!invoice) return;
+    if (invoice.status === 'Payée') {
+      showWarning('pay', 'Cette facture est déjà réglée en totalité.');
+      return;
+    }
+    if (invoice.status === 'Brouillon') {
+      setValidateThenPayOpen(true);
+      return;
+    }
     setInvoiceToTransfer(null);
     setInvoiceToReglement(invoice);
     setDialogToken(prev => prev + 1);
@@ -328,13 +338,36 @@ export default function FATestPage() {
     }
   };
 
+  const handleValidateAndPay = async () => {
+    if (!singleSelected) return;
+    const invoice = singleSelected;
+    setIsValidatingForPay(true);
+    try {
+      await api.validatePurchaseInvoice(invoice.id);
+      refetchInvoices();
+      const validatedInvoice = { ...invoice, status: 'Non payée' } as PurchaseInvoice;
+      toast({ title: 'Facture validée', description: `La facture ${invoice.invoiceNumber} est passée en "Non payée".` });
+      setValidateThenPayOpen(false);
+      setInvoiceToEdit(null);
+      setInvoiceToTransfer(null);
+      setInvoiceToReglement(validatedInvoice);
+      setDialogToken(prev => prev + 1);
+    } catch (error) {
+      setValidateThenPayOpen(false);
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de validation',
+        description: (error instanceof Error && error.message) || 'La validation a échoué.',
+      });
+    } finally {
+      setIsValidatingForPay(false);
+    }
+  };
+
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = !!singleSelected && singleSelected.status !== 'Brouillon';
-  const showPayButton = singleSelected
-    ? singleSelected.status === 'Non payée' || singleSelected.status === 'Partiellement payée'
-    : multiSelected;
   const validateBlocked = multiSelected;
-  const payBlocked = multiSelected;
+  const payBlocked = multiSelected || singleSelected?.status === 'Payée';
   const cancelValidationBlocked = !!singleSelected && (singleSelected.status === 'Partiellement payée' || singleSelected.status === 'Payée' || invoiceAlreadyCredited);
   const transferBlocked = multiSelected || singleSelected?.status === 'Brouillon' || invoiceAlreadyCredited;
   const editBlocked = multiSelected;
@@ -418,25 +451,23 @@ export default function FATestPage() {
                 )}
                 style={{ transitionDelay: toolbarVisible ? '75ms' : '0ms' }}
               >
-                {showPayButton && (
-                  <ActionWarning id="pay" warning={warning} onClose={clearWarning}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className={cn("h-8 w-8", payBlocked && "opacity-50")}
-                          aria-disabled={payBlocked}
-                          onClick={handleReglerClick}
-                        >
-                          <Wallet className="h-4 w-4 text-blue-500" />
-                          <span className="sr-only">Régler</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Régler</TooltipContent>
-                    </Tooltip>
-                  </ActionWarning>
-                )}
+                <ActionWarning id="pay" warning={warning} onClose={clearWarning}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={cn("h-8 w-8", payBlocked && "opacity-50")}
+                        aria-disabled={payBlocked}
+                        onClick={handleReglerClick}
+                      >
+                        <Wallet className="h-4 w-4 text-blue-500" />
+                        <span className="sr-only">Régler</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Régler</TooltipContent>
+                  </Tooltip>
+                </ActionWarning>
               </div>
 
               {/* Transférer en Avoir */}
@@ -588,6 +619,23 @@ export default function FATestPage() {
             <AlertDialogCancel disabled={isValidatingForTransfer}>Annuler</AlertDialogCancel>
             <AlertDialogAction disabled={isValidatingForTransfer} onClick={(e) => { e.preventDefault(); handleValidateAndTransfer(); }}>
               Valider et transférer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={validateThenPayOpen} onOpenChange={(open) => { if (!isValidatingForPay) setValidateThenPayOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Facture non validée</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette facture n'est pas encore validée. Voulez-vous la valider puis la régler ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isValidatingForPay}>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={isValidatingForPay} onClick={(e) => { e.preventDefault(); handleValidateAndPay(); }}>
+              Valider et régler
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
