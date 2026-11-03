@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi, purchaseReceiptFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
+import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseInvoice } from '@/lib/types';
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 import { FaTestDialog } from '@/components/fa-test-dialog';
 import { AaTestDialog } from '@/components/aa-test-dialog';
 import { ReglementTestDialog } from '@/components/reglement-test-dialog';
@@ -40,6 +41,9 @@ type EnrichedInvoice = PurchaseInvoice & {
 };
 
 const MULTI_SELECTION_MESSAGE = 'Sélectionnez une seule facture pour utiliser cette action.';
+
+const sortByInvoiceNumber = <T extends { invoiceNumber: string }>(list: T[]): T[] =>
+  [...list].sort((a, b) => compareDocumentNumbers(a.invoiceNumber, b.invoiceNumber));
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -119,6 +123,7 @@ export default function FATestPage() {
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
   const tablePrefs = useTablePrefs('purchase-invoices', columnIds);
+  const { runBulk, isRunning: isBulkRunning } = useBulkAction();
 
   // --- STATES ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -134,8 +139,9 @@ export default function FATestPage() {
   const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
   const [validateThenPayOpen, setValidateThenPayOpen] = useState(false);
   const [isValidatingForPay, setIsValidatingForPay] = useState(false);
+  const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
@@ -170,6 +176,14 @@ export default function FATestPage() {
   const multiSelected = selectedInvoices.length > 1;
   const toolbarVisible = selectedInvoices.length > 0;
   const invoiceAlreadyCredited = !!singleSelected?.creditNoteNumber;
+  const selectedDrafts = selectedInvoices.filter((i) => i.status === 'Brouillon');
+  const selectedAlreadyValidatedCount = selectedInvoices.length - selectedDrafts.length;
+  const draftsWithoutReceiptCount = selectedDrafts.filter((i) => !i.purchaseReceiptId).length;
+  const refusedText = `${selectedAlreadyValidatedCount} facture${selectedAlreadyValidatedCount > 1 ? 's validées seront refusées' : ' validée sera refusée'}.`;
+  const bulkDeleteDescription =
+    selectedAlreadyValidatedCount === 0
+      ? `Cette action est irréversible. Les ${selectedInvoices.length} factures sélectionnées seront supprimées.`
+      : `Cette action est irréversible. ${selectedDrafts.length} des ${selectedInvoices.length} factures sélectionnées ${selectedDrafts.length > 1 ? 'seront supprimées' : 'sera supprimée'}. ${refusedText}`;
 
   const requireSingle = (key: string): EnrichedInvoice | null => {
     if (singleSelected) return singleSelected;
@@ -202,6 +216,15 @@ export default function FATestPage() {
   };
 
   const handleDeleteRequest = () => {
+    if (isBulkRunning) return;
+    if (multiSelected) {
+      if (selectedDrafts.length === 0) {
+        showWarning('delete', 'Les factures sélectionnées sont déjà validées.', 'Suppression impossible');
+        return;
+      }
+      setDeleteDialogOpen(true);
+      return;
+    }
     const invoice = requireSingle('delete');
     if (!invoice) return;
     if (invoice.status !== 'Brouillon') {
@@ -213,6 +236,20 @@ export default function FATestPage() {
   };
 
   const handleDeleteConfirm = async () => {
+    if (multiSelected) {
+      const toDelete = sortByInvoiceNumber(selectedInvoices);
+      setDeleteDialogOpen(false);
+      await runBulk({
+        items: toDelete,
+        getName: (i) => i.invoiceNumber,
+        action: (i) => api.deletePurchaseInvoice(i.id),
+        successLabel: (n) => `${n} facture${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''}`,
+        failureTitle: 'Suppression impossible',
+      });
+      refetchInvoices();
+      setSelectedIds(new Set());
+      return;
+    }
     if (!invoiceToDelete) return;
     try {
       await api.deletePurchaseInvoice(invoiceToDelete.id);
@@ -233,7 +270,33 @@ export default function FATestPage() {
     setSelectedIds(new Set());
   };
 
+  const handleBulkValidateRequest = () => {
+    if (isBulkRunning) return;
+    if (selectedDrafts.length === 0) {
+      showWarning('validate', 'Les factures sélectionnées sont déjà validées.');
+      return;
+    }
+    setBulkValidateOpen(true);
+  };
+
+  const handleBulkValidateConfirm = async () => {
+    const toValidate = sortByInvoiceNumber(selectedDrafts);
+    setBulkValidateOpen(false);
+    await runBulk({
+      items: toValidate,
+      getName: (i) => i.invoiceNumber,
+      action: (i) => api.validatePurchaseInvoice(i.id),
+      successLabel: (n) => `${n} facture${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''}`,
+      failureTitle: 'Validation impossible',
+    });
+    refetchInvoices();
+  };
+
   const handleValidateInvoice = async () => {
+    if (multiSelected) {
+      handleBulkValidateRequest();
+      return;
+    }
     const invoice = requireSingle('validate');
     if (!invoice) return;
     try {
@@ -366,12 +429,12 @@ export default function FATestPage() {
 
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = !!singleSelected && singleSelected.status !== 'Brouillon';
-  const validateBlocked = multiSelected;
+  const validateBlocked = multiSelected && selectedDrafts.length === 0;
   const payBlocked = multiSelected || singleSelected?.status === 'Payée';
   const cancelValidationBlocked = !!singleSelected && (singleSelected.status === 'Partiellement payée' || singleSelected.status === 'Payée' || invoiceAlreadyCredited);
   const transferBlocked = multiSelected || singleSelected?.status === 'Brouillon' || invoiceAlreadyCredited;
   const editBlocked = multiSelected;
-  const deleteBlocked = multiSelected || (!!singleSelected && singleSelected.status !== 'Brouillon');
+  const deleteBlocked = multiSelected ? selectedDrafts.length === 0 : !!singleSelected && singleSelected.status !== 'Brouillon';
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -424,7 +487,7 @@ export default function FATestPage() {
                           <span className="sr-only">Valider</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Valider</TooltipContent>
+                      <TooltipContent>{multiSelected && selectedDrafts.length > 0 ? `Valider (${selectedDrafts.length})` : 'Valider'}</TooltipContent>
                     </Tooltip>
                   </ActionWarning>
                 )}
@@ -540,7 +603,7 @@ export default function FATestPage() {
                         <span className="sr-only">Supprimer</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
+                    <TooltipContent>{multiSelected ? `Supprimer (${selectedInvoices.length})` : 'Supprimer'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -592,17 +655,43 @@ export default function FATestPage() {
         <AaTestDialog key={`transfer-${dialogToken}-${invoiceToTransfer?.id ?? 'none'}`} invoiceToTransfer={invoiceToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cette facture ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {multiSelected ? `Supprimer ${selectedInvoices.length} factures ?` : 'Supprimer cette facture ?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. La facture "{invoiceToDelete?.invoiceNumber}" sera supprimée.
+              {multiSelected
+                ? bulkDeleteDescription
+                : `Cette action est irréversible. La facture "${invoiceToDelete?.invoiceNumber ?? ''}" sera supprimée.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkValidateOpen} onOpenChange={(open) => { if (!isBulkRunning) setBulkValidateOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Valider ${selectedDrafts.length} facture${selectedDrafts.length > 1 ? 's' : ''} ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {draftsWithoutReceiptCount > 0
+                ? `${draftsWithoutReceiptCount} facture${draftsWithoutReceiptCount > 1 ? 's' : ''} sans bon de réception ${draftsWithoutReceiptCount > 1 ? 'ajouteront' : 'ajoutera'} leurs quantités au stock.`
+                : 'Les factures sélectionnées en brouillon seront validées.'}
+              {selectedAlreadyValidatedCount > 0
+                ? ` ${selectedAlreadyValidatedCount} facture${selectedAlreadyValidatedCount > 1 ? 's' : ''} déjà validée${selectedAlreadyValidatedCount > 1 ? 's' : ''} ${selectedAlreadyValidatedCount > 1 ? 'seront ignorées' : 'sera ignorée'}.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkValidateConfirm}>Valider</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
