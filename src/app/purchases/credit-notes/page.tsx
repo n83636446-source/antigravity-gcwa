@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { supplierFromApi, purchaseCreditNoteFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
+import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseCreditNote } from '@/lib/types';
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 import { AaTestDialog } from '@/components/aa-test-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
@@ -37,6 +38,9 @@ type EnrichedCreditNote = PurchaseCreditNote & {
 };
 
 const MULTI_SELECTION_MESSAGE = 'Sélectionnez un seul avoir pour utiliser cette action.';
+
+const sortByCreditNoteNumber = <T extends { creditNoteNumber: string }>(list: T[]): T[] =>
+  [...list].sort((a, b) => compareDocumentNumbers(a.creditNoteNumber, b.creditNoteNumber));
 
 const columns: DataTableColumn<EnrichedCreditNote>[] = [
   { id: 'creditNoteNumber', label: 'Numéro', cell: (c) => c.creditNoteNumber, sortValue: (c) => c.creditNoteNumber, className: 'font-medium' },
@@ -73,6 +77,7 @@ export default function AATestPage() {
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
   const tablePrefs = useTablePrefs('purchase-credit-notes', columnIds);
+  const { runBulk, isRunning: isBulkRunning } = useBulkAction();
 
   // --- STATES ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -81,8 +86,9 @@ export default function AATestPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [creditNoteToDelete, setCreditNoteToDelete] = useState<PurchaseCreditNote | null>(null);
+  const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !bulkValidateOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: creditNotes, isLoading: isLoadingCreditNotes, refetch: refetchCreditNotes } = useApiCollection(() => api.getPurchaseCreditNotes().then(r => r.map(purchaseCreditNoteFromApi)));
@@ -107,6 +113,13 @@ export default function AATestPage() {
   const singleSelected = selectedCreditNotes.length === 1 ? selectedCreditNotes[0] : null;
   const multiSelected = selectedCreditNotes.length > 1;
   const toolbarVisible = selectedCreditNotes.length > 0;
+  const selectedDrafts = selectedCreditNotes.filter((c) => c.status === 'Brouillon');
+  const selectedAlreadyValidatedCount = selectedCreditNotes.length - selectedDrafts.length;
+  const refusedText = `${selectedAlreadyValidatedCount} avoir${selectedAlreadyValidatedCount > 1 ? 's validés seront refusés' : ' validé sera refusé'}.`;
+  const bulkDeleteDescription =
+    selectedAlreadyValidatedCount === 0
+      ? `Cette action est irréversible. Les ${selectedCreditNotes.length} avoirs sélectionnés seront supprimés.`
+      : `Cette action est irréversible. ${selectedDrafts.length} des ${selectedCreditNotes.length} avoirs sélectionnés ${selectedDrafts.length > 1 ? 'seront supprimés' : 'sera supprimé'}. ${refusedText}`;
 
   const requireSingle = (key: string): EnrichedCreditNote | null => {
     if (singleSelected) return singleSelected;
@@ -135,6 +148,15 @@ export default function AATestPage() {
   };
 
   const handleDeleteRequest = () => {
+    if (isBulkRunning) return;
+    if (multiSelected) {
+      if (selectedDrafts.length === 0) {
+        showWarning('delete', 'Les avoirs sélectionnés sont déjà validés.', 'Suppression impossible');
+        return;
+      }
+      setDeleteDialogOpen(true);
+      return;
+    }
     const creditNote = requireSingle('delete');
     if (!creditNote) return;
     if (creditNote.status === 'Validé') {
@@ -146,6 +168,20 @@ export default function AATestPage() {
   };
 
   const handleDeleteConfirm = async () => {
+    if (multiSelected) {
+      const toDelete = sortByCreditNoteNumber(selectedCreditNotes);
+      setDeleteDialogOpen(false);
+      await runBulk({
+        items: toDelete,
+        getName: (c) => c.creditNoteNumber,
+        action: (c) => api.deletePurchaseCreditNote(c.id),
+        successLabel: (n) => `${n} avoir${n > 1 ? 's' : ''} supprimé${n > 1 ? 's' : ''}`,
+        failureTitle: 'Suppression impossible',
+      });
+      refetchCreditNotes();
+      setSelectedIds(new Set());
+      return;
+    }
     if (!creditNoteToDelete) return;
     try {
       await api.deletePurchaseCreditNote(creditNoteToDelete.id);
@@ -166,7 +202,33 @@ export default function AATestPage() {
     setSelectedIds(new Set());
   };
 
+  const handleBulkValidateRequest = () => {
+    if (isBulkRunning) return;
+    if (selectedDrafts.length === 0) {
+      showWarning('validate', 'Les avoirs sélectionnés sont déjà validés.');
+      return;
+    }
+    setBulkValidateOpen(true);
+  };
+
+  const handleBulkValidateConfirm = async () => {
+    const toValidate = sortByCreditNoteNumber(selectedDrafts);
+    setBulkValidateOpen(false);
+    await runBulk({
+      items: toValidate,
+      getName: (c) => c.creditNoteNumber,
+      action: (c) => api.validatePurchaseCreditNote(c.id),
+      successLabel: (n) => `${n} avoir${n > 1 ? 's' : ''} validé${n > 1 ? 's' : ''}`,
+      failureTitle: 'Validation impossible',
+    });
+    refetchCreditNotes();
+  };
+
   const handleValidateCreditNote = async () => {
+    if (multiSelected) {
+      handleBulkValidateRequest();
+      return;
+    }
     const creditNote = requireSingle('validate');
     if (!creditNote) return;
     try {
@@ -200,9 +262,9 @@ export default function AATestPage() {
 
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = singleSelected?.status === 'Validé';
-  const validateBlocked = multiSelected;
+  const validateBlocked = multiSelected && selectedDrafts.length === 0;
   const editBlocked = multiSelected;
-  const deleteBlocked = multiSelected || singleSelected?.status === 'Validé';
+  const deleteBlocked = multiSelected ? selectedDrafts.length === 0 : singleSelected?.status === 'Validé';
 
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
@@ -255,7 +317,7 @@ export default function AATestPage() {
                           <span className="sr-only">Valider</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Valider</TooltipContent>
+                      <TooltipContent>{multiSelected && selectedDrafts.length > 0 ? `Valider (${selectedDrafts.length})` : 'Valider'}</TooltipContent>
                     </Tooltip>
                   </ActionWarning>
                 )}
@@ -317,7 +379,7 @@ export default function AATestPage() {
                         <span className="sr-only">Supprimer</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Supprimer</TooltipContent>
+                    <TooltipContent>{multiSelected ? `Supprimer (${selectedCreditNotes.length})` : 'Supprimer'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -365,17 +427,41 @@ export default function AATestPage() {
         <AaTestDialog key={`${dialogToken}-${creditNoteToEdit?.id ?? 'new'}`} creditNoteToEdit={creditNoteToEdit} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cet avoir ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {multiSelected ? `Supprimer ${selectedCreditNotes.length} avoirs ?` : 'Supprimer cet avoir ?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. L'avoir "{creditNoteToDelete?.creditNoteNumber}" sera supprimé.
+              {multiSelected
+                ? bulkDeleteDescription
+                : `Cette action est irréversible. L'avoir "${creditNoteToDelete?.creditNoteNumber ?? ''}" sera supprimé.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkValidateOpen} onOpenChange={(open) => { if (!isBulkRunning) setBulkValidateOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Valider ${selectedDrafts.length} avoir${selectedDrafts.length > 1 ? 's' : ''} ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              La validation retirera les quantités du stock.
+              {selectedAlreadyValidatedCount > 0
+                ? ` ${selectedAlreadyValidatedCount} avoir${selectedAlreadyValidatedCount > 1 ? 's' : ''} déjà validé${selectedAlreadyValidatedCount > 1 ? 's' : ''} ${selectedAlreadyValidatedCount > 1 ? 'seront ignorés' : 'sera ignoré'}.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkValidateConfirm}>Valider</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
