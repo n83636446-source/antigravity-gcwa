@@ -1,4 +1,4 @@
-ESLint run: 2026-11-03 09:11:31
+ESLint run: 2026-11-03 10:39:19
 
 > nextn@0.1.0 lint
 > next lint
@@ -6,12 +6,6 @@ ESLint run: 2026-11-03 09:11:31
 
 ./src/app/layout.tsx
 29:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
-
-./src/app/purchases/invoices/page.tsx
-121:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-143:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-170:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-215:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/purchases/payments/page.tsx
 95:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
