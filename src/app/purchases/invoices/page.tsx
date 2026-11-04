@@ -4,16 +4,17 @@ import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { api } from "@/lib/api";
-import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi, purchaseReceiptFromApi } from "@/lib/types";
+import { supplierFromApi, purchaseInvoiceFromApi, purchaseCreditNoteFromApi, purchaseReceiptFromApi, purchaseCreditNoteToApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
 import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseInvoice } from '@/lib/types';
+import type { PurchaseInvoice, PurchaseCreditNote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Pencil, Trash2, CheckCircle, XCircle, PlusCircle, Wallet, ArrowRightCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -28,7 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn, compareDocumentNumbers } from '@/lib/utils';
+import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils';
 import { FaTestDialog } from '@/components/fa-test-dialog';
 import { AaTestDialog } from '@/components/aa-test-dialog';
 import { ReglementTestDialog } from '@/components/reglement-test-dialog';
@@ -44,6 +45,22 @@ const MULTI_SELECTION_MESSAGE = 'Sélectionnez une seule facture pour utiliser c
 
 const sortByInvoiceNumber = <T extends { invoiceNumber: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => compareDocumentNumbers(a.invoiceNumber, b.invoiceNumber));
+
+const parseCreditNoteNumber = (value: string): { prefix: string; digits: string } | null => {
+  const match = value.trim().match(/^(.*?)(\d+)$/);
+  return match ? { prefix: match[1], digits: match[2] } : null;
+};
+
+const formatCreditNoteNumber = (prefix: string, digits: string, offset: number): string =>
+  `${prefix}${(parseInt(digits, 10) + offset).toString().padStart(digits.length, '0')}`;
+
+const suggestNextCreditNoteNumber = (existing: { creditNoteNumber: string }[]): string => {
+  const maxValue = existing.reduce((max, c) => {
+    const n = parseInt(c.creditNoteNumber.replace('AA', '').trim(), 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  return `AA${(maxValue + 1).toString().padStart(4, '0')}`;
+};
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -140,8 +157,10 @@ export default function FATestPage() {
   const [validateThenPayOpen, setValidateThenPayOpen] = useState(false);
   const [isValidatingForPay, setIsValidatingForPay] = useState(false);
   const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
+  const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
+  const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen && !bulkTransferOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
@@ -176,6 +195,26 @@ export default function FATestPage() {
   const multiSelected = selectedInvoices.length > 1;
   const toolbarVisible = selectedInvoices.length > 0;
   const invoiceAlreadyCredited = !!singleSelected?.creditNoteNumber;
+  const transferableInvoices = sortByInvoiceNumber(selectedInvoices.filter((i) => !i.creditNoteNumber));
+  const alreadyCreditedCount = selectedInvoices.length - transferableInvoices.length;
+  const transferDraftCount = transferableInvoices.filter((i) => i.status === 'Brouillon').length;
+  const parsedFirstNumber = parseCreditNoteNumber(bulkTransferFirstNumber);
+  const plannedCreditNoteNumbers = parsedFirstNumber
+    ? transferableInvoices.map((_, index) => formatCreditNoteNumber(parsedFirstNumber.prefix, parsedFirstNumber.digits, index))
+    : [];
+  const existingCreditNoteNumbers = new Set((creditNotes ?? []).map((c) => c.creditNoteNumber));
+  const conflictingCreditNoteNumber = plannedCreditNoteNumbers.find((n) => existingCreditNoteNumbers.has(n));
+  const transferNumberError = !bulkTransferFirstNumber.trim()
+    ? 'Le numéro est obligatoire.'
+    : !parsedFirstNumber
+      ? 'Le numéro doit se terminer par des chiffres (par exemple AA0007).'
+      : conflictingCreditNoteNumber
+        ? `Le numéro ${conflictingCreditNoteNumber} est déjà utilisé.`
+        : null;
+  const transferPreview =
+    plannedCreditNoteNumbers.length > 1
+      ? `${plannedCreditNoteNumbers[0]} à ${plannedCreditNoteNumbers[plannedCreditNoteNumbers.length - 1]}`
+      : plannedCreditNoteNumbers[0] ?? '';
   const selectedDrafts = selectedInvoices.filter((i) => i.status === 'Brouillon');
   const selectedAlreadyValidatedCount = selectedInvoices.length - selectedDrafts.length;
   const draftsWithoutReceiptCount = selectedDrafts.filter((i) => !i.purchaseReceiptId).length;
@@ -358,7 +397,80 @@ export default function FATestPage() {
     setDialogToken(prev => prev + 1);
   };
 
+  const handleBulkTransferRequest = () => {
+    if (isBulkRunning) return;
+    if (transferableInvoices.length === 0) {
+      showWarning('transfer', 'Les factures sélectionnées ont déjà été transférées en avoir.', 'Transfert impossible');
+      return;
+    }
+    setBulkTransferFirstNumber(suggestNextCreditNoteNumber(creditNotes ?? []));
+    setBulkTransferOpen(true);
+  };
+
+  const handleBulkTransferConfirm = async () => {
+    if (transferNumberError || !parsedFirstNumber) return;
+    const { prefix, digits } = parsedFirstNumber;
+    const sources = transferableInvoices;
+    let nextOffset = 0;
+    setBulkTransferOpen(false);
+    await runBulk({
+      items: sources,
+      getName: (i) => i.invoiceNumber,
+      action: async (invoice) => {
+        if (invoice.items.length === 0) {
+          throw new Error('Aucune ligne à transférer.');
+        }
+        if (invoice.status === 'Brouillon') {
+          await api.validatePurchaseInvoice(invoice.id);
+        }
+        const creditNoteItems = invoice.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          tvaRate: item.tvaRate,
+        }));
+        const totals = creditNoteItems.reduce(
+          (acc, item) => {
+            const lineHT = roundMoney(item.price * item.quantity);
+            const lineTVA = roundMoney(lineHT * (item.tvaRate / 100));
+            return {
+              totalHT: roundMoney(acc.totalHT + lineHT),
+              totalTTC: roundMoney(acc.totalTTC + lineHT + lineTVA),
+            };
+          },
+          { totalHT: 0, totalTTC: 0 }
+        );
+        const creditNote: PurchaseCreditNote = {
+          id: `aa-${generateId()}`,
+          creditNoteNumber: formatCreditNoteNumber(prefix, digits, nextOffset),
+          purchaseInvoiceId: invoice.id,
+          supplierId: invoice.supplierId,
+          creditNoteDate: new Date().toISOString(),
+          items: creditNoteItems,
+          status: 'Brouillon',
+          totalHT: totals.totalHT,
+          totalTTC: totals.totalTTC,
+          paymentMode: invoice.paymentMode,
+          dueDate: invoice.dueDate,
+          representativeId: invoice.representativeId,
+          reference: invoice.reference,
+          remarks: invoice.remarks,
+        };
+        await api.createPurchaseCreditNote(purchaseCreditNoteToApi(creditNote));
+        nextOffset++;
+      },
+      successLabel: (n) => `${n} avoir${n > 1 ? 's' : ''} créé${n > 1 ? 's' : ''}`,
+      failureTitle: 'Transfert impossible',
+    });
+    refetchInvoices();
+    refetchCreditNotes();
+  };
+
   const handleTransferToCreditNote = () => {
+    if (multiSelected) {
+      handleBulkTransferRequest();
+      return;
+    }
     const invoice = requireSingle('transfer');
     if (!invoice) return;
     if (invoice.status === 'Brouillon') {
@@ -432,7 +544,7 @@ export default function FATestPage() {
   const validateBlocked = multiSelected && selectedDrafts.length === 0;
   const payBlocked = multiSelected || singleSelected?.status === 'Payée';
   const cancelValidationBlocked = !!singleSelected && (singleSelected.status === 'Partiellement payée' || singleSelected.status === 'Payée' || invoiceAlreadyCredited);
-  const transferBlocked = multiSelected || singleSelected?.status === 'Brouillon' || invoiceAlreadyCredited;
+  const transferBlocked = multiSelected ? transferableInvoices.length === 0 : singleSelected?.status === 'Brouillon' || invoiceAlreadyCredited;
   const editBlocked = multiSelected;
   const deleteBlocked = multiSelected ? selectedDrafts.length === 0 : !!singleSelected && singleSelected.status !== 'Brouillon';
 
@@ -555,7 +667,7 @@ export default function FATestPage() {
                         <span className="sr-only">Transférer en Avoir</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Transférer en Avoir</TooltipContent>
+                    <TooltipContent>{multiSelected ? `Transférer en avoirs (${selectedInvoices.length})` : 'Transférer en Avoir'}</TooltipContent>
                   </Tooltip>
                 </ActionWarning>
               </div>
@@ -670,6 +782,51 @@ export default function FATestPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkTransferOpen} onOpenChange={(open) => { if (!isBulkRunning) setBulkTransferOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Transférer ${transferableInvoices.length} facture${transferableInvoices.length > 1 ? 's' : ''} en avoir${transferableInvoices.length > 1 ? 's' : ''} ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Un avoir brouillon sera créé pour chaque facture, avec toutes ses lignes.</p>
+                {transferDraftCount > 0 && (
+                  <p>
+                    {`${transferDraftCount} facture${transferDraftCount > 1 ? 's' : ''} en brouillon ${transferDraftCount > 1 ? 'seront validées' : 'sera validée'} d'abord.`}
+                  </p>
+                )}
+                {alreadyCreditedCount > 0 && (
+                  <p>
+                    {`${alreadyCreditedCount} facture${alreadyCreditedCount > 1 ? 's' : ''} déjà transférée${alreadyCreditedCount > 1 ? 's seront ignorées' : ' sera ignorée'}.`}
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1">
+            <label htmlFor="bulk-transfer-first-number" className="text-sm font-medium">
+              Numéro du premier avoir
+            </label>
+            <Input
+              id="bulk-transfer-first-number"
+              value={bulkTransferFirstNumber}
+              onChange={(e) => setBulkTransferFirstNumber(e.target.value)}
+              className={cn('font-mono', transferNumberError && 'border-red-500 focus-visible:ring-red-500')}
+            />
+            <p className={cn('min-h-5 text-sm', transferNumberError ? 'text-red-500' : 'text-muted-foreground')}>
+              {transferNumberError ?? (transferPreview ? `Avoirs créés : ${transferPreview}` : '')}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={!!transferNumberError} onClick={handleBulkTransferConfirm}>
+              {transferDraftCount > 0 ? 'Valider et transférer' : 'Transférer'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
