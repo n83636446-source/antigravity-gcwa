@@ -29,10 +29,11 @@ import {
 
 interface RaDialogProps {
   purchaseInvoice: PurchaseInvoice | null;
+  purchaseInvoices?: PurchaseInvoice[] | null;
     onSaveSuccess?: () => void;
 }
 
-export function RaDialog({ purchaseInvoice, onSaveSuccess }: RaDialogProps) {
+export function RaDialog({ purchaseInvoice, purchaseInvoices, onSaveSuccess }: RaDialogProps) {
   const [open, setOpen] = useState<boolean>(!!purchaseInvoice || true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isHoveringDock, setIsHoveringDock] = useState(false);
@@ -115,29 +116,36 @@ const nextNum = calculateNextNumber(existing);
         setReglementNumber(nextNum);
         setDate(new Date());
 
-        // Pre-fill from prop if provided (from an invoice)
-        if (purchaseInvoice) {
-            setSelectedSupplierId(purchaseInvoice.supplierId);
-            setLineAmounts({ [purchaseInvoice.id]: String(roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0))) });
-            setPaymentMode(purchaseInvoice.paymentMode || "cash");
-            if (purchaseInvoice.dueDate) setDueDate(new Date(purchaseInvoice.dueDate));
+        // Pre-fill from props if provided (one invoice, or several invoices of one supplier)
+        const preselected = purchaseInvoices && purchaseInvoices.length > 0 ? purchaseInvoices : purchaseInvoice ? [purchaseInvoice] : [];
+        const preselectedLines: Record<string, string> = {};
+        preselected.forEach((inv) => {
+            preselectedLines[inv.id] = String(roundMoney(inv.totalTTC - (inv.amountPaid || 0)));
+        });
+        const firstMode = preselected[0]?.paymentMode;
+        const sharedPaymentMode = firstMode && preselected.every((inv) => inv.paymentMode === firstMode) ? firstMode : "cash";
+        if (preselected.length > 0) {
+            setSelectedSupplierId(preselected[0].supplierId);
+            setLineAmounts(preselectedLines);
+            setPaymentMode(sharedPaymentMode);
+            if (preselected.length === 1 && preselected[0].dueDate) setDueDate(new Date(preselected[0].dueDate));
         }
 
         initialValuesRef.current = {
             reglementNumber: nextNum,
             date: new Date(),
-            paymentMode: purchaseInvoice?.paymentMode || "cash",
+            paymentMode: sharedPaymentMode,
             reference: "",
             remarks: "",
-            supplierId: purchaseInvoice?.supplierId || "",
-            lines: purchaseInvoice ? JSON.stringify({ [purchaseInvoice.id]: String(roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0))) }) : '{}',
+            supplierId: preselected.length > 0 ? preselected[0].supplierId : "",
+            lines: JSON.stringify(preselectedLines),
         };
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     }
     if (open) fetchData();
-  }, [open, purchaseInvoice]);
+  }, [open, purchaseInvoice, purchaseInvoices]);
 
   const isFormDirty = () => {
     if (!initialValuesRef.current) return false;
@@ -276,7 +284,7 @@ const nextNum = calculateNextNumber(existing);
                         <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                            <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
                            <div key={shakeTick} className={cn("w-full", formErrors.supplier && "animate-shake")}>
-                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setLineAmounts({}); setLineErrors({}); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} hasError={formErrors.supplier} disabled={!!purchaseInvoice} />
+                               <SupplierSelector value={selectedSupplierId} onChange={(id) => { setSelectedSupplierId(id); setLineAmounts({}); setLineErrors({}); }} suppliers={availableSuppliers} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} hasError={formErrors.supplier} disabled={!!purchaseInvoice || !!(purchaseInvoices && purchaseInvoices.length > 0)} />
                            </div>
                         </div>
                      </div>
