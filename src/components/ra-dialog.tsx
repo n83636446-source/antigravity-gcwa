@@ -27,12 +27,12 @@ import {
   FieldMessage,
 } from "@/components/purchase-dialog-shared-ui"
 
-interface ReglementTestDialogProps {
+interface RaDialogProps {
   purchaseInvoice: PurchaseInvoice | null;
     onSaveSuccess?: () => void;
 }
 
-export function ReglementTestDialog({ purchaseInvoice, onSaveSuccess }: ReglementTestDialogProps) {
+export function RaDialog({ purchaseInvoice, onSaveSuccess }: RaDialogProps) {
   const [open, setOpen] = useState<boolean>(!!purchaseInvoice || true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isHoveringDock, setIsHoveringDock] = useState(false);
@@ -115,7 +115,7 @@ const nextNum = calculateNextNumber(existing);
         setReglementNumber(nextNum);
         setDate(new Date());
 
-        // Pre-fill from prop if provided (FA Test entry)
+        // Pre-fill from prop if provided (from an invoice)
         if (purchaseInvoice) {
             setSelectedSupplierId(purchaseInvoice.supplierId);
             setLineAmounts({ [purchaseInvoice.id]: String(roundMoney(purchaseInvoice.totalTTC - (purchaseInvoice.amountPaid || 0))) });
@@ -480,18 +480,3 @@ const nextNum = calculateNextNumber(existing);
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

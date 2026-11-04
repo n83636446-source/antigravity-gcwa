@@ -85,15 +85,15 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-interface BrTestDialogProps {
+interface BraDialogProps {
     receiptToEdit?: PurchaseReceipt | null;
     orderToTransfer?: PurchaseOrder | null;
     isTransferInstance?: boolean;
     onSaveSuccess?: () => void;
 }
 
-export function BrTestDialog({ receiptToEdit, orderToTransfer, isTransferInstance = false, onSaveSuccess }: BrTestDialogProps) {
-  const storageKeyPrefix = isTransferInstance ? 'brTransferDialog' : 'brTestDialog';
+export function BraDialog({ receiptToEdit, orderToTransfer, isTransferInstance = false, onSaveSuccess }: BraDialogProps) {
+  const storageKeyPrefix = isTransferInstance ? 'brTransferDialog' : 'braDialog';
 
   const [open, setOpen] = useState<boolean>((() => {
     if (isTransferInstance) return !!orderToTransfer;
@@ -863,9 +863,3 @@ export function BrTestDialog({ receiptToEdit, orderToTransfer, isTransferInstanc
     </>
   )
 }
-
-
-
-
-
-

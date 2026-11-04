@@ -30,8 +30,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils';
-import { BcTestDialog } from '@/components/bc-test-dialog';
-import { BrTestDialog } from '@/components/br-test-dialog';
+import { BcaDialog } from '@/components/bca-dialog';
+import { BraDialog } from '@/components/bra-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 type EnrichedOrder = PurchaseOrder & {
@@ -94,7 +94,7 @@ const columns: DataTableColumn<EnrichedOrder>[] = [
 
 const columnIds = columns.map((c) => c.id);
 
-export default function BCTestPage() {
+export default function BCAPage() {
   const { toast } = useToast();
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -188,14 +188,14 @@ export default function BCTestPage() {
   const handleOpenNewOrder = () => {
     setOrderToEdit(null);
     setOrderToTransfer(null);
-    sessionStorage.setItem('bcTestDialogState', 'true');
+    sessionStorage.setItem('bcaDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
   const handleRowDoubleClick = (order: PurchaseOrder) => {
     setOrderToEdit(order);
     setOrderToTransfer(null);
-    sessionStorage.setItem('bcTestDialogState', 'true');
+    sessionStorage.setItem('bcaDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
@@ -285,7 +285,7 @@ export default function BCTestPage() {
     }
     setOrderToTransfer(order);
     setOrderToEdit(null);
-    // Use the specific transfer key to isolate from standalone BR Test
+    // Use the specific transfer key to isolate from standalone BR dialog
     sessionStorage.setItem('brTransferDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
@@ -502,8 +502,8 @@ export default function BCTestPage() {
 
       {/* Rendu masqué des dialogues pour permettre leur déclenchement externe */}
       <div className="hidden">
-        <BcTestDialog key={`${dialogToken}-${orderToEdit?.id ?? 'new'}`} orderToEdit={orderToEdit} transferredReceiptNumber={orderToEdit ? rows.find((o) => o.id === orderToEdit.id)?.receiptNumber ?? null : null} onSaveSuccess={() => refetchOrders()} />
-        <BrTestDialog key={`transfer-${dialogToken}-${orderToTransfer?.id ?? 'none'}`} orderToTransfer={orderToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchOrders(); refetchReceipts(); }} />
+        <BcaDialog key={`${dialogToken}-${orderToEdit?.id ?? 'new'}`} orderToEdit={orderToEdit} transferredReceiptNumber={orderToEdit ? rows.find((o) => o.id === orderToEdit.id)?.receiptNumber ?? null : null} onSaveSuccess={() => refetchOrders()} />
+        <BraDialog key={`transfer-${dialogToken}-${orderToTransfer?.id ?? 'none'}`} orderToTransfer={orderToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchOrders(); refetchReceipts(); }} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

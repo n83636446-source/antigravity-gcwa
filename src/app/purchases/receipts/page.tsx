@@ -28,10 +28,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { FaTestDialog } from '@/components/fa-test-dialog';
+import { FaaDialog } from '@/components/faa-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils';
-import { BrTestDialog } from '@/components/br-test-dialog';
+import { BraDialog } from '@/components/bra-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 type EnrichedReceipt = PurchaseReceipt & {
@@ -121,7 +121,7 @@ const columns: DataTableColumn<EnrichedReceipt>[] = [
 
 const columnIds = columns.map((c) => c.id);
 
-export default function BRTestPage() {
+export default function BRAPage() {
   const { toast } = useToast();
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -131,7 +131,7 @@ export default function BRTestPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [receiptToEdit, setReceiptToEdit] = useState<PurchaseReceipt | null>(null);
 
-  // Token pour forcer le re-rendu du BrTestDialog lors de l'ouverture
+  // Token pour forcer le re-rendu du BraDialog lors de l'ouverture
   const [dialogToken, setDialogToken] = useState(0);
 
   // Standard Delete States
@@ -223,7 +223,7 @@ export default function BRTestPage() {
     setReceiptToEdit(null);
     setReceiptToTransfer(null);
     // On utilise la persistence sessionStorage pour forcer l'ouverture du nouveau dialogue
-    sessionStorage.setItem('brTestDialogState', 'true');
+    sessionStorage.setItem('braDialogState', 'true');
     // On incrémente le token pour forcer le composant à se remonter et lire le sessionStorage
     setDialogToken(prev => prev + 1);
   };
@@ -231,7 +231,7 @@ export default function BRTestPage() {
   const handleRowDoubleClick = (receipt: PurchaseReceipt) => {
     setReceiptToEdit(receipt);
     setReceiptToTransfer(null);
-    sessionStorage.setItem('brTestDialogState', 'true');
+    sessionStorage.setItem('braDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
@@ -678,8 +678,8 @@ export default function BRTestPage() {
 
       {/* Rendu masqué du nouveau dialogue pour permettre son déclenchement externe */}
       <div className="hidden">
-        <BrTestDialog key={`${dialogToken}-${receiptToEdit?.id ?? 'new'}`} receiptToEdit={receiptToEdit} onSaveSuccess={() => refetchReceipts()} />
-        <FaTestDialog key={`transfer-${dialogToken}-${receiptToTransfer?.id ?? 'none'}`} receiptToTransfer={receiptToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchReceipts(); refetchInvoices(); }} />
+        <BraDialog key={`${dialogToken}-${receiptToEdit?.id ?? 'new'}`} receiptToEdit={receiptToEdit} onSaveSuccess={() => refetchReceipts()} />
+        <FaaDialog key={`transfer-${dialogToken}-${receiptToTransfer?.id ?? 'none'}`} receiptToTransfer={receiptToTransfer} isTransferInstance={true} onSaveSuccess={() => { refetchReceipts(); refetchInvoices(); }} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

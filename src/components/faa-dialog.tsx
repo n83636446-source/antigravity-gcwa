@@ -12,8 +12,8 @@ import { cn, roundMoney, generateId, isDuplicateNumber } from "@/lib/utils"
  
  
 import { api } from "@/lib/api"
-import { productFromApi, supplierFromApi, representativeFromApi, purchaseCreditNoteFromApi, purchaseCreditNoteToApi } from "@/lib/types";
-import type { PurchaseCreditNote, PurchaseInvoice } from "@/lib/types" 
+import { productFromApi, supplierFromApi, representativeFromApi, purchaseInvoiceFromApi, purchaseInvoiceToApi } from "@/lib/types";
+import type { PurchaseInvoice, PurchaseReceipt } from "@/lib/types" 
 import { useToast } from "@/hooks/use-toast" 
 
 import { ArticleDialog } from "@/components/article-dialog"
@@ -85,18 +85,18 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-interface AaTestDialogProps {
-    creditNoteToEdit?: PurchaseCreditNote | null;
-    invoiceToTransfer?: PurchaseInvoice | null;
+interface FaaDialogProps {
+    invoiceToEdit?: PurchaseInvoice | null;
+    receiptToTransfer?: PurchaseReceipt | null;
     isTransferInstance?: boolean;
     onSaveSuccess?: () => void;
 }
 
-export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferInstance = false, onSaveSuccess }: AaTestDialogProps) {
-  const storageKeyPrefix = isTransferInstance ? 'aaTransferDialog' : 'aaTestDialog';
+export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance = false, onSaveSuccess }: FaaDialogProps) {
+  const storageKeyPrefix = isTransferInstance ? 'faTransferDialog' : 'faaDialog';
 
   const [open, setOpen] = useState<boolean>((() => {
-    if (isTransferInstance) return !!invoiceToTransfer;
+    if (isTransferInstance) return !!receiptToTransfer;
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(`${storageKeyPrefix}State`);
       return saved ? JSON.parse(saved) : false;
@@ -131,14 +131,14 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   const { shakeTick, overlayShakeTick, triggerFieldShake, triggerOverlayShake } = useShakeWarning();
   const [flashingRowId, setFlashingRowId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [existingCreditNotes, setExistingCreditNotes] = useState<PurchaseCreditNote[]>([])
+  const [existingInvoices, setExistingInvoices] = useState<PurchaseInvoice[]>([])
   
-  const [creditNoteNumber, setCreditNoteNumber] = useState("AA0001")
+  const [invoiceNumber, setInvoiceNumber] = useState("FA0001")
   const [remarks, setRemarks] = useState("") 
   const [formErrors, setFormErrors] = useState<{
       supplier?: boolean;
       items?: boolean;
-      creditNoteNumber?: boolean;
+      invoiceNumber?: boolean;
       dueDate?: boolean;
   }>({}) 
 
@@ -174,17 +174,17 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   const [isHoveringDock, setIsHoveringDock] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const isEditMode = !!creditNoteToEdit;
-  const isValidated = creditNoteToEdit?.status === 'Validé';
+  const isEditMode = !!invoiceToEdit;
+  const isLocked = !!(invoiceToEdit && invoiceToEdit.status !== 'Brouillon');
 
-  const calculateNextNumber = (creditNotes: PurchaseCreditNote[]) => {
-    if (!creditNotes || creditNotes.length === 0) return "AA0001";
-    const maxId = creditNotes.reduce((max, r) => {
-        const codeDigits = r.creditNoteNumber.replace("AA", "").trim();
+  const calculateNextNumber = (invoices: PurchaseInvoice[]) => {
+    if (!invoices || invoices.length === 0) return "FA0001";
+    const maxId = invoices.reduce((max, r) => {
+        const codeDigits = r.invoiceNumber.replace("FA", "").trim();
         const numVal = parseInt(codeDigits, 10);
         return isNaN(numVal) ? max : (numVal > max ? numVal : max);
     }, 0);
-    return `AA${(maxId + 1).toString().padStart(4, '0')}`;
+    return `FA${(maxId + 1).toString().padStart(4, '0')}`;
   };
 
   const resetForm = () => {
@@ -198,24 +198,24 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
     setItems([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }]); 
     setShowCloseAlert(false); 
     setFormErrors({}); 
-    setCreditNoteNumber(calculateNextNumber(existingCreditNotes));
+    setInvoiceNumber(calculateNextNumber(existingInvoices));
     setIsHoveringDock(false);
   }
 
   const isFormDirty = () => {
-      if (isValidated) return false;
-      if (creditNoteNumber !== (isEditMode ? creditNoteToEdit?.creditNoteNumber : calculateNextNumber(existingCreditNotes))) return true;
-      if (!isSameDay(date, isEditMode ? new Date(creditNoteToEdit!.creditNoteDate) : new Date())) return true;
-      if (supplierId !== (isEditMode ? creditNoteToEdit?.supplierId : "")) return true;
-      if (remarks !== (isEditMode ? (creditNoteToEdit?.remarks || "") : "")) return true;
-      if (reference !== (isEditMode ? (creditNoteToEdit?.reference || "") : "")) return true;
-      if (representativeId !== (isEditMode ? (representativeId === "" ? "" : creditNoteToEdit?.representativeId) : "")) return true;
-      if (paymentMethod !== (isEditMode ? (creditNoteToEdit?.paymentMode || "cash") : "cash")) return true;
-      if (isEditMode && creditNoteToEdit?.dueDate && !isSameDay(dueDate, new Date(creditNoteToEdit.dueDate))) return true;
+      if (isLocked) return false;
+      if (invoiceNumber !== (isEditMode ? invoiceToEdit?.invoiceNumber : calculateNextNumber(existingInvoices))) return true;
+      if (!isSameDay(date, isEditMode ? new Date(invoiceToEdit!.invoiceDate) : new Date())) return true;
+      if (supplierId !== (isEditMode ? invoiceToEdit?.supplierId : "")) return true;
+      if (remarks !== (isEditMode ? (invoiceToEdit?.remarks || "") : "")) return true;
+      if (reference !== (isEditMode ? (invoiceToEdit?.reference || "") : "")) return true;
+      if (representativeId !== (isEditMode ? (representativeId === "" ? "" : invoiceToEdit?.representativeId) : "")) return true;
+      if (paymentMethod !== (isEditMode ? (invoiceToEdit?.paymentMode || "cash") : "cash")) return true;
+      if (isEditMode && invoiceToEdit?.dueDate && !isSameDay(dueDate, new Date(invoiceToEdit.dueDate))) return true;
 
       const currentItemsNormalized = items.map(i => ({ articleId: i.articleId, qty: i.qty, price: i.price, tva: i.tva }));
-      const originalItemsNormalized = isEditMode && creditNoteToEdit
-          ? creditNoteToEdit.items.map(i => ({ articleId: i.productId, qty: i.quantity, price: i.price, tva: i.tvaRate }))
+      const originalItemsNormalized = isEditMode && invoiceToEdit
+          ? invoiceToEdit.items.map(i => ({ articleId: i.productId, qty: i.quantity, price: i.price, tva: i.tvaRate }))
           : [{ articleId: "", qty: 1, price: 0, tva: 20 }];
       if (JSON.stringify(currentItemsNormalized) !== JSON.stringify(originalItemsNormalized)) return true;
 
@@ -239,33 +239,33 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
     const fetchData = async () => {
       
       try {
-        const [articlesSnap, suppliersSnap, repsSnap, creditNotesSnap] = await Promise.all([
+        const [articlesSnap, suppliersSnap, repsSnap, invoicesSnap] = await Promise.all([
             api.getProducts(),
             api.getSuppliers(),
             api.getRepresentatives(),
-            api.getPurchaseCreditNotes()
+            api.getPurchaseInvoices()
         ])
 
         const articles = articlesSnap.map(productFromApi);
         const suppliers = suppliersSnap.map(supplierFromApi);
         const reps = repsSnap.map(representativeFromApi);
-        const creditNotes = creditNotesSnap.map(purchaseCreditNoteFromApi);
+        const invoices = invoicesSnap.map(purchaseInvoiceFromApi);
 
         setAvailableArticles(deduplicate(articles));
         setAvailableSuppliers(deduplicate(suppliers));
         setAvailableRepresentatives(deduplicate(reps));
-        setExistingCreditNotes(creditNotes);
+        setExistingInvoices(invoices);
 
-        if (isEditMode && creditNoteToEdit) {
-            setCreditNoteNumber(creditNoteToEdit.creditNoteNumber);
-            setDate(new Date(creditNoteToEdit.creditNoteDate));
-            setSupplierId(creditNoteToEdit.supplierId);
-            setPaymentMethod(creditNoteToEdit.paymentMode || "cash");
-            if (creditNoteToEdit.dueDate) setDueDate(new Date(creditNoteToEdit.dueDate));
-            setRepresentativeId(creditNoteToEdit.representativeId || "");
-            setReference(creditNoteToEdit.reference || "");
-            setRemarks(creditNoteToEdit.remarks || "");
-            setItems(creditNoteToEdit.items.map(item => ({
+        if (isEditMode && invoiceToEdit) {
+            setInvoiceNumber(invoiceToEdit.invoiceNumber);
+            setDate(new Date(invoiceToEdit.invoiceDate));
+            setSupplierId(invoiceToEdit.supplierId);
+            setPaymentMethod(invoiceToEdit.paymentMode || "cash");
+            if (invoiceToEdit.dueDate) setDueDate(new Date(invoiceToEdit.dueDate));
+            setRepresentativeId(invoiceToEdit.representativeId || "");
+            setReference(invoiceToEdit.reference || "");
+            setRemarks(invoiceToEdit.remarks || "");
+            setItems(invoiceToEdit.items.map(item => ({
               id: generateId(),
               articleId: item.productId,
               qty: item.quantity,
@@ -273,32 +273,32 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
               tva: item.tvaRate
             })));
             setOpen(true);
-        } else if (invoiceToTransfer) {
-            setCreditNoteNumber(calculateNextNumber(creditNotes));
+        } else if (receiptToTransfer) {
+            setInvoiceNumber(calculateNextNumber(invoices));
             setDate(new Date());
-            setSupplierId(invoiceToTransfer.supplierId);
-            setPaymentMethod(invoiceToTransfer.paymentMode || "cash");
-            if (invoiceToTransfer.dueDate) setDueDate(new Date(invoiceToTransfer.dueDate));
-            setRepresentativeId(invoiceToTransfer.representativeId || "");
-            setReference(invoiceToTransfer.reference || "");
-            setRemarks(invoiceToTransfer.remarks || "");
-            setItems(invoiceToTransfer.items.map(item => ({
+            setSupplierId(receiptToTransfer.supplierId);
+            setPaymentMethod(receiptToTransfer.paymentMode || "cash");
+            if (receiptToTransfer.dueDate) setDueDate(new Date(receiptToTransfer.dueDate));
+            setRepresentativeId(receiptToTransfer.representativeId || "");
+            setReference(receiptToTransfer.reference || "");
+            setRemarks(receiptToTransfer.remarks || "");
+            setItems(receiptToTransfer.items.map(item => ({
               id: generateId(),
               articleId: item.productId,
-              qty: item.quantity,
+              qty: item.quantityReceived,
               price: item.price,
               tva: item.tvaRate
             })));
             setOpen(true);
         } else {
-            setCreditNoteNumber(calculateNextNumber(creditNotes));
+            setInvoiceNumber(calculateNextNumber(invoices));
         }
       } catch (error) {
         console.error("Error fetching data:", error)
       }
     }
     if (open) fetchData()
-  }, [open, isEditMode, creditNoteToEdit, invoiceToTransfer])
+  }, [open, isEditMode, invoiceToEdit, receiptToTransfer])
 
   useEffect(() => {
     if (isBefore(dueDate, startOfDay(date))) {
@@ -306,19 +306,19 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
     }
   }, [date]);
 
-  const handleCreateCreditNote = async () => {
-    if (isValidated) return;
+  const handleCreateInvoice = async () => {
+    if (isLocked) return;
     const newErrors: typeof formErrors = {};
     let hasError = false;
 
-    const isDuplicate = isDuplicateNumber(existingCreditNotes, 'creditNoteNumber', creditNoteNumber, creditNoteToEdit?.id);
+    const isDuplicate = isDuplicateNumber(existingInvoices, 'invoiceNumber', invoiceNumber, invoiceToEdit?.id);
     if (isDuplicate) {
-        newErrors.creditNoteNumber = true;
+        newErrors.invoiceNumber = true;
         hasError = true;
     }
 
     if (!supplierId) { newErrors.supplier = true; hasError = true; }
-    if (!creditNoteNumber.trim()) { newErrors.creditNoteNumber = true; hasError = true; }
+    if (!invoiceNumber.trim()) { newErrors.invoiceNumber = true; hasError = true; }
     const validItems = items.filter(i => i.articleId && i.qty > 0);
     if (validItems.length === 0) { newErrors.items = true; hasError = true; }
     
@@ -335,52 +335,52 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
     setFormErrors({});
     setIsSubmitting(true);
     try {
-        const creditNoteData: any = {
-            creditNoteNumber: creditNoteNumber, 
+        const invoiceData: any = {
+            invoiceNumber: invoiceNumber, 
             supplierId: supplierId,
-            creditNoteDate: date instanceof Date ? date.toISOString() : new Date().toISOString(),
+            invoiceDate: date instanceof Date ? date.toISOString() : new Date().toISOString(),
             items: validItems.map(i => ({
                 productId: i.articleId,
                 quantity: i.qty,
                 price: i.price,
                 tvaRate: i.tva
             })),
-            status: isEditMode ? creditNoteToEdit!.status : "Brouillon", 
+            status: isEditMode ? invoiceToEdit!.status : "Brouillon", 
             totalHT: totalHT,
             totalTTC: totalTTC,
             paymentMode: paymentMethod,
             dueDate: dueDate instanceof Date ? dueDate.toISOString() : new Date().toISOString(),
         };
-        if (representativeId) creditNoteData.representativeId = representativeId;
-        if (reference) creditNoteData.reference = reference;
-        if (remarks) creditNoteData.remarks = remarks;
-        if (invoiceToTransfer) creditNoteData.purchaseInvoiceId = invoiceToTransfer.id;
+        if (representativeId) invoiceData.representativeId = representativeId;
+        if (reference) invoiceData.reference = reference;
+        if (remarks) invoiceData.remarks = remarks;
+        if (receiptToTransfer) invoiceData.purchaseReceiptId = receiptToTransfer.id;
 
-        if (isEditMode && creditNoteToEdit) {
-            await api.updatePurchaseCreditNote(creditNoteToEdit.id, purchaseCreditNoteToApi(creditNoteData));
-            toast({ title: "Succès", description: `Avoir ${creditNoteNumber} mis à jour avec succès.` });
+        if (isEditMode && invoiceToEdit) {
+            await api.updatePurchaseInvoice(invoiceToEdit.id, purchaseInvoiceToApi(invoiceData));
+            toast({ title: "Succès", description: `Facture d'achat ${invoiceNumber} mise à jour avec succès.` });
             onSaveSuccess?.();
             setOpen(false);
             setTimeout(() => { resetForm(); setIsSubmitting(false); }, 300);
         } else {
-            creditNoteData.id = "aa-" + Date.now();
-            const docRef = await api.createPurchaseCreditNote(purchaseCreditNoteToApi(creditNoteData));
+            invoiceData.id = "fa-" + Date.now();
+            const docRef = await api.createPurchaseInvoice(purchaseInvoiceToApi(invoiceData));
             if (docRef) {
-                toast({ title: "Succès", description: `Avoir ${creditNoteNumber} créé avec succès.` });
+                toast({ title: "Succès", description: `Facture d'achat ${invoiceNumber} créée avec succès.` });
             onSaveSuccess?.();
                 setOpen(false);
                 setTimeout(() => { resetForm(); setIsSubmitting(false); }, 300);
             }
         }
     } catch (error) {
-        console.error("Failed to save credit note", error);
+        console.error("Failed to save invoice", error);
         toast({ title: "Erreur", description: error instanceof Error && error.message ? error.message : "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
         setIsSubmitting(false);
     }
   }
 
   const addItem = () => {
-    if (isValidated) return;
+    if (isLocked) return;
     const id = generateId()
     const newItem = { id, articleId: "", qty: 1, price: 0, tva: 20 }
     setItems([...items, newItem])
@@ -388,7 +388,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   }
 
   const insertItemAfter = (currentId: string) => {
-    if (isValidated) return;
+    if (isLocked) return;
     const newId = generateId()
     const newItem = { id: newId, articleId: "", qty: 1, price: 0, tva: 20 }
     setItems(prevItems => {
@@ -402,12 +402,12 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   }
 
   const removeItem = (id: string) => {
-    if (isValidated) return;
+    if (isLocked) return;
     setItems(items.filter(item => item.id !== id))
   }
 
   const handleLineChange = (id: string, field: keyof InvoiceItem, value: string | number) => {
-    if (isValidated) return;
+    if (isLocked) return;
     let finalValue = value;
     if (field === 'qty') {
         const num = Number(value);
@@ -428,7 +428,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   }
 
   const handlePriceBlur = (id: string) => {
-    if (isValidated) return;
+    if (isLocked) return;
     setItems(prev => prev.map(item => {
         if (item.id === id) {
             return { ...item, price: roundMoney(item.price) }
@@ -438,7 +438,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   }
 
   const handleMerge = (originalId: string, duplicateId: string) => {
-    if (isValidated) return;
+    if (isLocked) return;
     const duplicateItem = items.find(i => i.id === duplicateId);
     if (!duplicateItem) return;
     setItems(prev => {
@@ -455,7 +455,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
   }
 
   const handleArticleChange = (rowId: string, value: string) => {
-    if (isValidated) return;
+    if (isLocked) return;
     const selectedArticle = availableArticles.find(a => a.id === value)
     if (selectedArticle) {
         setItems(items.map(item => 
@@ -584,15 +584,15 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                     <h3 className="absolute -top-3 left-3 bg-white px-2 text-sm font-semibold text-blue-800">Informations pièce</h3>
                     <div className="space-y-4 pt-2">
                        <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
-                          <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.creditNoteNumber && "text-red-500")}>Numéro *</Label>
-                          <div key={shakeTick} className={cn("w-full min-0", formErrors.creditNoteNumber && "animate-shake")}>
-                            <Input value={creditNoteNumber} onChange={(e) => setCreditNoteNumber(e.target.value)} disabled={isValidated} className={cn("w-full min-w-0 font-mono", formErrors.creditNoteNumber && "border-red-500 focus-visible:ring-red-500")} />
+                          <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.invoiceNumber && "text-red-500")}>Numéro *</Label>
+                          <div key={shakeTick} className={cn("w-full min-0", formErrors.invoiceNumber && "animate-shake")}>
+                            <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} disabled={isLocked} className={cn("w-full min-w-0 font-mono", formErrors.invoiceNumber && "border-red-500 focus-visible:ring-red-500")} />
                           </div>
-                          <FieldMessage isMobile={isMobileSize}>{formErrors.creditNoteNumber ? (creditNoteNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}</FieldMessage>
+                          <FieldMessage isMobile={isMobileSize}>{formErrors.invoiceNumber ? (invoiceNumber.trim() ? "Ce numéro de document est déjà utilisé." : "Le numéro est obligatoire.") : null}</FieldMessage>
                        </div>
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
-                          <Label className={isMobileSize ? "text-left" : "text-right"}>Date de la pièce</Label>
-                          <DatePickerField selected={date} onSelect={setDate} placeholder="JJ/MM/AAAA" disabled={isValidated} />
+                          <Label className={isMobileSize ? "text-left" : "text-right"}>Date de facture</Label>
+                          <DatePickerField selected={date} onSelect={setDate} placeholder="JJ/MM/AAAA" disabled={isLocked} />
                        </div>
                     </div>
                  </div>
@@ -602,7 +602,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                         <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                            <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.supplier && "text-red-500")}>Fournisseur *</Label>
                            <div key={shakeTick} className={cn("w-full", formErrors.supplier && "animate-shake")}>
-                               <SupplierSelector value={supplierId} onChange={handleSupplierChange} suppliers={availableSuppliers} disabled={isValidated} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} onCreateNew={() => setIsCreateSupplierOpen(true)} hasError={formErrors.supplier} />
+                               <SupplierSelector value={supplierId} onChange={handleSupplierChange} suppliers={availableSuppliers} disabled={isLocked} onOpenAdvanced={() => setIsSupplierSearchOpen(true)} onCreateNew={() => setIsCreateSupplierOpen(true)} hasError={formErrors.supplier} />
                                {formErrors.supplier && <span className="text-xs text-red-500 mt-1 block">Le fournisseur est obligatoire.</span>}
                            </div>
                         </div>
@@ -615,7 +615,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                     <div className="space-y-4 pt-2">
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Mode de paiement</Label>
-                          <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isValidated}>
+                          <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isLocked}>
                               <SelectTrigger className="w-full flex items-center justify-between overflow-hidden [&>span]:truncate [&>span]:flex-1 [&>span]:min-w-0 [&>svg]:shrink-0 [&>svg]:ml-2">
                                   <SelectValue placeholder="Espèces" />
                               </SelectTrigger>
@@ -624,8 +624,8 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                        </div>
                        <div className={cn("grid items-center", isMobileSize ? "grid-cols-1 gap-y-1" : "grid-cols-[110px_1fr] gap-x-4 gap-y-1")}>
                           <Label className={cn(isMobileSize ? "text-left" : "text-right", formErrors.dueDate && "text-red-500")}>Date d'échéance</Label>
-                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" disabled={isValidated} minDate={date} warningInOwnRow isMobile={isMobileSize} />
-                          {formErrors.dueDate && (<FieldMessage isMobile={isMobileSize}>La date d'échéance ne peut pas être antérieure à la date de pièce.</FieldMessage>)}
+                          <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" disabled={isLocked} minDate={date} warningInOwnRow isMobile={isMobileSize} />
+                          {formErrors.dueDate && (<FieldMessage isMobile={isMobileSize}>La date d'échéance ne peut pas être antérieure à la date de facture.</FieldMessage>)}
                        </div>
                     </div>
                  </div>
@@ -634,16 +634,16 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                     <div className="space-y-4 pt-2">
                        <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                           <Label className={isMobileSize ? "text-left" : "text-right"}>Représentant</Label>
-                          <RepresentativeSelector value={representativeId} onChange={handleRepresentativeChange} representatives={availableRepresentatives} disabled={isValidated} onOpenAdvanced={() => setIsRepresentativeSearchOpen(true)} onCreateNew={() => setIsCreateRepOpen(true)} />
+                          <RepresentativeSelector value={representativeId} onChange={handleRepresentativeChange} representatives={availableRepresentatives} disabled={isLocked} onOpenAdvanced={() => setIsRepresentativeSearchOpen(true)} onCreateNew={() => setIsCreateRepOpen(true)} />
                         </div>
                        <div className="space-y-4 pt-2">
                           <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                              <Label className={isMobileSize ? "text-left" : "text-right"}>Référence</Label>
-                             <Input placeholder="Référence" disabled={isValidated} className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
+                             <Input placeholder="Référence" disabled={isLocked} className="w-full min-w-0" value={reference} onChange={(e) => setReference(e.target.value)} />
                           </div>
                           <div className={cn("grid items-center gap-4", isMobileSize ? "grid-cols-1 gap-2" : "grid-cols-[110px_1fr]")}>
                              <Label className={isMobileSize ? "text-left" : "text-right"}>Remarque</Label>
-                             <Input placeholder="Remarque" disabled={isValidated} className="w-full min-w-0" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+                             <Input placeholder="Remarque" disabled={isLocked} className="w-full min-w-0" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
                           </div>
                        </div>
                     </div>
@@ -670,8 +670,8 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                       return (
                           <tr key={item.id} className={cn("border-b transition-all duration-1000 ease-out", flashingRowId === item.id ? "bg-green-100/80" : "hover:bg-muted/50 data-[state=selected]:bg-muted")}>
                             <td className="p-4 align-middle">
-                              <ArticleSelector value={item.articleId} onChange={(val: string) => handleArticleChange(item.id, val)} articles={availableArticles} disabled={isValidated} onOpenAdvanced={() => openArticleSearch(item.id)} onCreateNew={() => handleCreateNewArticle(item.id)} autoFocus={item.id === newRowId} />
-                              {!isValidated && originalItem && (
+                              <ArticleSelector value={item.articleId} onChange={(val: string) => handleArticleChange(item.id, val)} articles={availableArticles} disabled={isLocked} onOpenAdvanced={() => openArticleSearch(item.id)} onCreateNew={() => handleCreateNewArticle(item.id)} autoFocus={item.id === newRowId} />
+                              {!isLocked && originalItem && (
                                   <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 mt-2 animate-in fade-in slide-in-from-top-1">
                                      <AlertTriangle className="h-3 w-3 shrink-0" />
                                      <span className="font-medium">Article déjà présent.</span>
@@ -679,12 +679,12 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                                   </div>
                               )}
                             </td>
-                            <td className="p-4 align-middle"><Input type="number" value={item.qty} min={1} disabled={isValidated} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[80px]" /></td>
-                            <td className="p-4 align-middle"><Input type="number" value={item.price} min={0} disabled={isValidated} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} onBlur={() => handlePriceBlur(item.id)} className="min-w-[80px] bg-slate-50" /></td>
-                            <td className="p-4 align-middle"><Input type="number" value={item.tva} readOnly disabled={isValidated} className="min-w-[80px] bg-slate-50" /></td>
+                            <td className="p-4 align-middle"><Input type="number" value={item.qty} min={1} disabled={isLocked} onChange={(e) => handleLineChange(item.id, 'qty', Number(e.target.value))} className="min-w-[60px]" /></td>
+                            <td className="p-4 align-middle"><Input type="number" value={item.price} min={0} disabled={isLocked} onChange={(e) => handleLineChange(item.id, 'price', Number(e.target.value))} onBlur={() => handlePriceBlur(item.id)} className="min-w-[60px] bg-slate-50" /></td>
+                            <td className="p-4 align-middle"><Input type="number" value={item.tva} readOnly disabled={isLocked} className="min-w-[60px] bg-slate-50" /></td>
                             <td className="p-4 align-middle text-right font-medium">{(item.price * item.qty).toFixed(2)} €</td>
                             <td className="p-4 align-middle flex items-center justify-end gap-1">
-                               {!isValidated && (
+                               {!isLocked && (
                                  <>
                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => insertItemAfter(item.id)} title="Insérer"><PlusCircle className="h-4 w-4" /></Button>
                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeItem(item.id)} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
@@ -694,7 +694,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                           </tr>
                       )
                   })}
-                  {!isValidated && (
+                  {!isLocked && (
                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                       <td colSpan={6} className="p-4 align-middle">
                          <Button type="button" variant="outline" className="w-full border-dashed text-muted-foreground" onClick={addItem}>+ Ajouter une ligne</Button>
@@ -714,9 +714,9 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
             <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>TOTAL TTC:</span> <span>{totalTTC.toFixed(2)} €</span></div>
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>{isValidated ? "Fermer" : "Annuler"}</Button>
-          {!isValidated && (
-            <Button className="bg-slate-900 text-white" disabled={isSubmitting} onClick={handleCreateCreditNote}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>{isLocked ? "Fermer" : "Annuler"}</Button>
+          {!isLocked && (
+            <Button className="bg-slate-900 text-white" disabled={isSubmitting} onClick={handleCreateInvoice}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enregistrement...</> : (isEditMode ? "Enregistrer" : "Créer")}
             </Button>
           )}
@@ -799,10 +799,10 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                             >
                                 <h3 className="font-semibold text-lg mb-2">Attention</h3>
                                 <p className="text-sm text-muted-foreground mb-6">
-                                  Voulez-vous enregistrer les modifications appliquées à l'avoir d'achat {creditNoteNumber} ?
+                                  Voulez-vous enregistrer les modifications appliquées à la facture d'achat {invoiceNumber} ?
                                 </p>
                                 <div className="flex justify-center gap-2">
-                                    <Button className="bg-slate-900 text-white min-w-[70px]" size="sm" onClick={() => { setShowCloseAlert(false); handleCreateCreditNote(); }}>Oui</Button>
+                                    <Button className="bg-slate-900 text-white min-w-[70px]" size="sm" onClick={() => { setShowCloseAlert(false); handleCreateInvoice(); }}>Oui</Button>
                                     <Button variant="destructive" size="sm" className="min-w-[70px]" onClick={confirmClose}>Non</Button>
                                     <Button variant="outline" size="sm" className="min-w-[70px]" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
                                 </div>
@@ -815,7 +815,7 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
                             <div className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative" style={{ width: 1000 * 0.25, height: 800 * 0.25 }} onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}>
                                 <button onClick={(e) => { e.stopPropagation(); handleOpenChange(false); setIsHoveringDock(false); }} className="absolute top-2 right-2 z-50 p-1.5 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 rounded-md transition-opacity duration-200 shadow-sm pointer-events-auto opacity-0 group-hover:opacity-100" title="Fermer"><X className="h-4 w-4" /></button>
                                 <div className="pointer-events-none origin-top-left bg-white flex flex-col" style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}>
-                                    <div className="flex-none p-4 flex items-center gap-2 font-semibold text-sm">{isEditMode ? "Modifier" : "Créer"} un avoir d'achat</div>
+                                    <div className="flex-none p-4 flex items-center gap-2 font-semibold text-sm">{isEditMode ? "Modifier" : "Créer"} une facture d'achat</div>
                                     <div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>
                                     <div className="flex-1 min-h-0 flex flex-col">{formAndFooterJSX}</div>
                                 </div>
@@ -834,11 +834,11 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
 
                         <div className={cn("flex-none p-4 select-none flex items-center gap-2", !isMinimized && "cursor-default", isMinimized && "py-0 px-3 h-10")}>
                             {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
-                            <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Avoir d'achat - ${creditNoteNumber}` : `${isEditMode ? "Modifier l'" : "Créer un "}avoir d'achat${isEditMode ? ` - ${creditNoteNumber}` : ""}`}</div>
+                            <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Facture d'achat - ${invoiceNumber}` : `${isEditMode ? "Modifier la" : "Créer une"} facture d'achat${isEditMode ? ` - ${invoiceNumber}` : ""}`}</div>
                         </div>
                         {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm text-left">Remplissez les informations ci-dessous.</div>)}
                         <div className={cn("flex-col flex-1 min-h-0 transition-opacity duration-300", isMinimized ? "hidden" : "flex")}>
-                            <DialogTitle className="sr-only">{isEditMode ? "Modifier" : "Créer"} un avoir d'achat</DialogTitle>
+                            <DialogTitle className="sr-only">{isEditMode ? "Modifier" : "Créer"} une facture d'achat</DialogTitle>
                             {formAndFooterJSX}
                         </div>
                     </div>
@@ -857,9 +857,3 @@ export function AaTestDialog({ creditNoteToEdit, invoiceToTransfer, isTransferIn
     </>
   )
 }
-
-
-
-
-
-

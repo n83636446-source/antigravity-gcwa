@@ -29,7 +29,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, compareDocumentNumbers } from '@/lib/utils';
-import { AaTestDialog } from '@/components/aa-test-dialog';
+import { AaaDialog } from '@/components/aaa-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 type EnrichedCreditNote = PurchaseCreditNote & {
@@ -72,7 +72,7 @@ const columns: DataTableColumn<EnrichedCreditNote>[] = [
 
 const columnIds = columns.map((c) => c.id);
 
-export default function AATestPage() {
+export default function AAAPage() {
   const { toast } = useToast();
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -131,13 +131,13 @@ export default function AATestPage() {
 
   const handleOpenNewCreditNote = () => {
     setCreditNoteToEdit(null);
-    sessionStorage.setItem('aaTestDialogState', 'true');
+    sessionStorage.setItem('aaaDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
   const handleRowDoubleClick = (creditNote: PurchaseCreditNote) => {
     setCreditNoteToEdit(creditNote);
-    sessionStorage.setItem('aaTestDialogState', 'true');
+    sessionStorage.setItem('aaaDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
@@ -424,7 +424,7 @@ export default function AATestPage() {
 
       {/* Rendu masqué du dialogue pour permettre son déclenchement externe */}
       <div className="hidden">
-        <AaTestDialog key={`${dialogToken}-${creditNoteToEdit?.id ?? 'new'}`} creditNoteToEdit={creditNoteToEdit} onSaveSuccess={() => refetchCreditNotes()} />
+        <AaaDialog key={`${dialogToken}-${creditNoteToEdit?.id ?? 'new'}`} creditNoteToEdit={creditNoteToEdit} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>

@@ -85,35 +85,35 @@ const deduplicate = <T extends { id: string }>(items: T[]): T[] => {
   });
 };
 
-interface BcTestDialogProps {
+interface BcaDialogProps {
     orderToEdit?: PurchaseOrder | null;
     onSaveSuccess?: () => void;
     transferredReceiptNumber?: string | null;
 }
 
-export function BcTestDialog({ orderToEdit, onSaveSuccess, transferredReceiptNumber }: BcTestDialogProps) {
+export function BcaDialog({ orderToEdit, onSaveSuccess, transferredReceiptNumber }: BcaDialogProps) {
   const [open, setOpen] = useState<boolean>((() => {
     if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('bcTestDialogState');
+      const saved = sessionStorage.getItem('bcaDialogState');
       return saved ? JSON.parse(saved) : false;
     }
     return false;
   })());
 
   useEffect(() => {
-    sessionStorage.setItem('bcTestDialogState', JSON.stringify(open));
+    sessionStorage.setItem('bcaDialogState', JSON.stringify(open));
   }, [open]);
 
   const [isMinimized, setIsMinimized] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('bcTestMinimizedState');
+      const saved = sessionStorage.getItem('bcaMinimizedState');
       return saved ? JSON.parse(saved) : false;
     }
     return false;
   });
 
   useEffect(() => {
-    sessionStorage.setItem('bcTestMinimizedState', JSON.stringify(isMinimized));
+    sessionStorage.setItem('bcaMinimizedState', JSON.stringify(isMinimized));
   }, [isMinimized]);
   
   const { state, isMobile } = useSidebar();
@@ -847,9 +847,3 @@ export function BcTestDialog({ orderToEdit, onSaveSuccess, transferredReceiptNum
     </>
   )
 }
-
-
-
-
-
-

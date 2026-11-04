@@ -1,4 +1,4 @@
-ESLint run: 2026-11-04 09:05:24
+ESLint run: 2026-11-04 09:50:09
 
 > nextn@0.1.0 lint
 > next lint
@@ -10,7 +10,7 @@ ESLint run: 2026-11-04 09:05:24
 ./src/app/purchases/payments/page.tsx
 95:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
-./src/components/aa-test-dialog.tsx
+./src/components/aaa-dialog.tsx
 110:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 124:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 307:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
@@ -19,14 +19,14 @@ ESLint run: 2026-11-04 09:05:24
 509:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 524:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
-./src/components/bc-test-dialog.tsx
+./src/components/bca-dialog.tsx
 288:6  Warning: React Hook useEffect has a missing dependency: 'deliveryDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 319:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 468:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 490:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 505:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
-./src/components/br-test-dialog.tsx
+./src/components/bra-dialog.tsx
 306:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 337:28  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 342:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
@@ -37,7 +37,7 @@ ESLint run: 2026-11-04 09:05:24
 ./src/components/dashboard/estimate-stock-dialog.tsx
 29:48  Warning: 'supplier' is defined but never used.  @typescript-eslint/no-unused-vars
 
-./src/components/fa-test-dialog.tsx
+./src/components/faa-dialog.tsx
 110:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 124:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 307:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
@@ -49,7 +49,7 @@ ESLint run: 2026-11-04 09:05:24
 ./src/components/purchase-dialog-shared-ui.tsx
 984:140  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
-./src/components/reglement-test-dialog.tsx
+./src/components/ra-dialog.tsx
 68:35  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 209:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 

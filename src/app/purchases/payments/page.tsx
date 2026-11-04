@@ -34,9 +34,9 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { ReglementTestDialog } from '@/components/reglement-test-dialog';
+import { RaDialog } from '@/components/ra-dialog';
 
-export default function ReglementTestPage() {
+export default function RAPage() {
   
   const { toast } = useToast();
   
@@ -234,7 +234,7 @@ const handleCreateClick = () => {
       )}
 
       {showCreateDialog && (
-        <ReglementTestDialog
+        <RaDialog
             key={`new-${dialogToken}`}
             purchaseInvoice={null}
             onSaveSuccess={() => { refetchReglements(); refetchInvoices(); }}
@@ -274,14 +274,3 @@ const handleCreateClick = () => {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

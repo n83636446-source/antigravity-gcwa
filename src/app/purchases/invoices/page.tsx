@@ -30,9 +30,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils';
-import { FaTestDialog } from '@/components/fa-test-dialog';
-import { AaTestDialog } from '@/components/aa-test-dialog';
-import { ReglementTestDialog } from '@/components/reglement-test-dialog';
+import { FaaDialog } from '@/components/faa-dialog';
+import { AaaDialog } from '@/components/aaa-dialog';
+import { RaDialog } from '@/components/ra-dialog';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 type EnrichedInvoice = PurchaseInvoice & {
@@ -135,7 +135,7 @@ const columns: DataTableColumn<EnrichedInvoice>[] = [
 
 const columnIds = columns.map((c) => c.id);
 
-export default function FATestPage() {
+export default function FAAPage() {
   const { toast } = useToast();
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -236,7 +236,7 @@ export default function FATestPage() {
     setInvoiceToEdit(null);
     setInvoiceToReglement(null);
     setInvoiceToTransfer(null);
-    sessionStorage.setItem('faTestDialogState', 'true');
+    sessionStorage.setItem('faaDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
@@ -244,7 +244,7 @@ export default function FATestPage() {
     setInvoiceToEdit(invoice);
     setInvoiceToReglement(null);
     setInvoiceToTransfer(null);
-    sessionStorage.setItem('faTestDialogState', 'true');
+    sessionStorage.setItem('faaDialogState', 'true');
     setDialogToken(prev => prev + 1);
   };
 
@@ -760,11 +760,11 @@ export default function FATestPage() {
 
       {/* Rendu masqué du dialogue pour permettre son déclenchement externe */}
       <div className="hidden">
-        <FaTestDialog key={`${dialogToken}-${invoiceToEdit?.id ?? 'new'}`} invoiceToEdit={invoiceToEdit} onSaveSuccess={() => refetchInvoices()} />
+        <FaaDialog key={`${dialogToken}-${invoiceToEdit?.id ?? 'new'}`} invoiceToEdit={invoiceToEdit} onSaveSuccess={() => refetchInvoices()} />
         {invoiceToReglement && (
-          <ReglementTestDialog key={`reglement-${dialogToken}-${invoiceToReglement.id}`} purchaseInvoice={invoiceToReglement} onSaveSuccess={() => refetchInvoices()} />
+          <RaDialog key={`reglement-${dialogToken}-${invoiceToReglement.id}`} purchaseInvoice={invoiceToReglement} onSaveSuccess={() => refetchInvoices()} />
         )}
-        <AaTestDialog key={`transfer-${dialogToken}-${invoiceToTransfer?.id ?? 'none'}`} invoiceToTransfer={invoiceToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchCreditNotes()} />
+        <AaaDialog key={`transfer-${dialogToken}-${invoiceToTransfer?.id ?? 'none'}`} invoiceToTransfer={invoiceToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>
