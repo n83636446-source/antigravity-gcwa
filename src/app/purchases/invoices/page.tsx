@@ -682,7 +682,7 @@ export default function FATestPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {draftsWithoutReceiptCount > 0
-                ? `${draftsWithoutReceiptCount} facture${draftsWithoutReceiptCount > 1 ? 's' : ''} sans bon de réception ${draftsWithoutReceiptCount > 1 ? 'ajouteront' : 'ajoutera'} leurs quantités au stock.`
+                ? `${draftsWithoutReceiptCount} facture${draftsWithoutReceiptCount > 1 ? 's' : ''} sans bon de réception ${draftsWithoutReceiptCount > 1 ? 'ajouteront leurs' : 'ajoutera ses'} quantités au stock.`
                 : 'Les factures sélectionnées en brouillon seront validées.'}
               {selectedAlreadyValidatedCount > 0
                 ? ` ${selectedAlreadyValidatedCount} facture${selectedAlreadyValidatedCount > 1 ? 's' : ''} déjà validée${selectedAlreadyValidatedCount > 1 ? 's' : ''} ${selectedAlreadyValidatedCount > 1 ? 'seront ignorées' : 'sera ignorée'}.`
