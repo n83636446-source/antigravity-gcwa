@@ -346,3 +346,47 @@ class ReglementRead(BaseModel):
     status: str
     lines: List[ReglementLineRead] = []
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Purchase Advance (facture d'acompte) ---
+class PurchaseAdvanceEnter(BaseModel):
+    id: str
+    advance_number: str = Field(min_length=1)
+    reglement_id: str
+    reglement_number: str = Field(min_length=1)
+    purchase_invoice_id: str
+    advance_date: str
+    payment_mode: Optional[str] = None
+    due_date: Optional[str] = None
+    reference: Optional[str] = None
+    description: Optional[str] = None
+    amount_ttc: float = Field(gt=0)
+    tva_rate: float = Field(ge=0, le=100)
+
+class PurchaseAdvanceCancel(BaseModel):
+    id: str
+    advance_number: str = Field(min_length=1)
+    reglement_id: str
+    reglement_number: str = Field(min_length=1)
+    advance_date: str
+    payment_mode: Optional[str] = None
+    due_date: Optional[str] = None
+
+class PurchaseAdvanceRead(BaseModel):
+    id: str
+    advance_number: str
+    supplier_id: str
+    purchase_invoice_id: str
+    cancels_advance_id: Optional[str] = None
+    advance_date: str
+    payment_mode: Optional[str] = None
+    due_date: Optional[str] = None
+    reference: Optional[str] = None
+    description: Optional[str] = None
+    tva_rate: float
+    total_ht: float
+    total_tva: float
+    total_ttc: float
+    status: str
+    reglement_id: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)

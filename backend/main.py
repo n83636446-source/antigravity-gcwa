@@ -13,6 +13,7 @@ from .routers import (
     purchase_invoices,
     purchase_credit_notes,
     reglements,
+    purchase_advances,
 )
 
 # Auto-create all tables in SQLite
@@ -39,9 +40,9 @@ app.include_router(purchase_receipts.router, prefix="/purchase_receipts", tags=[
 app.include_router(purchase_invoices.router, prefix="/purchase_invoices", tags=["Purchase Invoices"])
 app.include_router(purchase_credit_notes.router, prefix="/purchase_credit_notes", tags=["Purchase Credit Notes"])
 app.include_router(reglements.router, prefix="/reglements", tags=["Reglements"])
+app.include_router(purchase_advances.router, prefix="/purchase_advances", tags=["Purchase Advances"])
 
 
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "2.0.0"}
-

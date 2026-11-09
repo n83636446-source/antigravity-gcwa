@@ -158,3 +158,23 @@ class ReglementLine(Base):
     purchase_invoice_id: Mapped[str] = mapped_column(String, ForeignKey("purchase_invoices.id"))
     amount: Mapped[float] = mapped_column(Float)
     reglement: Mapped["Reglement"] = relationship("Reglement", back_populates="lines")
+
+
+class PurchaseAdvance(Base):
+    __tablename__ = "purchase_advances"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    advance_number: Mapped[str] = mapped_column(String, unique=True)
+    supplier_id: Mapped[str] = mapped_column(String, ForeignKey("suppliers.id"))
+    purchase_invoice_id: Mapped[str] = mapped_column(String, ForeignKey("purchase_invoices.id"))
+    cancels_advance_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    advance_date: Mapped[str] = mapped_column(String)
+    payment_mode: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    due_date: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    reference: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    tva_rate: Mapped[float] = mapped_column(Float)
+    total_ht: Mapped[float] = mapped_column(Float)
+    total_tva: Mapped[float] = mapped_column(Float)
+    total_ttc: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String, default="Validé")
+    reglement_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("reglements.id"), nullable=True)
