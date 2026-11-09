@@ -1,4 +1,4 @@
-ESLint run: 2026-11-04 10:17:13
+ESLint run: 2026-11-09 09:02:55
 
 > nextn@0.1.0 lint
 > next lint
@@ -93,19 +93,19 @@ ESLint run: 2026-11-04 10:17:13
 294:65  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 320:52  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 327:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-344:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-355:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-359:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-359:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-365:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-383:44  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-383:50  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-390:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-407:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-407:53  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-414:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-431:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-431:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+403:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+414:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+418:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+418:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+424:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+442:44  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+442:50  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+449:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+466:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+466:53  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+473:39  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+490:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+490:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/building-your-application/configuring/eslint#disabling-rules
 

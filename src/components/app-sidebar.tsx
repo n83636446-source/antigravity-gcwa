@@ -49,6 +49,7 @@ const articlesSubMenuItems = [
 const achatSubMenuItems = [
   { href: '/purchases/orders', label: 'Bons de commande' },
   { href: '/purchases/receipts', label: 'Bons de réception' },
+  { href: '/purchases/advances', label: "Factures d'acompte" },
   { href: '/purchases/invoices', label: 'Factures' },
   { href: '/purchases/credit-notes', label: 'Avoirs' },
   { href: '/purchases/payments', label: 'Règlements' },

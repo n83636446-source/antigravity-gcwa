@@ -341,6 +341,65 @@ export function purchaseCreditNoteFromApi(apiItem: any): PurchaseCreditNote {
   };
 }
 
+export type ApiPurchaseAdvance = {
+  id: string;
+  advance_number: string;
+  supplier_id: string;
+  purchase_invoice_id: string;
+  cancels_advance_id?: string | null;
+  advance_date: string;
+  payment_mode?: string | null;
+  due_date?: string | null;
+  reference?: string | null;
+  description?: string | null;
+  tva_rate: number;
+  total_ht: number;
+  total_tva: number;
+  total_ttc: number;
+  status: string;
+  reglement_id?: string | null;
+};
+
+export type PurchaseAdvance = {
+  id: string;
+  advanceNumber: string;
+  supplierId: string;
+  purchaseInvoiceId: string;
+  cancelsAdvanceId?: string;
+  advanceDate: string;
+  paymentMode?: string;
+  dueDate?: string;
+  reference?: string;
+  description?: string;
+  tvaRate: number;
+  totalHT: number;
+  totalTVA: number;
+  totalTTC: number;
+  status: string;
+  reglementId?: string;
+};
+
+export function purchaseAdvanceFromApi(apiItem: ApiPurchaseAdvance): PurchaseAdvance {
+  return {
+    id: apiItem.id,
+    advanceNumber: apiItem.advance_number,
+    supplierId: apiItem.supplier_id,
+    purchaseInvoiceId: apiItem.purchase_invoice_id,
+    cancelsAdvanceId: apiItem.cancels_advance_id || undefined,
+    advanceDate: apiItem.advance_date,
+    paymentMode: apiItem.payment_mode || undefined,
+    dueDate: apiItem.due_date || undefined,
+    reference: apiItem.reference || undefined,
+    description: apiItem.description || undefined,
+    tvaRate: apiItem.tva_rate,
+    totalHT: apiItem.total_ht,
+    totalTVA: apiItem.total_tva,
+    totalTTC: apiItem.total_ttc,
+    status: apiItem.status,
+    reglementId: apiItem.reglement_id || undefined,
+  };
+}
+
 export function reglementFromApi(apiItem: any): Reglement {
   return {
     id: apiItem.id,

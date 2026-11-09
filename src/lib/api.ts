@@ -3,8 +3,8 @@
  * All data fetching and persistence goes through here.
  */
 
-import { reglementFromApi } from '@/lib/types';
-import type { Reglement } from '@/lib/types';
+import { reglementFromApi, purchaseAdvanceFromApi } from '@/lib/types';
+import type { Reglement, PurchaseAdvance, ApiPurchaseAdvance } from '@/lib/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
@@ -319,8 +319,10 @@ export const api = {
     return reglementFromApi(result);
   },
   deleteReglement: (id: string) => del('/reglements/' + id),
+  // --- Purchase advances (factures d'acompte) ---
+  getPurchaseAdvances: async (): Promise<PurchaseAdvance[]> => {
+    const data = await get<ApiPurchaseAdvance[]>('/purchase_advances/');
+    return data.map(purchaseAdvanceFromApi);
+  },
 
 };
-
-
-
