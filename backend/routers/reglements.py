@@ -5,9 +5,10 @@ from typing import List
 import uuid
 
 from ..database import get_db
-from ..models import Reglement, PurchaseInvoice, Supplier, ReglementLine
+from ..models import Reglement, PurchaseInvoice, Supplier, ReglementLine, PurchaseAdvance
 from ..schemas import ReglementCreate, ReglementRead
 from ..crud import get_all, get_by_id
+from ..invoice_balance import net_advance, status_for_balance
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -51,7 +52,7 @@ def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail=f"La facture {invoice.invoice_number} n'est pas validée.")
 
         amount = round(line.amount, 2)
-        remaining = round((invoice.total_ttc or 0) - (invoice.amount_paid or 0), 2)
+        remaining = round((invoice.total_ttc or 0) - (invoice.amount_paid or 0) - net_advance(db, invoice.id), 2)
         
         if amount <= 0 or amount > remaining:
             raise HTTPException(status_code=400, detail=f"Le montant pour la facture {invoice.invoice_number} dépasse le solde dû.")
@@ -87,7 +88,7 @@ def submit_reglement(data: ReglementCreate, db: Session = Depends(get_db)):
         for invoice, amount in invoices_to_update:
             new_amount_paid = round((invoice.amount_paid or 0) + amount, 2)
             invoice.amount_paid = new_amount_paid
-            invoice.status = "Payée" if new_amount_paid >= round(invoice.total_ttc or 0, 2) else "Partiellement payée"
+            invoice.status = status_for_balance(invoice.total_ttc, new_amount_paid, net_advance(db, invoice.id))
 
         db.commit()
         db.refresh(reglement)
@@ -105,6 +106,11 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Règlement introuvable.")
     if reglement.status == "Annulé":
         raise HTTPException(status_code=400, detail="Ce règlement est déjà annulé.")
+    if db.query(PurchaseAdvance).filter(PurchaseAdvance.reglement_id == reglement.id).first():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Impossible d'annuler le règlement d'acompte {reglement.reglement_number}, utiliser la fonction d'annulation d'acompte.",
+        )
 
     try:
         for line in reglement.lines:
@@ -112,7 +118,7 @@ def void_reglement(id: str, db: Session = Depends(get_db)):
             if invoice:
                 new_amount_paid = round((invoice.amount_paid or 0) - line.amount, 2)
                 invoice.amount_paid = new_amount_paid
-                invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
+                invoice.status = status_for_balance(invoice.total_ttc, new_amount_paid, net_advance(db, invoice.id))
 
         reglement.status = "Annulé"
         db.commit()
@@ -131,6 +137,12 @@ def delete_reglement(id: str, db: Session = Depends(get_db)):
     if not reglement:
         raise HTTPException(status_code=404, detail="Règlement introuvable.")
 
+    if db.query(PurchaseAdvance).filter(PurchaseAdvance.reglement_id == reglement.id).first():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Impossible de supprimer le règlement d'acompte {reglement.reglement_number}, utiliser la fonction d'annulation d'acompte.",
+        )
+
     try:
         if reglement.status == "Actif":
             for line in reglement.lines:
@@ -138,7 +150,7 @@ def delete_reglement(id: str, db: Session = Depends(get_db)):
                 if invoice:
                     new_amount_paid = round((invoice.amount_paid or 0) - line.amount, 2)
                     invoice.amount_paid = new_amount_paid
-                    invoice.status = "Partiellement payée" if new_amount_paid > 0 else "Non payée"
+                    invoice.status = status_for_balance(invoice.total_ttc, new_amount_paid, net_advance(db, invoice.id))
         
         db.delete(reglement)
         db.commit()

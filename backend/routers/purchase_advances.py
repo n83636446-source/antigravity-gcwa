@@ -8,6 +8,7 @@ from ..database import get_db
 from ..models import PurchaseAdvance, PurchaseInvoice, Reglement
 from ..schemas import PurchaseAdvanceEnter, PurchaseAdvanceCancel, PurchaseAdvanceRead
 from ..crud import get_all, get_by_id
+from ..invoice_balance import net_advance, status_for_balance
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -96,6 +97,9 @@ def enter_advance(data: PurchaseAdvanceEnter, db: Session = Depends(get_db)):
             reglement_id=reglement.id,
         )
         db.add(advance)
+        db.flush()
+        if invoice.status != "Brouillon":
+            invoice.status = status_for_balance(invoice.total_ttc, invoice.amount_paid, net_advance(db, invoice.id))
         db.commit()
         db.refresh(advance)
         return advance
@@ -151,6 +155,10 @@ def cancel_advance(id: str, data: PurchaseAdvanceCancel, db: Session = Depends(g
             reglement_id=reglement.id,
         )
         db.add(twin)
+        db.flush()
+        source_invoice = get_by_id(db, PurchaseInvoice, original.purchase_invoice_id)
+        if source_invoice and source_invoice.status != "Brouillon":
+            source_invoice.status = status_for_balance(source_invoice.total_ttc, source_invoice.amount_paid, net_advance(db, source_invoice.id))
         db.commit()
         db.refresh(twin)
         return twin

@@ -3,17 +3,27 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine, Product, PurchaseReceipt
+from ..models import PurchaseInvoice, Reglement, PurchaseCreditNote, ReglementLine, Product, PurchaseReceipt, PurchaseAdvance
 from ..schemas import PurchaseInvoiceCreate, PurchaseInvoiceUpdate, PurchaseInvoiceRead
 from .. import crud
+from ..invoice_balance import net_advance, advance_totals, status_for_balance
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _with_advance(db: Session, invoice: PurchaseInvoice) -> PurchaseInvoice:
+    invoice.advance_total = net_advance(db, invoice.id)
+    return invoice
+
+
 @router.get("", response_model=List[PurchaseInvoiceRead])
 def get_purchase_invoices(db: Session = Depends(get_db)):
-    return crud.get_all(db, PurchaseInvoice)
+    invoices = crud.get_all(db, PurchaseInvoice)
+    totals = advance_totals(db)
+    for invoice in invoices:
+        invoice.advance_total = totals.get(invoice.id, 0.0)
+    return invoices
 
 
 @router.get("/{invoice_id}", response_model=PurchaseInvoiceRead)
@@ -21,7 +31,7 @@ def get_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
-    return db_obj
+    return _with_advance(db, db_obj)
 
 
 @router.post("", response_model=PurchaseInvoiceRead, status_code=status.HTTP_201_CREATED)
@@ -39,7 +49,7 @@ def create_purchase_invoice(data: PurchaseInvoiceCreate, db: Session = Depends(g
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vous ne pouvez créer une facture qu'à partir d'un bon de réception validé.")
         if db.query(PurchaseInvoice).filter(PurchaseInvoice.purchase_receipt_id == data.purchase_receipt_id).first():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Une facture existe déjà pour ce bon de réception.")
-    return crud.create(db, PurchaseInvoice, data.model_dump())
+    return _with_advance(db, crud.create(db, PurchaseInvoice, data.model_dump()))
 
 
 @router.put("/{invoice_id}", response_model=PurchaseInvoiceRead)
@@ -58,7 +68,13 @@ def update_purchase_invoice(invoice_id: str, data: PurchaseInvoiceUpdate, db: Se
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Le statut ne peut être modifié que par la validation ou l'annulation de validation.",
         )
-    return crud.update(db, db_obj, payload)
+    new_total = payload.get("total_ttc")
+    if new_total is not None and net_advance(db, invoice_id) > round(new_total, 2):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le total de la facture ne peut pas être inférieur aux acomptes déjà saisis.",
+        )
+    return _with_advance(db, crud.update(db, db_obj, payload))
 
 
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -77,6 +93,11 @@ def delete_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cette facture a un avoir associé et ne peut pas être supprimée.",
+        )
+    if db.query(PurchaseAdvance).filter(PurchaseAdvance.purchase_invoice_id == invoice_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette facture a des acomptes associés et ne peut pas être supprimée.",
         )
     if db_obj.status != "Brouillon":
         raise HTTPException(
@@ -102,10 +123,10 @@ def validate_purchase_invoice(invoice_id: str, db: Session = Depends(get_db)):
                 product = crud.get_by_id(db, Product, item.get("product_id"))
                 if product:
                     product.stock_level = (product.stock_level or 0) + item.get("quantity", 0)
-        db_obj.status = "Non payée"
+        db_obj.status = status_for_balance(db_obj.total_ttc, db_obj.amount_paid, net_advance(db, db_obj.id))
         db.commit()
         db.refresh(db_obj)
-        return db_obj
+        return _with_advance(db, db_obj)
     except Exception:
         db.rollback()
         logger.exception("validate_purchase_invoice failed")
@@ -117,6 +138,11 @@ def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(ge
     db_obj = crud.get_by_id(db, PurchaseInvoice, invoice_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facture introuvable.")
+    if db_obj.status != "Brouillon" and net_advance(db, invoice_id) != 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette facture a un acompte. Annulez-le d'abord avant d'annuler la validation.",
+        )
     if db_obj.status not in ("Non payée", "En retard"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -163,7 +189,7 @@ def cancel_purchase_invoice_validation(invoice_id: str, db: Session = Depends(ge
         db_obj.status = "Brouillon"
         db.commit()
         db.refresh(db_obj)
-        return db_obj
+        return _with_advance(db, db_obj)
     except HTTPException:
         db.rollback()
         raise
