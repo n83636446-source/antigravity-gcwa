@@ -85,7 +85,7 @@ export function RaDialog({ purchaseInvoice, purchaseInvoices, onSaveSuccess }: R
     [unpaidInvoices, selectedSupplierId]
   );
 
-  const getRemaining = (inv: PurchaseInvoice) => roundMoney(inv.totalTTC - (inv.amountPaid || 0));
+  const getRemaining = (inv: PurchaseInvoice) => roundMoney(inv.totalTTC - (inv.amountPaid || 0) - (inv.advanceTotal || 0));
   const totalAmount = roundMoney(Object.values(lineAmounts).reduce((sum, v) => sum + (Number(v) || 0), 0));
 
   const toggleInvoice = (inv: PurchaseInvoice, checked: boolean) => {
@@ -120,7 +120,7 @@ const nextNum = calculateNextNumber(existing);
         const preselected = purchaseInvoices && purchaseInvoices.length > 0 ? purchaseInvoices : purchaseInvoice ? [purchaseInvoice] : [];
         const preselectedLines: Record<string, string> = {};
         preselected.forEach((inv) => {
-            preselectedLines[inv.id] = String(roundMoney(inv.totalTTC - (inv.amountPaid || 0)));
+            preselectedLines[inv.id] = String(roundMoney(inv.totalTTC - (inv.amountPaid || 0) - (inv.advanceTotal || 0)));
         });
         const firstMode = preselected[0]?.paymentMode;
         const sharedPaymentMode = firstMode && preselected.every((inv) => inv.paymentMode === firstMode) ? firstMode : "cash";

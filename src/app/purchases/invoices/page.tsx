@@ -33,6 +33,8 @@ import { cn, compareDocumentNumbers, generateId, roundMoney } from '@/lib/utils'
 import { FaaDialog } from '@/components/faa-dialog';
 import { AaaDialog } from '@/components/aaa-dialog';
 import { RaDialog } from '@/components/ra-dialog';
+import { AdvanceDialog } from '@/components/advance-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
 type EnrichedInvoice = PurchaseInvoice & {
@@ -62,6 +64,14 @@ const suggestNextCreditNoteNumber = (existing: { creditNoteNumber: string }[]): 
   return `AA${(maxValue + 1).toString().padStart(4, '0')}`;
 };
 
+const suggestNextNumber = (existing: string[], prefix: string): string => {
+  const maxValue = existing.reduce((max, value) => {
+    const n = parseInt(value.replace(prefix, '').trim(), 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  return `${prefix}${(maxValue + 1).toString().padStart(4, '0')}`;
+};
+
 const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
 const paidSortValue = (i: EnrichedInvoice): number | null => {
@@ -85,6 +95,26 @@ const columns: DataTableColumn<EnrichedInvoice>[] = [
     label: 'Montant TTC',
     cell: (i) => currencyFormatter.format(i.totalTTC),
     sortValue: (i) => i.totalTTC,
+    className: 'text-right font-medium',
+    headClassName: 'text-right',
+  },
+  {
+    id: 'advanceTotal',
+    label: 'Acompte',
+    cell: (i) => ((i.advanceTotal ?? 0) !== 0 ? currencyFormatter.format(i.advanceTotal ?? 0) : '—'),
+    sortValue: (i) => i.advanceTotal ?? 0,
+    className: 'text-right',
+    headClassName: 'text-right',
+  },
+  {
+    id: 'balance',
+    label: 'Solde dû',
+    cell: (i) =>
+      i.status === 'Brouillon'
+        ? '—'
+        : currencyFormatter.format(roundMoney(i.totalTTC - (i.amountPaid ?? 0) - (i.advanceTotal ?? 0))),
+    sortValue: (i) =>
+      i.status === 'Brouillon' ? null : roundMoney(i.totalTTC - (i.amountPaid ?? 0) - (i.advanceTotal ?? 0)),
     className: 'text-right font-medium',
     headClassName: 'text-right',
   },
@@ -158,6 +188,9 @@ export default function FAAPage() {
   const [isValidatingForPay, setIsValidatingForPay] = useState(false);
   const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
   const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
+  const [payMenuOpen, setPayMenuOpen] = useState(false);
+  const [advanceInvoice, setAdvanceInvoice] = useState<PurchaseInvoice | null>(null);
+  const [advanceNumbers, setAdvanceNumbers] = useState({ advance: '', reglement: '' });
   const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
   useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen && !bulkTransferOpen, () => setSelectedIds(new Set()));
@@ -377,6 +410,41 @@ export default function FAAPage() {
         variant: 'destructive',
         title: "Action impossible",
         description: (error instanceof Error && error.message) || "L'annulation a échoué.",
+      });
+    }
+  };
+
+  const handlePayMenuOpenChange = (open: boolean) => {
+    if (!open) {
+      setPayMenuOpen(false);
+      return;
+    }
+    if (multiSelected) {
+      showWarning('pay', MULTI_SELECTION_MESSAGE);
+      return;
+    }
+    if (singleSelected?.status === 'Payée') {
+      showWarning('pay', 'Cette facture est déjà réglée en totalité.');
+      return;
+    }
+    setPayMenuOpen(true);
+  };
+
+  const handleAdvanceClick = async () => {
+    const invoice = singleSelected;
+    if (!invoice) return;
+    try {
+      const [advances, reglementsList] = await Promise.all([api.getPurchaseAdvances(), api.getReglements()]);
+      setAdvanceNumbers({
+        advance: suggestNextNumber(advances.map((a) => a.advanceNumber), 'AC'),
+        reglement: suggestNextNumber(reglementsList.map((r) => r.reglementNumber), 'RG'),
+      });
+      setAdvanceInvoice(invoice);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Action impossible',
+        description: (error instanceof Error && error.message) || 'Le chargement a échoué.',
       });
     }
   };
@@ -627,21 +695,28 @@ export default function FAAPage() {
                 style={{ transitionDelay: toolbarVisible ? '75ms' : '0ms' }}
               >
                 <ActionWarning id="pay" warning={warning} onClose={clearWarning}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className={cn("h-8 w-8", payBlocked && "opacity-50")}
-                        aria-disabled={payBlocked}
-                        onClick={handleReglerClick}
-                      >
-                        <Wallet className="h-4 w-4 text-blue-500" />
-                        <span className="sr-only">Régler</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Régler</TooltipContent>
-                  </Tooltip>
+                  <DropdownMenu open={payMenuOpen} onOpenChange={handlePayMenuOpenChange}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className={cn("h-8 w-8", payBlocked && "opacity-50")}
+                            aria-disabled={payBlocked}
+                          >
+                            <Wallet className="h-4 w-4 text-blue-500" />
+                            <span className="sr-only">Régler</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Régler</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={handleReglerClick}>Régler…</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleAdvanceClick}>Saisir un acompte…</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </ActionWarning>
               </div>
 
@@ -766,6 +841,16 @@ export default function FAAPage() {
         )}
         <AaaDialog key={`transfer-${dialogToken}-${invoiceToTransfer?.id ?? 'none'}`} invoiceToTransfer={invoiceToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
+
+      <AdvanceDialog
+        open={!!advanceInvoice}
+        onOpenChange={(open) => { if (!open) setAdvanceInvoice(null); }}
+        invoice={advanceInvoice}
+        supplierName={rows.find((r) => r.id === advanceInvoice?.id)?.supplierName ?? ''}
+        suggestedAdvanceNumber={advanceNumbers.advance}
+        suggestedReglementNumber={advanceNumbers.reglement}
+        onSaved={() => refetchInvoices()}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>
         <AlertDialogContent>

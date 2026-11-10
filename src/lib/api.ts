@@ -127,6 +127,7 @@ export type ApiPurchaseInvoice = {
   total_ht: number;
   total_ttc: number;
   amount_paid?: number | null;
+  advance_total?: number | null;
   payment_mode?: string | null;
   due_date?: string | null;
   representative_id?: string | null;
@@ -156,6 +157,21 @@ export type ApiPurchaseCreditNote = {
   representative_id?: string | null;
   reference?: string | null;
   remarks?: string | null;
+};
+
+export type ApiPurchaseAdvanceEnter = {
+  id: string;
+  advance_number: string;
+  reglement_id: string;
+  reglement_number: string;
+  purchase_invoice_id: string;
+  advance_date: string;
+  payment_mode?: string | null;
+  due_date?: string | null;
+  reference?: string | null;
+  description?: string | null;
+  amount_ttc: number;
+  tva_rate: number;
 };
 
 function formatApiDetail(detail: unknown, fallback: string): string {
@@ -324,5 +340,6 @@ export const api = {
     const data = await get<ApiPurchaseAdvance[]>('/purchase_advances/');
     return data.map(purchaseAdvanceFromApi);
   },
+  enterPurchaseAdvance: (data: ApiPurchaseAdvanceEnter) => post<ApiPurchaseAdvance>('/purchase_advances/enter', data),
 
 };

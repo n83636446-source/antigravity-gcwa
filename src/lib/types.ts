@@ -111,6 +111,7 @@ export type PurchaseInvoice = {
   totalHT: number;
   totalTTC: number;
   amountPaid?: number;
+  advanceTotal?: number;
   paymentMode?: string;
   dueDate?: string;
   representativeId?: string;
@@ -283,6 +284,7 @@ export function purchaseInvoiceFromApi(apiData: any): PurchaseInvoice {
     totalHT: apiData.total_ht,
     totalTTC: apiData.total_ttc,
     amountPaid: apiData.amount_paid || undefined,
+    advanceTotal: apiData.advance_total || undefined,
     paymentMode: apiData.payment_mode || undefined,
     dueDate: apiData.due_date || undefined,
     representativeId: apiData.representative_id || undefined,
