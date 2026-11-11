@@ -193,7 +193,7 @@ export default function FAAPage() {
   const [advanceNumbers, setAdvanceNumbers] = useState({ advance: '', reglement: '' });
   const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen && !bulkTransferOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen && !bulkTransferOpen && !payMenuOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
@@ -713,8 +713,8 @@ export default function FAAPage() {
                       <TooltipContent>Régler</TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={handleReglerClick}>Régler…</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={handleAdvanceClick}>Saisir un acompte…</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleReglerClick}>Régler</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleAdvanceClick}>Saisir un acompte</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </ActionWarning>
