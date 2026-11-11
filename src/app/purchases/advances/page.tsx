@@ -7,12 +7,26 @@ import { api } from "@/lib/api";
 import { supplierFromApi, purchaseInvoiceFromApi } from "@/lib/types";
 import { useApiCollection } from "@/hooks/use-api";
 import { useTablePrefs } from '@/hooks/use-table-prefs';
+import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { PageHeader } from '@/components/page-header';
 import type { PurchaseAdvance } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type EnrichedAdvance = PurchaseAdvance & {
   supplierName: string;
@@ -76,12 +90,14 @@ const columnIds = columns.map((c) => c.id);
 export default function AdvancesPage() {
   const cardRef = useRef<HTMLDivElement>(null);
   const tablePrefs = useTablePrefs('purchase-advances', columnIds);
+  const { runBulk, isRunning: isBulkRunning } = useBulkAction();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  useClearSelectionOnOutsideClick(cardRef, true, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen, () => setSelectedIds(new Set()));
 
-  const { data: advances, isLoading: isLoadingAdvances } = useApiCollection(() => api.getPurchaseAdvances());
+  const { data: advances, isLoading: isLoadingAdvances, refetch: refetchAdvances } = useApiCollection(() => api.getPurchaseAdvances());
   const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
   const { data: invoices, isLoading: isLoadingInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
   const { data: reglements, isLoading: isLoadingReglements } = useApiCollection(() => api.getReglements());
@@ -115,6 +131,28 @@ export default function AdvancesPage() {
     });
   }, [advances, suppliers, invoices, reglements]);
 
+  // An acompte selected together with its cancellation is deleted once, through the original (the cancellation goes with it).
+  const toDelete = rows.filter((a) => selectedIds.has(a.id) && !(a.cancelsAdvanceId && selectedIds.has(a.cancelsAdvanceId)));
+
+  const handleDeleteRequest = () => {
+    if (isBulkRunning || toDelete.length === 0) return;
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    const items = toDelete;
+    setDeleteDialogOpen(false);
+    await runBulk({
+      items,
+      getName: (a) => a.advanceNumber,
+      action: (a) => api.deletePurchaseAdvance(a.id),
+      successLabel: (n) => `${n} facture${n > 1 ? 's' : ''} d'acompte supprimée${n > 1 ? 's' : ''}`,
+      failureTitle: 'Suppression impossible',
+    });
+    refetchAdvances();
+    setSelectedIds(new Set());
+  };
+
   return (
     <div className="flex flex-col gap-8 p-4 md:p-6">
       <PageHeader
@@ -139,6 +177,22 @@ export default function AdvancesPage() {
               </span>
             </CardTitle>
             <div className="flex items-center gap-2 h-10">
+              <div
+                className={cn(
+                  "transition-all duration-300",
+                  selectedIds.size > 0 ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
+                )}
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={handleDeleteRequest}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Supprimer</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{selectedIds.size > 1 ? `Supprimer (${selectedIds.size})` : 'Supprimer'}</TooltipContent>
+                </Tooltip>
+              </div>
               <ResetSortButton visible={tablePrefs.isCustomized} onClick={tablePrefs.resetPrefs} />
             </div>
           </CardHeader>
@@ -167,6 +221,23 @@ export default function AdvancesPage() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {`Supprimer ${toDelete.length} facture${toDelete.length > 1 ? 's' : ''} d'acompte ?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {`Cette action est irréversible. ${toDelete.length > 1 ? 'Ces acomptes seront supprimés' : 'Cet acompte sera supprimé'}, avec leur annulation éventuelle et leurs règlements automatiques. Fonction temporaire, réservée aux tests.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

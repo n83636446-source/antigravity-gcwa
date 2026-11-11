@@ -341,5 +341,6 @@ export const api = {
     return data.map(purchaseAdvanceFromApi);
   },
   enterPurchaseAdvance: (data: ApiPurchaseAdvanceEnter) => post<ApiPurchaseAdvance>('/purchase_advances/enter', data),
+  deletePurchaseAdvance: (id: string) => del('/purchase_advances/' + id),
 
 };
