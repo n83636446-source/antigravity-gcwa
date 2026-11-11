@@ -1,75 +1,43 @@
-Backend checks run: 2026-11-09 08:29:24
+Backend checks run: 2026-11-11 08:18:35
 
-=== CHECK 1: py_compile and backend startup ===
-Compiled backend\invoice_balance.py: OK
-Compiled backend\models.py: OK
-Compiled backend\schemas.py: OK
-Compiled backend\main.py: OK
-Compiled backend\routers\purchase_invoices.py: OK
-Compiled backend\routers\reglements.py: OK
-Compiled backend\routers\purchase_advances.py: OK
-Copied c:\Users\FODIM\Desktop\Antigravity GCWA\stockpilot.db to temporary dir: C:\Users\FODIM\AppData\Local\Temp\stockpilot_test2_mbwg9ib3
-Backend successfully started on http://127.0.0.1:8002 (port 8002)
+=== CHECK 1: py_compile, backend startup, GET /purchase_advances/ ===
+Compiled backend/routers/purchase_advances.py: OK
+Copied stockpilot.db to temporary dir: C:\Users\FODIM\AppData\Local\Temp\stockpilot_test3_s7s7qy8i
+Backend started on http://127.0.0.1:8002
+GET /purchase_advances/ -> HTTP 200: []
 
-=== CHECK 2: Initial GET /purchase_invoices advance_total ===
-GET /purchase_invoices -> HTTP 200 (count: 6)
-Verified all 6 invoices have advance_total == 0.0
+=== CHECK 2: Validated invoice A + enter 10.00 acompte ===
+Created & validated invoice A: ID=fa-deltest-a, Total_TTC=600.0, Status=Non payée
+POST /purchase_advances/enter Request: {"id": "ac-deltest-1", "advance_number": "AC9201", "reglement_id": "rg-deltest-1", "reglement_number": "RG9201", "purchase_invoice_id": "fa-deltest-a", "advance_date": "2026-11-11", "payment_mode": "cash", "amount_ttc": 10.0, "tva_rate": 20.0}
+POST /purchase_advances/enter -> HTTP 200: {"id": "ac-deltest-1", "advance_number": "AC9201", "supplier_id": "sup-1789054392500", "purchase_invoice_id": "fa-deltest-a", "cancels_advance_id": null, "advance_date": "2026-11-11", "payment_mode": "cash", "due_date": null, "reference": null, "description": "Acompte versé sur [Facture - FA9201]", "tva_rate": 20.0, "total_ht": 8.33, "total_tva": 1.67, "total_ttc": 10.0, "status": "Validé", "reglement_id": "rg-deltest-1"}
+GET /purchase_invoices/fa-deltest-a -> HTTP 200: Status=Partiellement payée, Advance_Total=10.0
+GET /reglements/ -> Automatic payment present: [{"id": "rg-deltest-1", "reglement_number": "RG9201", "supplier_id": "sup-1789054392500", "date": "2026-11-11", "amount": 10.0, "payment_mode": "cash", "reference": null, "remarks": null, "status": "Actif", "lines": []}]
 
-=== CHECK 3: Enter 10.00 EUR acompte on invoice A ===
-POST /purchase_invoices (create invoice A) -> HTTP 201: {"invoice_number": "FA9001", "purchase_order_id": null, "supplier_id": "sup-1789054392500", "invoice_date": "2026-11-09", "status": "Brouillon", "total_ht": 500.0, "total_ttc": 600.0, "payment_mode": null, "due_date": null, "purchase_receipt_id": null, "amount_paid": null, "representative_id": null, "reference": null, "remarks": null, "items": [{"product_id": "prod-1789196780050", "quantity": 2.0, "price": 250.0, "tva_rate": 20.0}], "id": "fa-test-a", "advance_total": 0.0}
-POST /purchase_invoices/fa-test-a/validate -> HTTP 200: {"invoice_number": "FA9001", "purchase_order_id": null, "supplier_id": "sup-1789054392500", "invoice_date": "2026-11-09", "status": "Non payée", "total_ht": 500.0, "total_ttc": 600.0, "payment_mode": null, "due_date": null, "purchase_receipt_id": null, "amount_paid": null, "representative_id": null, "reference": null, "remarks": null, "items": [{"product_id": "prod-1789196780050", "quantity": 2.0, "price": 250.0, "tva_rate": 20.0}], "id": "fa-test-a", "advance_total": 0.0}
-Invoice A created & validated: ID=fa-test-a, Number=FA9001, Status=Non payée, Total_TTC=600.0, Amount_Paid=None
-POST /purchase_advances/enter Request: {"id": "pa-test-chk3", "advance_number": "AC9101", "reglement_id": "rg-test-chk3", "reglement_number": "RG9101", "purchase_invoice_id": "fa-test-a", "advance_date": "2026-11-09", "payment_mode": "cash", "amount_ttc": 10.0, "tva_rate": 20.0}
-POST /purchase_advances/enter -> HTTP 200: {"id": "pa-test-chk3", "advance_number": "AC9101", "supplier_id": "sup-1789054392500", "purchase_invoice_id": "fa-test-a", "cancels_advance_id": null, "advance_date": "2026-11-09", "payment_mode": "cash", "due_date": null, "reference": null, "description": "Acompte versé sur [Facture - FA9001]", "tva_rate": 20.0, "total_ht": 8.33, "total_tva": 1.67, "total_ttc": 10.0, "status": "Validé", "reglement_id": "rg-test-chk3"}
-GET /purchase_invoices/fa-test-a -> HTTP 200: {"invoice_number": "FA9001", "purchase_order_id": null, "supplier_id": "sup-1789054392500", "invoice_date": "2026-11-09", "status": "Partiellement payée", "total_ht": 500.0, "total_ttc": 600.0, "payment_mode": null, "due_date": null, "purchase_receipt_id": null, "amount_paid": null, "representative_id": null, "reference": null, "remarks": null, "items": [{"product_id": "prod-1789196780050", "quantity": 2.0, "price": 250.0, "tva_rate": 20.0}], "id": "fa-test-a", "advance_total": 10.0}
-Invoice A verified: advance_total=10.0, status='Partiellement payée', amount_paid=0.0
+=== CHECK 3: Delete acompte ac-deltest-1 ===
+DELETE /purchase_advances/ac-deltest-1 -> HTTP 200: {"deleted": true}
+GET /purchase_advances/ -> HTTP 200: ac-deltest-1 present? False
+GET /reglements/ -> HTTP 200: rg-deltest-1 present? False
+GET /purchase_invoices/fa-deltest-a -> HTTP 200: Status=Non payée, Advance_Total=0.0
 
-=== CHECK 4: Submit payment for invoice A (excess amount then exact balance) ===
-POST /reglements/submit (excess amount: 591.0) Request: {"id": "rg-test-excess-chk4", "reglement_number": "RG9102", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "lines": [{"purchase_invoice_id": "fa-test-a", "amount": 591.0}]}
-POST /reglements/submit -> HTTP 400: {"detail": "Le montant pour la facture FA9001 dépasse le solde dû."}
-POST /reglements/submit (exact balance: 590.0) Request: {"id": "rg-test-chk4", "reglement_number": "RG9103", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "lines": [{"purchase_invoice_id": "fa-test-a", "amount": 590.0}]}
-POST /reglements/submit -> HTTP 200: {"id": "rg-test-chk4", "reglement_number": "RG9103", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "amount": 590.0, "payment_mode": null, "reference": null, "remarks": null, "status": "Actif", "lines": [{"id": "rgl-line-aabede461925", "purchase_invoice_id": "fa-test-a", "amount": 590.0}]}
-GET /purchase_invoices/fa-test-a -> HTTP 200: Status=Payée, Amount_Paid=590.0, Advance_Total=10.0
-Invoice A verified as 'Payée'
+=== CHECK 4: Enter, cancel, attempt delete cancellation (400), then delete original (200) ===
+POST /purchase_advances/enter (ac-deltest-2) -> HTTP 200
+POST /purchase_advances/ac-deltest-2/cancel -> HTTP 200: {"id": "ac-deltest-2-cancel", "advance_number": "AC9203", "supplier_id": "sup-1789054392500", "purchase_invoice_id": "fa-deltest-a", "cancels_advance_id": "ac-deltest-2", "advance_date": "2026-11-11", "payment_mode": "cash", "due_date": null, "reference": null, "description": "Acompte versé sur [Facture - FA9201]", "tva_rate": 20.0, "total_ht": -8.33, "total_tva": -1.67, "total_ttc": -10.0, "status": "Validé", "reglement_id": "rg-deltest-2-cancel"}
+DELETE /purchase_advances/ac-deltest-2-cancel -> HTTP 400: {"detail": "Cette pièce est une annulation d'acompte. Supprimez l'acompte d'origine pour la supprimer."}
+DELETE /purchase_advances/ac-deltest-2 -> HTTP 200: {"deleted": true}
+Verified both acomptes and payments removed. GET /purchase_invoices/fa-deltest-a -> Status=Non payée, Advance_Total=0.0
 
-=== CHECK 5: Void payment rg-test-chk4 ===
-POST /reglements/rg-test-chk4/void -> HTTP 200: {"id": "rg-test-chk4", "reglement_number": "RG9103", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "amount": 590.0, "payment_mode": null, "reference": null, "remarks": null, "status": "Annulé", "lines": [{"id": "rgl-line-aabede461925", "purchase_invoice_id": "fa-test-a", "amount": 590.0}]}
-GET /purchase_invoices/fa-test-a -> HTTP 200: Status=Partiellement payée, Amount_Paid=0.0, Advance_Total=10.0
-Invoice A is 'Partiellement payée' because advance 10.00 is still active.
-DELETE /reglements/rg-test-chk4 (cleanup voided payment) -> HTTP 200: {"deleted": true}
+=== CHECK 5: Draft invoice B enter acompte then delete ===
+DELETE /purchase_advances/ac-deltest-b -> HTTP 200: {"deleted": true}
+GET /purchase_invoices/fa-deltest-b -> HTTP 200: Status=Brouillon, Advance_Total=0.0
 
-=== CHECK 6: Attempt void & delete of advance payment rg-test-chk3 ===
-POST /reglements/rg-test-chk3/void -> HTTP 400: {"detail": "Impossible d'annuler le règlement d'acompte RG9101, utiliser la fonction d'annulation d'acompte."}
-DELETE /reglements/rg-test-chk3 -> HTTP 400: {"detail": "Impossible de supprimer le règlement d'acompte RG9101, utiliser la fonction d'annulation d'acompte."}
+=== CHECK 6: Delete unknown acompte id ===
+DELETE /purchase_advances/unknown-id -> HTTP 404: {"detail": "Facture d'acompte introuvable."}
 
-=== CHECK 7: Attempt delete and cancel-validation on invoice A with active advance ===
-DELETE /purchase_invoices/fa-test-a -> HTTP 400: {"detail": "Cette facture a des acomptes associés et ne peut pas être supprimée."}
-POST /purchase_invoices/fa-test-a/cancel-validation -> HTTP 400: {"detail": "Cette facture a un acompte. Annulez-le d'abord avant d'annuler la validation."}
+=== CHECK 7: Invoice C with partial payment (50.00) + acompte (10.00) -> delete acompte ===
+POST /reglements/submit (50.00 on C) -> HTTP 200
+POST /purchase_advances/enter (10.00 on C) -> HTTP 200
+DELETE /purchase_advances/ac-deltest-c -> HTTP 200: {"deleted": true}
+GET /purchase_invoices/fa-deltest-c -> HTTP 200: Amount_Paid=50.0, Advance_Total=0.0, Status=Partiellement payée
 
-=== CHECK 8: Cancel acompte pa-test-chk3 ===
-POST /purchase_advances/pa-test-chk3/cancel Request: {"id": "pa-test-chk3-cancel", "advance_number": "AC9102", "reglement_id": "rg-test-chk3-cancel", "reglement_number": "RG9104", "advance_date": "2026-11-09", "payment_mode": "cash"}
-POST /purchase_advances/pa-test-chk3/cancel -> HTTP 200: {"id": "pa-test-chk3-cancel", "advance_number": "AC9102", "supplier_id": "sup-1789054392500", "purchase_invoice_id": "fa-test-a", "cancels_advance_id": "pa-test-chk3", "advance_date": "2026-11-09", "payment_mode": "cash", "due_date": null, "reference": null, "description": "Acompte versé sur [Facture - FA9001]", "tva_rate": 20.0, "total_ht": -8.33, "total_tva": -1.67, "total_ttc": -10.0, "status": "Validé", "reglement_id": "rg-test-chk3-cancel"}
-GET /purchase_invoices/fa-test-a -> HTTP 200: Status=Non payée, Advance_Total=0.0
-Invoice A verified: advance_total=0.0, status='Non payée'
-
-=== CHECK 9: Draft invoice B with acompte, PUT validation, validate, cancel ===
-POST /purchase_invoices (create draft B) Request: {"id": "fa-test-draft-b", "invoice_number": "FA9999", "supplier_id": "sup-1789054392500", "invoice_date": "2026-11-09", "total_ht": 100.0, "total_ttc": 120.0, "items": [{"product_id": "prod-1789196780050", "quantity": 1, "price": 100.0, "tva_rate": 20.0}]}
-POST /purchase_invoices -> HTTP 201: {"invoice_number": "FA9999", "purchase_order_id": null, "supplier_id": "sup-1789054392500", "invoice_date": "2026-11-09", "status": "Brouillon", "total_ht": 100.0, "total_ttc": 120.0, "payment_mode": null, "due_date": null, "purchase_receipt_id": null, "amount_paid": null, "representative_id": null, "reference": null, "remarks": null, "items": [{"product_id": "prod-1789196780050", "quantity": 1.0, "price": 100.0, "tva_rate": 20.0}], "id": "fa-test-draft-b", "advance_total": 0.0}
-POST /purchase_advances/enter (on draft B) Request: {"id": "pa-test-b", "advance_number": "AC9103", "reglement_id": "rg-test-b", "reglement_number": "RG9105", "purchase_invoice_id": "fa-test-draft-b", "advance_date": "2026-11-09", "payment_mode": "cash", "amount_ttc": 10.0, "tva_rate": 20.0}
-POST /purchase_advances/enter -> HTTP 200: {"id": "pa-test-b", "advance_number": "AC9103", "supplier_id": "sup-1789054392500", "purchase_invoice_id": "fa-test-draft-b", "cancels_advance_id": null, "advance_date": "2026-11-09", "payment_mode": "cash", "due_date": null, "reference": null, "description": "Acompte versé sur [Facture - FA9999]", "tva_rate": 20.0, "total_ht": 8.33, "total_tva": 1.67, "total_ttc": 10.0, "status": "Validé", "reglement_id": "rg-test-b"}
-GET /purchase_invoices/fa-test-draft-b -> HTTP 200: Status=Brouillon, Advance_Total=10.0
-PUT /purchase_invoices/fa-test-draft-b (total_ttc: 5.00) -> HTTP 400: {"detail": "Le total de la facture ne peut pas être inférieur aux acomptes déjà saisis."}
-POST /purchase_invoices/fa-test-draft-b/validate -> HTTP 200: Status=Partiellement payée, Advance_Total=10.0
-POST /purchase_advances/pa-test-b/cancel -> HTTP 200: {"id": "pa-test-b-cancel", "advance_number": "AC9104", "supplier_id": "sup-1789054392500", "purchase_invoice_id": "fa-test-draft-b", "cancels_advance_id": "pa-test-b", "advance_date": "2026-11-09", "payment_mode": "cash", "due_date": null, "reference": null, "description": "Acompte versé sur [Facture - FA9999]", "tva_rate": 20.0, "total_ht": -8.33, "total_tva": -1.67, "total_ttc": -10.0, "status": "Validé", "reglement_id": "rg-test-b-cancel"}
-GET /purchase_invoices/fa-test-draft-b -> HTTP 200: Status=Non payée, Advance_Total=0.0
-
-=== CHECK 10: Validated invoice C with no acompte (pay in full then void) ===
-Invoice C created & validated: ID=fa-test-c, Number=FA9003, Status=Non payée, Total_TTC=240.0
-POST /reglements/submit (Invoice C full payment: 240.0) Request: {"id": "rg-test-c", "reglement_number": "RG9107", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "lines": [{"purchase_invoice_id": "fa-test-c", "amount": 240.0}]}
-POST /reglements/submit -> HTTP 200: {"id": "rg-test-c", "reglement_number": "RG9107", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "amount": 240.0, "payment_mode": null, "reference": null, "remarks": null, "status": "Actif", "lines": [{"id": "rgl-line-462d0d5a61f5", "purchase_invoice_id": "fa-test-c", "amount": 240.0}]}
-GET /purchase_invoices/fa-test-c -> HTTP 200: Status=Payée
-POST /reglements/rg-test-c/void -> HTTP 200: {"id": "rg-test-c", "reglement_number": "RG9107", "supplier_id": "sup-1789054392500", "date": "2026-11-09", "amount": 240.0, "payment_mode": null, "reference": null, "remarks": null, "status": "Annulé", "lines": [{"id": "rgl-line-462d0d5a61f5", "purchase_invoice_id": "fa-test-c", "amount": 240.0}]}
-GET /purchase_invoices/fa-test-c -> HTTP 200: Status=Non payée
-
-All 10 checks completed successfully.
+All 7 checks completed successfully.
 DONE

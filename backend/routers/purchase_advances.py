@@ -166,3 +166,38 @@ def cancel_advance(id: str, data: PurchaseAdvanceCancel, db: Session = Depends(g
         db.rollback()
         logger.exception("cancel_advance failed")
         raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")
+
+
+# TEMPORARY (testing only, to-do 9.11): Ciel does not allow deleting an acompte.
+@router.delete("/{id}")
+def delete_advance(id: str, db: Session = Depends(get_db)):
+    advance = get_by_id(db, PurchaseAdvance, id)
+    if not advance:
+        raise HTTPException(status_code=404, detail="Facture d'acompte introuvable.")
+    if advance.cancels_advance_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Cette pièce est une annulation d'acompte. Supprimez l'acompte d'origine pour la supprimer.",
+        )
+
+    try:
+        to_delete = [advance] + db.query(PurchaseAdvance).filter(PurchaseAdvance.cancels_advance_id == advance.id).all()
+        invoice_id = advance.purchase_invoice_id
+        reglement_ids = [item.reglement_id for item in to_delete if item.reglement_id]
+        for item in to_delete:
+            db.delete(item)
+        db.flush()
+        for reglement_id in reglement_ids:
+            reglement = get_by_id(db, Reglement, reglement_id)
+            if reglement:
+                db.delete(reglement)
+        db.flush()
+        invoice = get_by_id(db, PurchaseInvoice, invoice_id)
+        if invoice and invoice.status != "Brouillon":
+            invoice.status = status_for_balance(invoice.total_ttc, invoice.amount_paid, net_advance(db, invoice.id))
+        db.commit()
+        return {"deleted": True}
+    except Exception:
+        db.rollback()
+        logger.exception("delete_advance failed")
+        raise HTTPException(status_code=500, detail="Une erreur interne est survenue. Veuillez réessayer.")
