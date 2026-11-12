@@ -54,8 +54,10 @@ export default function RAPage() {
     const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
 
     const { data: suppliers, isLoading: isLoadingSuppliers } = useApiCollection(() => api.getSuppliers().then(r => r.map(supplierFromApi)));
+
+    const { data: advances, isLoading: isLoadingAdvances } = useApiCollection(() => api.getPurchaseAdvances());
   
-  const isLoading = isLoadingReglements || isLoadingInvoices || isLoadingSuppliers;
+  const isLoading = isLoadingReglements || isLoadingInvoices || isLoadingSuppliers || isLoadingAdvances;
 
   // --- HANDLERS ---
 
@@ -109,6 +111,16 @@ const handleCreateClick = () => {
 
   const getInvoiceNumbers = (lines: ReglementLine[]) =>
     lines.map(l => invoices?.find(i => i.id === l.purchaseInvoiceId)?.invoiceNumber || 'Inconnue').join(', ');
+
+  const isAdvancePayment = (reg: Reglement) => (advances ?? []).some((a) => a.reglementId === reg.id);
+
+  const getInvoicesLabel = (reg: Reglement) => {
+    if (reg.lines.length > 0) return getInvoiceNumbers(reg.lines);
+    const advance = (advances ?? []).find((a) => a.reglementId === reg.id);
+    if (!advance) return '';
+    const invoiceNumber = invoices?.find((i) => i.id === advance.purchaseInvoiceId)?.invoiceNumber || 'Inconnue';
+    return `${invoiceNumber} (${advance.cancelsAdvanceId ? 'annulation' : 'acompte'} ${advance.advanceNumber})`;
+  };
 
   const getSupplierName = (id: string) => {
     return suppliers?.find(s => s.id === id)?.name || 'Inconnu';
@@ -167,7 +179,7 @@ const handleCreateClick = () => {
                         </TableCell>
                         <TableCell>{format(new Date(reg.date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                         <TableCell>{getSupplierName(reg.supplierId)}</TableCell>
-                        <TableCell className="font-mono text-xs">{getInvoiceNumbers(reg.lines)}</TableCell>
+                        <TableCell className="font-mono text-xs">{getInvoicesLabel(reg)}</TableCell>
                         <TableCell className="text-right font-medium">
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(reg.amount)}
                         </TableCell>
@@ -186,12 +198,14 @@ const handleCreateClick = () => {
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                                    onClick={() => handleVoidClick(reg)}
+                                    onClick={() => { if (!isAdvancePayment(reg)) handleVoidClick(reg); }}
+                                    aria-disabled={isAdvancePayment(reg)}
+                                    style={{ opacity: isAdvancePayment(reg) ? 0.4 : undefined }}
                                   >
                                     <RotateCcw className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Annuler ce règlement</TooltipContent>
+                                <TooltipContent>{isAdvancePayment(reg) ? "Règlement d'acompte : utilisez l'annulation d'acompte" : 'Annuler ce règlement'}</TooltipContent>
                               </Tooltip>
                             )}
                             <Tooltip>
@@ -200,12 +214,14 @@ const handleCreateClick = () => {
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                                  onClick={() => handleDeleteClick(reg)}
+                                  onClick={() => { if (!isAdvancePayment(reg)) handleDeleteClick(reg); }}
+                                  aria-disabled={isAdvancePayment(reg)}
+                                  style={{ opacity: isAdvancePayment(reg) ? 0.4 : undefined }}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Supprimer ce règlement</TooltipContent>
+                              <TooltipContent>{isAdvancePayment(reg) ? "Règlement d'acompte : utilisez l'annulation d'acompte" : 'Supprimer ce règlement'}</TooltipContent>
                             </Tooltip>
                           </div>
                         </TableCell>
