@@ -113,13 +113,14 @@ const handleCreateClick = () => {
     lines.map(l => invoices?.find(i => i.id === l.purchaseInvoiceId)?.invoiceNumber || 'Inconnue').join(', ');
 
   const isAdvancePayment = (reg: Reglement) => (advances ?? []).some((a) => a.reglementId === reg.id);
+  const getAdvanceOf = (reg: Reglement) => (advances ?? []).find((a) => a.reglementId === reg.id);
 
   const getInvoicesLabel = (reg: Reglement) => {
     if (reg.lines.length > 0) return getInvoiceNumbers(reg.lines);
     const advance = (advances ?? []).find((a) => a.reglementId === reg.id);
     if (!advance) return '';
     const invoiceNumber = invoices?.find((i) => i.id === advance.purchaseInvoiceId)?.invoiceNumber || 'Inconnue';
-    return `${invoiceNumber} (${advance.cancelsAdvanceId ? 'annulation' : 'acompte'} ${advance.advanceNumber})`;
+    return invoiceNumber;
   };
 
   const getSupplierName = (id: string) => {
@@ -165,6 +166,7 @@ const handleCreateClick = () => {
                       <TableHead>Date</TableHead>
                       <TableHead>Fournisseur</TableHead>
                       <TableHead>Factures</TableHead>
+                      <TableHead>Acompte</TableHead>
                       <TableHead className="text-right">Montant</TableHead>
                       <TableHead>Mode</TableHead>
                       <TableHead>Statut</TableHead>
@@ -180,7 +182,10 @@ const handleCreateClick = () => {
                         <TableCell>{format(new Date(reg.date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                         <TableCell>{getSupplierName(reg.supplierId)}</TableCell>
                         <TableCell className="font-mono text-xs">{getInvoicesLabel(reg)}</TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className={cn("font-mono text-xs", getAdvanceOf(reg)?.cancelsAdvanceId && "text-red-600")}>
+                          {getAdvanceOf(reg)?.advanceNumber ?? ''}
+                        </TableCell>
+                        <TableCell className={cn("text-right font-medium", reg.amount < 0 && "text-red-600")}>
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(reg.amount)}
                         </TableCell>
                         <TableCell>{getPaymentModeLabel(reg.paymentMode)}</TableCell>
