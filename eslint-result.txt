@@ -1,4 +1,4 @@
-ESLint run: 2026-11-12 09:41:43
+ESLint run: 2026-11-14 07:49:57
 
 > nextn@0.1.0 lint
 > next lint
@@ -73,11 +73,11 @@ ESLint run: 2026-11-12 09:41:43
 21:7  Warning: 'actionTypes' is assigned a value but only used as a type.  @typescript-eslint/no-unused-vars
 
 ./src/lib/api.ts
-180:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-324:28  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-329:33  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-330:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-334:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+190:18  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+334:28  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+339:33  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+340:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+344:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/lib/types.ts
 173:41  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any

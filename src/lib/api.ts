@@ -174,6 +174,16 @@ export type ApiPurchaseAdvanceEnter = {
   tva_rate: number;
 };
 
+export type ApiPurchaseAdvanceCancel = {
+  id: string;
+  advance_number: string;
+  reglement_id: string;
+  reglement_number: string;
+  advance_date: string;
+  payment_mode?: string | null;
+  due_date?: string | null;
+};
+
 function formatApiDetail(detail: unknown, fallback: string): string {
   if (typeof detail === 'string') return detail;
   if (Array.isArray(detail) && detail.length > 0) {
@@ -341,6 +351,7 @@ export const api = {
     return data.map(purchaseAdvanceFromApi);
   },
   enterPurchaseAdvance: (data: ApiPurchaseAdvanceEnter) => post<ApiPurchaseAdvance>('/purchase_advances/enter', data),
+  cancelPurchaseAdvance: (id: string, data: ApiPurchaseAdvanceCancel) => post<ApiPurchaseAdvance>('/purchase_advances/' + id + '/cancel', data),
   deletePurchaseAdvance: (id: string) => del('/purchase_advances/' + id),
 
 };

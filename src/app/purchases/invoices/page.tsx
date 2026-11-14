@@ -10,7 +10,7 @@ import { useTablePrefs } from '@/hooks/use-table-prefs';
 import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { PageHeader } from '@/components/page-header';
-import type { PurchaseInvoice, PurchaseCreditNote } from '@/lib/types';
+import type { PurchaseInvoice, PurchaseCreditNote, PurchaseAdvance } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,7 @@ import { FaaDialog } from '@/components/faa-dialog';
 import { AaaDialog } from '@/components/aaa-dialog';
 import { RaDialog } from '@/components/ra-dialog';
 import { AdvanceDialog } from '@/components/advance-dialog';
+import { CancelAdvanceDialog } from '@/components/cancel-advance-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 
@@ -191,6 +192,9 @@ export default function FAAPage() {
   const [payMenuOpen, setPayMenuOpen] = useState(false);
   const [advanceInvoice, setAdvanceInvoice] = useState<PurchaseInvoice | null>(null);
   const [advanceNumbers, setAdvanceNumbers] = useState({ advance: '', reglement: '' });
+  const [cancelAdvanceInvoice, setCancelAdvanceInvoice] = useState<PurchaseInvoice | null>(null);
+  const [cancellableAdvances, setCancellableAdvances] = useState<PurchaseAdvance[]>([]);
+  const [cancelAdvanceNumbers, setCancelAdvanceNumbers] = useState({ advance: '', reglement: '' });
   const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
   useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen && !bulkTransferOpen && !payMenuOpen, () => setSelectedIds(new Set()));
@@ -423,7 +427,7 @@ export default function FAAPage() {
       showWarning('pay', MULTI_SELECTION_MESSAGE);
       return;
     }
-    if (singleSelected?.status === 'Payée') {
+    if (singleSelected?.status === 'Payée' && (singleSelected.advanceTotal ?? 0) <= 0) {
       showWarning('pay', 'Cette facture est déjà réglée en totalité.');
       return;
     }
@@ -440,6 +444,34 @@ export default function FAAPage() {
         reglement: suggestNextNumber(reglementsList.map((r) => r.reglementNumber), 'RG'),
       });
       setAdvanceInvoice(invoice);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Action impossible',
+        description: (error instanceof Error && error.message) || 'Le chargement a échoué.',
+      });
+    }
+  };
+
+  const handleCancelAdvanceClick = async () => {
+    const invoice = singleSelected;
+    if (!invoice) return;
+    try {
+      const [advances, reglementsList] = await Promise.all([api.getPurchaseAdvances(), api.getReglements()]);
+      const cancelledIds = new Set(advances.filter((a) => a.cancelsAdvanceId).map((a) => a.cancelsAdvanceId));
+      const cancellable = advances.filter(
+        (a) => a.purchaseInvoiceId === invoice.id && !a.cancelsAdvanceId && a.totalTTC > 0 && !cancelledIds.has(a.id)
+      );
+      if (cancellable.length === 0) {
+        showWarning('pay', "Cette facture n'a aucun acompte à annuler.");
+        return;
+      }
+      setCancelAdvanceNumbers({
+        advance: suggestNextNumber(advances.map((a) => a.advanceNumber), 'AC'),
+        reglement: suggestNextNumber(reglementsList.map((r) => r.reglementNumber), 'RG'),
+      });
+      setCancellableAdvances(cancellable);
+      setCancelAdvanceInvoice(invoice);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -610,7 +642,7 @@ export default function FAAPage() {
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = !!singleSelected && singleSelected.status !== 'Brouillon';
   const validateBlocked = multiSelected && selectedDrafts.length === 0;
-  const payBlocked = multiSelected || singleSelected?.status === 'Payée';
+  const payBlocked = multiSelected || (singleSelected?.status === 'Payée' && (singleSelected.advanceTotal ?? 0) <= 0);
   const cancelValidationBlocked = !!singleSelected && (singleSelected.status === 'Partiellement payée' || singleSelected.status === 'Payée' || invoiceAlreadyCredited);
   const transferBlocked = multiSelected ? transferableInvoices.length === 0 : singleSelected?.status === 'Brouillon' || invoiceAlreadyCredited;
   const editBlocked = multiSelected;
@@ -715,6 +747,7 @@ export default function FAAPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={handleReglerClick}>Régler</DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleAdvanceClick}>Saisir un acompte</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={handleCancelAdvanceClick}>Annuler un acompte</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </ActionWarning>
@@ -849,6 +882,17 @@ export default function FAAPage() {
         supplierName={rows.find((r) => r.id === advanceInvoice?.id)?.supplierName ?? ''}
         suggestedAdvanceNumber={advanceNumbers.advance}
         suggestedReglementNumber={advanceNumbers.reglement}
+        onSaved={() => refetchInvoices()}
+      />
+
+      <CancelAdvanceDialog
+        open={!!cancelAdvanceInvoice}
+        onOpenChange={(open) => { if (!open) setCancelAdvanceInvoice(null); }}
+        invoice={cancelAdvanceInvoice}
+        supplierName={rows.find((r) => r.id === cancelAdvanceInvoice?.id)?.supplierName ?? ''}
+        advances={cancellableAdvances}
+        suggestedAdvanceNumber={cancelAdvanceNumbers.advance}
+        suggestedReglementNumber={cancelAdvanceNumbers.reglement}
         onSaved={() => refetchInvoices()}
       />
 
