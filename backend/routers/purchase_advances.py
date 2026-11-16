@@ -174,14 +174,29 @@ def delete_advance(id: str, db: Session = Depends(get_db)):
     advance = get_by_id(db, PurchaseAdvance, id)
     if not advance:
         raise HTTPException(status_code=404, detail="Facture d'acompte introuvable.")
-    if advance.cancels_advance_id:
+    cancelling = db.query(PurchaseAdvance).filter(PurchaseAdvance.cancels_advance_id == advance.id).first()
+    if cancelling:
         raise HTTPException(
             status_code=400,
-            detail="Cette pièce est une annulation d'acompte. Supprimez l'acompte d'origine pour la supprimer.",
+            detail=f"Cet acompte a été annulé par {cancelling.advance_number}. Supprimez d'abord l'annulation.",
         )
+    if advance.cancels_advance_id:
+        checked_invoice = get_by_id(db, PurchaseInvoice, advance.purchase_invoice_id)
+        if checked_invoice:
+            balance_after = round(
+                (checked_invoice.total_ttc or 0)
+                - (checked_invoice.amount_paid or 0)
+                - (net_advance(db, checked_invoice.id) - (advance.total_ttc or 0)),
+                2,
+            )
+            if balance_after < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Impossible de supprimer cette annulation : le solde de la facture deviendrait négatif.",
+                )
 
     try:
-        to_delete = [advance] + db.query(PurchaseAdvance).filter(PurchaseAdvance.cancels_advance_id == advance.id).all()
+        to_delete = [advance]
         invoice_id = advance.purchase_invoice_id
         reglement_ids = [item.reglement_id for item in to_delete if item.reglement_id]
         for item in to_delete:
