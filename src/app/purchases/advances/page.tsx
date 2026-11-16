@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/page-header';
 import type { PurchaseAdvance } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,7 +32,7 @@ type EnrichedAdvance = PurchaseAdvance & {
   supplierName: string;
   invoiceNumber?: string;
   reglementNumber?: string;
-  typeLabel: string;
+  cancelledBy?: string;
 };
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -52,7 +52,13 @@ const columns: DataTableColumn<EnrichedAdvance>[] = [
     cell: (a) => <span className="font-mono text-xs">{a.invoiceNumber ?? '—'}</span>,
     sortValue: (a) => a.invoiceNumber ?? null,
   },
-  { id: 'typeLabel', label: 'Type', cell: (a) => a.typeLabel, sortValue: (a) => a.typeLabel },
+  { id: 'documentType', label: 'Type de pièce', cell: () => "Facture d'acompte", sortValue: () => "Facture d'acompte" },
+  {
+    id: 'cancelledBy',
+    label: 'Annulée',
+    cell: (a) => <span className="font-mono text-xs">{a.cancelsAdvanceId ? '—' : (a.cancelledBy ?? 'Non')}</span>,
+    sortValue: (a) => (a.cancelsAdvanceId ? null : (a.cancelledBy ?? 'Non')),
+  },
   {
     id: 'totalHT',
     label: 'Total HT',
@@ -109,30 +115,25 @@ export default function AdvancesPage() {
     const supplierNameById = new Map((suppliers ?? []).map((s) => [s.id, s.name]));
     const invoiceNumberById = new Map((invoices ?? []).map((i) => [i.id, i.invoiceNumber]));
     const reglementNumberById = new Map((reglements ?? []).map((r) => [r.id, r.reglementNumber]));
-    const numberById = new Map(list.map((a) => [a.id, a.advanceNumber]));
     const cancelledByNumber = new Map<string, string>();
     list.forEach((a) => {
       if (a.cancelsAdvanceId) cancelledByNumber.set(a.cancelsAdvanceId, a.advanceNumber);
     });
     return list.map((a) => {
-      let typeLabel = 'Acompte';
-      if (a.cancelsAdvanceId) {
-        typeLabel = `Annulation de ${numberById.get(a.cancelsAdvanceId) ?? '—'}`;
-      } else if (cancelledByNumber.has(a.id)) {
-        typeLabel = `Acompte (annulé par ${cancelledByNumber.get(a.id)})`;
-      }
       return {
         ...a,
+        cancelledBy: cancelledByNumber.get(a.id),
         supplierName: supplierNameById.get(a.supplierId) ?? 'Inconnu',
         invoiceNumber: invoiceNumberById.get(a.purchaseInvoiceId),
         reglementNumber: a.reglementId ? reglementNumberById.get(a.reglementId) : undefined,
-        typeLabel,
       };
     });
   }, [advances, suppliers, invoices, reglements]);
 
-  // An acompte selected together with its cancellation is deleted once, through the original (the cancellation goes with it).
-  const toDelete = rows.filter((a) => selectedIds.has(a.id) && !(a.cancelsAdvanceId && selectedIds.has(a.cancelsAdvanceId)));
+  // Cancellations are deleted before the acompte they cancel (the server refuses the other order).
+  const toDelete = rows
+    .filter((a) => selectedIds.has(a.id))
+    .sort((a, b) => Number(!!b.cancelsAdvanceId) - Number(!!a.cancelsAdvanceId) || compareDocumentNumbers(a.advanceNumber, b.advanceNumber));
 
   const handleDeleteRequest = () => {
     if (isBulkRunning || toDelete.length === 0) return;
@@ -205,6 +206,7 @@ export default function AdvancesPage() {
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
               defaultSort={{ columnId: 'advanceNumber', direction: 'asc' }}
+              rowClassName={(a) => (a.cancelsAdvanceId ? '[&>td]:text-red-600' : undefined)}
               emptyMessage={
                 <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-48">
                   <div className="flex flex-col items-center gap-1 text-center">
@@ -229,7 +231,7 @@ export default function AdvancesPage() {
               {`Supprimer ${toDelete.length} facture${toDelete.length > 1 ? 's' : ''} d'acompte ?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {`Cette action est irréversible. ${toDelete.length > 1 ? 'Ces acomptes seront supprimés' : 'Cet acompte sera supprimé'}, avec leur annulation éventuelle et leurs règlements automatiques. Fonction temporaire, réservée aux tests.`}
+              {`Cette action est irréversible. ${toDelete.length > 1 ? 'Ces pièces seront supprimées, avec leurs règlements automatiques' : 'Cette pièce sera supprimée, avec son règlement automatique'}. Une annulation se supprime avant l'acompte qu'elle annule. Fonction temporaire, réservée aux tests.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
