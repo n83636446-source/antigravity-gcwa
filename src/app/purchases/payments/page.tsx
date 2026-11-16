@@ -175,7 +175,7 @@ const handleCreateClick = () => {
                   </TableHeader>
                   <TableBody>
                     {reglements.map((reg) => (
-                      <TableRow key={reg.id} className={cn(reg.status === 'Annulé' && "opacity-60")}>
+                      <TableRow key={reg.id} className={cn(reg.status === 'Annulé' && "opacity-60", getAdvanceOf(reg)?.cancelsAdvanceId && "text-red-600")}>
                         <TableCell className={cn("font-medium font-mono", reg.status === 'Annulé' && "line-through")}>
                           {reg.reglementNumber}
                         </TableCell>
@@ -190,7 +190,7 @@ const handleCreateClick = () => {
                         </TableCell>
                         <TableCell>{getPaymentModeLabel(reg.paymentMode)}</TableCell>
                         <TableCell>
-                          <Badge variant={reg.status === 'Actif' ? 'default' : 'secondary'} className={cn(reg.status === 'Actif' ? "bg-green-600 hover:bg-green-700" : "")}>
+                          <Badge variant={reg.status === 'Actif' ? 'default' : 'secondary'} className={cn(reg.status === 'Actif' ? (getAdvanceOf(reg)?.cancelsAdvanceId ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700") : "")}>
                             {reg.status}
                           </Badge>
                         </TableCell>
