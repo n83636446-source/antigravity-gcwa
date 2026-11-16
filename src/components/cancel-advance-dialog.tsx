@@ -54,6 +54,13 @@ export function CancelAdvanceDialog({
 
   const selectionError = !selectedId ? "Choisissez l'acompte à annuler." : null;
 
+  const handleDateChange = (next: Date | undefined) => {
+    setDate(next);
+    if (next && dueDate && dueDate.getTime() < new Date(next.getFullYear(), next.getMonth(), next.getDate()).getTime()) {
+      setDueDate(next);
+    }
+  };
+
   const handleSubmit = async () => {
     setShowErrors(true);
     if (!invoice || !selectedId || !date || selectionError) return;
@@ -128,7 +135,7 @@ export function CancelAdvanceDialog({
           <div className="grid grid-cols-[130px_1fr] items-center gap-2">
             <span className="text-sm">Date</span>
             <div>
-              <DatePickerField selected={date} onSelect={setDate} placeholder="JJ/MM/AAAA" />
+              <DatePickerField selected={date} onSelect={handleDateChange} placeholder="JJ/MM/AAAA" />
             </div>
           </div>
 
@@ -146,7 +153,7 @@ export function CancelAdvanceDialog({
 
           <div className="grid grid-cols-[130px_1fr] items-center gap-2">
             <span className="text-sm">Date échéance</span>
-            <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" />
+            <DatePickerField selected={dueDate} onSelect={setDueDate} placeholder="JJ/MM/AAAA" minDate={date} warningInOwnRow />
           </div>
 
           <p className="text-xs text-muted-foreground">
