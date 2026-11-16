@@ -123,14 +123,14 @@ export function CancelAdvanceDialog({
                 </label>
               ))}
             </div>
-            {showErrors && selectionError && <p className="mt-1 text-sm text-red-500">{selectionError}</p>}
+            <p className="mt-1 min-h-5 text-sm text-red-500">{showErrors && selectionError ? selectionError : '\u00A0'}</p>
           </div>
 
           <div className="grid grid-cols-[130px_1fr] items-center gap-2">
             <span className="text-sm">Date</span>
             <div>
               <DatePickerField selected={date} onSelect={setDate} placeholder="JJ/MM/AAAA" />
-              {showErrors && dateError && <p className="mt-1 text-sm text-red-500">{dateError}</p>}
+              <p className="mt-1 min-h-5 text-sm text-red-500">{showErrors && dateError ? dateError : '\u00A0'}</p>
             </div>
           </div>
 

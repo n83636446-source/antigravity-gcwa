@@ -744,7 +744,7 @@ export default function FAAPage() {
                       </TooltipTrigger>
                       <TooltipContent>Régler</TooltipContent>
                     </Tooltip>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
                       <DropdownMenuItem onSelect={handleReglerClick}>Régler</DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleAdvanceClick}>Saisir un acompte</DropdownMenuItem>
                       <DropdownMenuItem onSelect={handleCancelAdvanceClick}>Annuler un acompte</DropdownMenuItem>
