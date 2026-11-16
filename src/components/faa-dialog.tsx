@@ -235,6 +235,10 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
     { totalHT: 0, totalTVA: 0, totalTTC: 0 }
   );
 
+  const advanceTotal = invoiceToEdit?.advanceTotal ?? 0;
+  const amountPaid = invoiceToEdit?.amountPaid ?? 0;
+  const balanceDue = roundMoney(totalTTC - advanceTotal - amountPaid);
+
   useEffect(() => {
     const fetchData = async () => {
       
@@ -325,6 +329,12 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
     if (isBefore(dueDate, startOfDay(date))) {
         newErrors.dueDate = true;
         hasError = true;
+    }
+
+    if (isEditMode && totalTTC < advanceTotal) {
+        toast({ title: "Erreur", description: "Le total de la facture ne peut pas être inférieur aux acomptes déjà saisis.", variant: "destructive" });
+        triggerFieldShake();
+        return;
     }
 
     if (hasError) {
@@ -712,6 +722,15 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
             <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
             <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>{totalTVA.toFixed(2)} €</span></div>
             <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>TOTAL TTC:</span> <span>{totalTTC.toFixed(2)} €</span></div>
+            {isEditMode && (
+              <>
+                <div className="flex justify-end gap-4"><span className="text-muted-foreground">Acompte:</span> <span>− {advanceTotal.toFixed(2)} €</span></div>
+                {amountPaid > 0 && (
+                  <div className="flex justify-end gap-4"><span className="text-muted-foreground">Déjà réglé:</span> <span>− {amountPaid.toFixed(2)} €</span></div>
+                )}
+                <div className={cn("flex justify-end gap-4 font-semibold", balanceDue < 0 && "text-red-600")}><span>SOLDE DÛ:</span> <span>{balanceDue.toFixed(2)} €</span></div>
+              </>
+            )}
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>{isLocked ? "Fermer" : "Annuler"}</Button>
