@@ -53,11 +53,10 @@ export function CancelAdvanceDialog({
   }, [open, invoice]);
 
   const selectionError = !selectedId ? "Choisissez l'acompte à annuler." : null;
-  const dateError = !date ? 'La date est obligatoire.' : null;
 
   const handleSubmit = async () => {
     setShowErrors(true);
-    if (!invoice || !selectedId || !date || selectionError || dateError) return;
+    if (!invoice || !selectedId || !date || selectionError) return;
     setIsSubmitting(true);
     try {
       const saved = await api.cancelPurchaseAdvance(selectedId, {
@@ -130,7 +129,6 @@ export function CancelAdvanceDialog({
             <span className="text-sm">Date</span>
             <div>
               <DatePickerField selected={date} onSelect={setDate} placeholder="JJ/MM/AAAA" />
-              <p className="mt-1 min-h-5 text-sm text-red-500">{showErrors && dateError ? dateError : '\u00A0'}</p>
             </div>
           </div>
 
