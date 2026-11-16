@@ -7,11 +7,19 @@ import { cn } from '@/lib/utils';
 
 export type ActionWarningState = { key: string; title: string; message: string } | null;
 
+// TEMPORARY DIAGNOSTIC (remove after investigation)
+const bubbleNow = () => Math.round(performance.now());
+const describeBubbleTarget = (e: { detail: { originalEvent: Event } }) => {
+  const t = e.detail.originalEvent.target as HTMLElement | null;
+  return `${t?.tagName ?? '?'} | ${(t?.getAttribute?.('class') ?? '').slice(0, 60)} | ${(t?.textContent ?? '').slice(0, 30)}`;
+};
+
 export function useActionWarning(durationMs = 6000) {
   const [warning, setWarning] = React.useState<ActionWarningState>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearWarning = React.useCallback(() => {
+    console.log('[bubble] clearWarning called', bubbleNow(), new Error().stack?.split('\n').slice(1, 5).join(' <- '));
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -23,7 +31,9 @@ export function useActionWarning(durationMs = 6000) {
     (key: string, message: string, title = 'Action impossible') => {
       if (timerRef.current) clearTimeout(timerRef.current);
       setWarning({ key, title, message });
+      console.log('[bubble] show', key, bubbleNow());
       timerRef.current = setTimeout(() => {
+        console.log('[bubble] timer expired', key, bubbleNow());
         setWarning(null);
         timerRef.current = null;
       }, durationMs);
@@ -53,7 +63,13 @@ export function ActionWarning({
 }) {
   const open = warning?.key === id;
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+    <PopoverPrimitive.Root
+      open={open}
+      onOpenChange={(next) => {
+        console.log('[bubble] onOpenChange', id, next, bubbleNow());
+        if (!next) onClose();
+      }}
+    >
       <PopoverPrimitive.Anchor asChild>
         <div className="inline-flex">{children}</div>
       </PopoverPrimitive.Anchor>
@@ -64,6 +80,10 @@ export function ActionWarning({
           sideOffset={8}
           role="alert"
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onFocusOutside={(e) => console.log('[bubble] focus outside', id, bubbleNow(), describeBubbleTarget(e))}
+          onPointerDownOutside={(e) => console.log('[bubble] pointer down outside', id, bubbleNow(), describeBubbleTarget(e))}
+          onInteractOutside={(e) => console.log('[bubble] interact outside', id, bubbleNow(), describeBubbleTarget(e))}
+          onEscapeKeyDown={() => console.log('[bubble] escape key', id, bubbleNow())}
           onCloseAutoFocus={(e) => e.preventDefault()}
           className={cn(
             'z-50 w-72 max-w-[90vw] rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 shadow-md outline-none',
