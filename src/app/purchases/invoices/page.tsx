@@ -181,11 +181,13 @@ export default function FAAPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<PurchaseInvoice | null>(null);
 
-  const [invoiceToReglement, setInvoiceToReglement] = useState<PurchaseInvoice | null>(null);
+  const [invoicesToReglement, setInvoicesToReglement] = useState<PurchaseInvoice[]>([]);
+  const setInvoiceToReglement = (invoice: PurchaseInvoice | null) => setInvoicesToReglement(invoice ? [invoice] : []);
   const [invoiceToTransfer, setInvoiceToTransfer] = useState<PurchaseInvoice | null>(null);
   const [validateThenTransferOpen, setValidateThenTransferOpen] = useState(false);
   const [isValidatingForTransfer, setIsValidatingForTransfer] = useState(false);
   const [validateThenPayOpen, setValidateThenPayOpen] = useState(false);
+  const [bulkPayDraftsOpen, setBulkPayDraftsOpen] = useState(false);
   const [isValidatingForPay, setIsValidatingForPay] = useState(false);
   const [bulkValidateOpen, setBulkValidateOpen] = useState(false);
   const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
@@ -197,7 +199,7 @@ export default function FAAPage() {
   const [cancelAdvanceNumbers, setCancelAdvanceNumbers] = useState({ advance: '', reglement: '' });
   const [bulkTransferFirstNumber, setBulkTransferFirstNumber] = useState('');
 
-  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkValidateOpen && !bulkTransferOpen && !payMenuOpen, () => setSelectedIds(new Set()));
+  useClearSelectionOnOutsideClick(cardRef, !deleteDialogOpen && !validateThenTransferOpen && !validateThenPayOpen && !bulkPayDraftsOpen && !bulkValidateOpen && !bulkTransferOpen && !payMenuOpen, () => setSelectedIds(new Set()));
 
   // --- DATA FETCHING ---
   const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useApiCollection(() => api.getPurchaseInvoices().then(r => r.map(purchaseInvoiceFromApi)));
@@ -254,6 +256,10 @@ export default function FAAPage() {
       : plannedCreditNoteNumbers[0] ?? '';
   const selectedDrafts = selectedInvoices.filter((i) => i.status === 'Brouillon');
   const selectedAlreadyValidatedCount = selectedInvoices.length - selectedDrafts.length;
+  const invoiceBalance = (i: EnrichedInvoice) => roundMoney(i.totalTTC - (i.amountPaid ?? 0) - (i.advanceTotal ?? 0));
+  const payableInvoices = sortByInvoiceNumber(selectedInvoices.filter((i) => invoiceBalance(i) > 0));
+  const payableDrafts = payableInvoices.filter((i) => i.status === 'Brouillon');
+  const settledIgnoredCount = selectedInvoices.length - payableInvoices.length;
   const draftsWithoutReceiptCount = selectedDrafts.filter((i) => !i.purchaseReceiptId).length;
   const refusedText = `${selectedAlreadyValidatedCount} facture${selectedAlreadyValidatedCount > 1 ? 's validées seront refusées' : ' validée sera refusée'}.`;
   const bulkDeleteDescription =
@@ -423,10 +429,6 @@ export default function FAAPage() {
       setPayMenuOpen(false);
       return;
     }
-    if (multiSelected) {
-      showWarning('pay', MULTI_SELECTION_MESSAGE);
-      return;
-    }
     if (singleSelected?.status === 'Payée' && (singleSelected.advanceTotal ?? 0) <= 0) {
       showWarning('pay', 'Cette facture est déjà réglée en totalité.');
       return;
@@ -435,7 +437,7 @@ export default function FAAPage() {
   };
 
   const handleAdvanceClick = async () => {
-    const invoice = singleSelected;
+    const invoice = requireSingle('pay');
     if (!invoice) return;
     try {
       const [advances, reglementsList] = await Promise.all([api.getPurchaseAdvances(), api.getReglements()]);
@@ -454,7 +456,7 @@ export default function FAAPage() {
   };
 
   const handleCancelAdvanceClick = async () => {
-    const invoice = singleSelected;
+    const invoice = requireSingle('pay');
     if (!invoice) return;
     try {
       const [advances, reglementsList] = await Promise.all([api.getPurchaseAdvances(), api.getReglements()]);
@@ -481,7 +483,60 @@ export default function FAAPage() {
     }
   };
 
+  const openBulkPayment = (list: PurchaseInvoice[]) => {
+    if (settledIgnoredCount > 0) {
+      toast({
+        title: 'Factures ignorées',
+        description: `${settledIgnoredCount} facture${settledIgnoredCount > 1 ? 's déjà réglées ont été ignorées' : ' déjà réglée a été ignorée'}.`,
+      });
+    }
+    setInvoiceToEdit(null);
+    setInvoiceToTransfer(null);
+    setInvoicesToReglement(list);
+    setDialogToken((prev) => prev + 1);
+  };
+
+  const handleBulkReglerClick = () => {
+    if (isBulkRunning) return;
+    if (new Set(selectedInvoices.map((i) => i.supplierId)).size > 1) {
+      showWarning('pay', 'Les factures sélectionnées doivent appartenir au même fournisseur.', 'Règlement impossible');
+      return;
+    }
+    if (payableInvoices.length === 0) {
+      showWarning('pay', 'Ces factures sont déjà réglées en totalité.', 'Règlement impossible');
+      return;
+    }
+    if (payableDrafts.length > 0) {
+      setBulkPayDraftsOpen(true);
+      return;
+    }
+    openBulkPayment(payableInvoices);
+  };
+
+  const handleBulkValidateAndPay = async () => {
+    const payable = payableInvoices;
+    setBulkPayDraftsOpen(false);
+    const result = await runBulk({
+      items: payableDrafts,
+      getName: (i) => i.invoiceNumber,
+      action: (i) => api.validatePurchaseInvoice(i.id),
+      successLabel: (n) => `${n} facture${n > 1 ? 's' : ''} validée${n > 1 ? 's' : ''}`,
+      failureTitle: 'Validation impossible',
+    });
+    refetchInvoices();
+    const failedNumbers = new Set(result.failures.map((f) => f.name));
+    const ready = payable
+      .filter((i) => !failedNumbers.has(i.invoiceNumber))
+      .map((i) => (i.status === 'Brouillon' ? ({ ...i, status: 'Non payée' } as EnrichedInvoice) : i));
+    if (ready.length === 0) return;
+    openBulkPayment(ready);
+  };
+
   const handleReglerClick = () => {
+    if (multiSelected) {
+      handleBulkReglerClick();
+      return;
+    }
     const invoice = requireSingle('pay');
     if (!invoice) return;
     if (invoice.status === 'Payée') {
@@ -642,7 +697,7 @@ export default function FAAPage() {
   const showValidateButton = singleSelected ? singleSelected.status === 'Brouillon' : multiSelected;
   const showCancelButton = !!singleSelected && singleSelected.status !== 'Brouillon';
   const validateBlocked = multiSelected && selectedDrafts.length === 0;
-  const payBlocked = multiSelected || (singleSelected?.status === 'Payée' && (singleSelected.advanceTotal ?? 0) <= 0);
+  const payBlocked = !multiSelected && singleSelected?.status === 'Payée' && (singleSelected.advanceTotal ?? 0) <= 0;
   const cancelValidationBlocked = !!singleSelected && (singleSelected.status === 'Partiellement payée' || singleSelected.status === 'Payée' || invoiceAlreadyCredited);
   const transferBlocked = multiSelected ? transferableInvoices.length === 0 : singleSelected?.status === 'Brouillon' || invoiceAlreadyCredited;
   const editBlocked = multiSelected;
@@ -869,8 +924,13 @@ export default function FAAPage() {
       {/* Rendu masqué du dialogue pour permettre son déclenchement externe */}
       <div className="hidden">
         <FaaDialog key={`${dialogToken}-${invoiceToEdit?.id ?? 'new'}`} invoiceToEdit={invoiceToEdit} onSaveSuccess={() => refetchInvoices()} />
-        {invoiceToReglement && (
-          <RaDialog key={`reglement-${dialogToken}-${invoiceToReglement.id}`} purchaseInvoice={invoiceToReglement} onSaveSuccess={() => refetchInvoices()} />
+        {invoicesToReglement.length > 0 && (
+          <RaDialog
+            key={`reglement-${dialogToken}-${invoicesToReglement.map((i) => i.id).join('-')}`}
+            purchaseInvoice={invoicesToReglement.length === 1 ? invoicesToReglement[0] : null}
+            purchaseInvoices={invoicesToReglement.length > 1 ? invoicesToReglement : null}
+            onSaveSuccess={() => refetchInvoices()}
+          />
         )}
         <AaaDialog key={`transfer-${dialogToken}-${invoiceToTransfer?.id ?? 'none'}`} invoiceToTransfer={invoiceToTransfer} isTransferInstance={true} onSaveSuccess={() => refetchCreditNotes()} />
       </div>
@@ -1010,6 +1070,22 @@ export default function FAAPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isValidatingForPay}>Annuler</AlertDialogCancel>
             <AlertDialogAction disabled={isValidatingForPay} onClick={(e) => { e.preventDefault(); handleValidateAndPay(); }}>
+              Valider et régler
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={bulkPayDraftsOpen} onOpenChange={setBulkPayDraftsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Factures non validées</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`${payableDrafts.length} facture${payableDrafts.length > 1 ? 's' : ''} sélectionnée${payableDrafts.length > 1 ? 's' : ''} ${payableDrafts.length > 1 ? 'ne sont' : "n'est"} pas encore validée${payableDrafts.length > 1 ? 's' : ''}. ${payableDrafts.length > 1 ? 'Elles seront validées' : 'Elle sera validée'}, dans l'ordre des numéros, avant le règlement. Voulez-vous continuer ?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkRunning}>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={isBulkRunning} onClick={(e) => { e.preventDefault(); handleBulkValidateAndPay(); }}>
               Valider et régler
             </AlertDialogAction>
           </AlertDialogFooter>
