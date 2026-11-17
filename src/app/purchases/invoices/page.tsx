@@ -483,8 +483,8 @@ export default function FAAPage() {
     }
   };
 
-  const openBulkPayment = (list: PurchaseInvoice[]) => {
-    if (settledIgnoredCount > 0) {
+  const openBulkPayment = (list: PurchaseInvoice[], notifyIgnored = true) => {
+    if (notifyIgnored && settledIgnoredCount > 0) {
       toast({
         title: 'Factures ignorées',
         description: `${settledIgnoredCount} facture${settledIgnoredCount > 1 ? 's déjà réglées ont été ignorées' : ' déjà réglée a été ignorée'}.`,
@@ -529,7 +529,7 @@ export default function FAAPage() {
       .filter((i) => !failedNumbers.has(i.invoiceNumber))
       .map((i) => (i.status === 'Brouillon' ? ({ ...i, status: 'Non payée' } as EnrichedInvoice) : i));
     if (ready.length === 0) return;
-    openBulkPayment(ready);
+    openBulkPayment(ready, false);
   };
 
   const handleReglerClick = () => {
@@ -782,7 +782,7 @@ export default function FAAPage() {
                 style={{ transitionDelay: toolbarVisible ? '75ms' : '0ms' }}
               >
                 <ActionWarning id="pay" warning={warning} onClose={clearWarning}>
-                  <DropdownMenu open={payMenuOpen} onOpenChange={handlePayMenuOpenChange}>
+                  <DropdownMenu open={payMenuOpen} onOpenChange={handlePayMenuOpenChange} modal={false}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DropdownMenuTrigger asChild>
@@ -1080,7 +1080,7 @@ export default function FAAPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Factures non validées</AlertDialogTitle>
             <AlertDialogDescription>
-              {`${payableDrafts.length} facture${payableDrafts.length > 1 ? 's' : ''} sélectionnée${payableDrafts.length > 1 ? 's' : ''} ${payableDrafts.length > 1 ? 'ne sont' : "n'est"} pas encore validée${payableDrafts.length > 1 ? 's' : ''}. ${payableDrafts.length > 1 ? 'Elles seront validées' : 'Elle sera validée'}, dans l'ordre des numéros, avant le règlement. Voulez-vous continuer ?`}
+              {`${payableDrafts.length} facture${payableDrafts.length > 1 ? 's' : ''} sélectionnée${payableDrafts.length > 1 ? 's' : ''} ${payableDrafts.length > 1 ? 'ne sont' : "n'est"} pas encore validée${payableDrafts.length > 1 ? 's' : ''}. ${payableDrafts.length > 1 ? 'Elles seront validées' : 'Elle sera validée'}, dans l'ordre des numéros, avant le règlement.${settledIgnoredCount > 0 ? ` ${settledIgnoredCount} facture${settledIgnoredCount > 1 ? 's déjà réglées seront ignorées' : ' déjà réglée sera ignorée'}.` : ''} Voulez-vous continuer ?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
