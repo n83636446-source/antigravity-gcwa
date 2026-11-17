@@ -1,4 +1,4 @@
-ESLint run: 2026-11-17 09:35:55
+ESLint run: 2026-11-17 10:20:23
 
 > nextn@0.1.0 lint
 > next lint
@@ -6,9 +6,6 @@ ESLint run: 2026-11-17 09:35:55
 
 ./src/app/layout.tsx
 29:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
-
-./src/app/purchases/payments/page.tsx
-97:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/aaa-dialog.tsx
 110:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
