@@ -717,22 +717,11 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
           </div>
         </form>
       </div>
-      <div className="flex-none p-6 pt-4 border-t bg-gray-50 rounded-b-lg text-right">
-        <div className="flex items-start justify-between gap-6 mb-4">
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-1 text-left">
-              {isEditMode && (
-                <>
-                  <div className="flex gap-2"><span className="text-muted-foreground">Acompte:</span> <span>− {advanceTotal.toFixed(2)} €</span></div>
-                  <div className="flex gap-2"><span className="text-muted-foreground">Déjà réglé:</span> <span>− {amountPaid.toFixed(2)} €</span></div>
-                  <div className={cn("flex gap-2 font-semibold", balanceDue < 0 && "text-red-600")}><span>SOLDE DÛ:</span> <span>{balanceDue.toFixed(2)} €</span></div>
-                </>
-              )}
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
-              <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>{totalTVA.toFixed(2)} €</span></div>
-              <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>TOTAL TTC:</span> <span>{totalTTC.toFixed(2)} €</span></div>
-            </div>
+      <div className="flex-none p-6 pt-4 border-t bg-gray-50 text-right">
+        <div className="space-y-2 mb-4">
+            <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total HT:</span> <span>{totalHT.toFixed(2)} €</span></div>
+            <div className="flex justify-end gap-4"><span className="text-muted-foreground">Total TVA:</span> <span>{totalTVA.toFixed(2)} €</span></div>
+            <div className="flex justify-end gap-4 font-bold text-lg text-blue-900"><span>TOTAL TTC:</span> <span>{totalTTC.toFixed(2)} €</span></div>
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>{isLocked ? "Fermer" : "Annuler"}</Button>
@@ -742,6 +731,15 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
             </Button>
           )}
         </div>
+      </div>
+      <div className="flex-none h-10 px-6 border-t bg-gray-100 rounded-b-lg flex items-center gap-x-8 text-sm text-left">
+        {isEditMode && (
+          <>
+            <div className="flex gap-2"><span className="text-muted-foreground">Acompte:</span> <span>− {advanceTotal.toFixed(2)} €</span></div>
+            <div className="flex gap-2"><span className="text-muted-foreground">Déjà réglé:</span> <span>− {amountPaid.toFixed(2)} €</span></div>
+            <div className={cn("flex gap-2 font-semibold", balanceDue < 0 && "text-red-600")}><span>SOLDE DÛ:</span> <span>{balanceDue.toFixed(2)} €</span></div>
+          </>
+        )}
       </div>
     </div>
   );
