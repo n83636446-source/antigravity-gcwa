@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { PlusCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { FileX, PlusCircle, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { supplierFromApi, purchaseInvoiceFromApi } from '@/lib/types';
 import type { Reglement, PurchaseAdvance } from '@/lib/types';
@@ -286,7 +286,7 @@ export default function RAPage() {
                         onClick={handleVoidRequest}
                         aria-disabled={voidBlocked}
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <FileX className="h-4 w-4" />
                         <span className="sr-only">Annuler le règlement</span>
                       </Button>
                     </TooltipTrigger>
