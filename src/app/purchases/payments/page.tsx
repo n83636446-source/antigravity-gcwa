@@ -10,6 +10,7 @@ import type { Reglement, PurchaseAdvance } from '@/lib/types';
 import { useApiCollection } from '@/hooks/use-api';
 import { useTablePrefs } from '@/hooks/use-table-prefs';
 import { useToast } from '@/hooks/use-toast';
+import { useBulkAction } from '@/hooks/use-bulk-action';
 import { DataTable, ResetSortButton, useClearSelectionOnOutsideClick, type DataTableColumn } from '@/components/data-table';
 import { ActionWarning, useActionWarning } from '@/components/action-warning';
 import { PageHeader } from '@/components/page-header';
@@ -29,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
+import { cn, compareDocumentNumbers } from '@/lib/utils';
 
 type EnrichedReglement = Reglement & {
   supplierName: string;
@@ -115,6 +116,7 @@ export default function RAPage() {
   const { warning, showWarning, clearWarning } = useActionWarning();
   const cardRef = useRef<HTMLDivElement>(null);
   const tablePrefs = useTablePrefs('purchase-payments', columnIds);
+  const { runBulk, isRunning: isBulkRunning } = useBulkAction();
 
   // --- STATES ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -165,8 +167,25 @@ export default function RAPage() {
   const multiSelected = selectedRows.length > 1;
   const toolbarVisible = selectedRows.length > 0;
 
-  const voidBlocked = multiSelected || (!!singleSelected && (singleSelected.isAdvancePayment || singleSelected.status === 'Annulé'));
-  const deleteBlocked = multiSelected || (!!singleSelected && singleSelected.isAdvancePayment);
+  const sortedSelected = [...selectedRows].sort((a, b) => compareDocumentNumbers(a.reglementNumber, b.reglementNumber));
+  const voidableCount = selectedRows.filter((r) => !r.isAdvancePayment && r.status === 'Actif').length;
+  const deletableCount = selectedRows.filter((r) => !r.isAdvancePayment).length;
+  const voidRefusedCount = selectedRows.length - voidableCount;
+  const deleteRefusedCount = selectedRows.length - deletableCount;
+  const refusedVoidText = `${voidRefusedCount} règlement${voidRefusedCount > 1 ? 's seront refusés' : ' sera refusé'} (déjà annulé${voidRefusedCount > 1 ? 's' : ''} ou règlement${voidRefusedCount > 1 ? 's' : ''} d'acompte).`;
+  const refusedDeleteText = `${deleteRefusedCount} règlement${deleteRefusedCount > 1 ? 's' : ''} d'acompte ${deleteRefusedCount > 1 ? 'seront refusés' : 'sera refusé'}.`;
+  const bulkVoidDescription =
+    voidRefusedCount === 0
+      ? `Les ${selectedRows.length} règlements sélectionnés seront annulés et le solde dû sera rétabli sur les factures correspondantes.`
+      : `${voidableCount} des ${selectedRows.length} règlements sélectionnés ${voidableCount > 1 ? 'seront annulés' : 'sera annulé'}. ${refusedVoidText}`;
+  const bulkDeleteDescription =
+    deleteRefusedCount === 0
+      ? `Cette action est irréversible. Les ${selectedRows.length} règlements sélectionnés seront supprimés.`
+      : `Cette action est irréversible. ${deletableCount} des ${selectedRows.length} règlements sélectionnés ${deletableCount > 1 ? 'seront supprimés' : 'sera supprimé'}. ${refusedDeleteText}`;
+  const voidBlocked = multiSelected
+    ? voidableCount === 0
+    : !!singleSelected && (singleSelected.isAdvancePayment || singleSelected.status === 'Annulé');
+  const deleteBlocked = multiSelected ? deletableCount === 0 : !!singleSelected && singleSelected.isAdvancePayment;
 
   const requireSingle = (key: string): EnrichedReglement | null => {
     if (singleSelected) return singleSelected;
@@ -181,6 +200,15 @@ export default function RAPage() {
   };
 
   const handleVoidRequest = () => {
+    if (isBulkRunning) return;
+    if (multiSelected) {
+      if (voidableCount === 0) {
+        showWarning('void', "Les règlements sélectionnés sont déjà annulés ou sont des règlements d'acompte.", 'Annulation impossible');
+        return;
+      }
+      setVoidDialogOpen(true);
+      return;
+    }
     const reglement = requireSingle('void');
     if (!reglement) return;
     if (reglement.isAdvancePayment) {
@@ -195,6 +223,21 @@ export default function RAPage() {
   };
 
   const handleVoidConfirm = async () => {
+    if (multiSelected) {
+      const items = sortedSelected;
+      setVoidDialogOpen(false);
+      await runBulk({
+        items,
+        getName: (r) => r.reglementNumber,
+        action: (r) => api.voidReglement(r.id),
+        successLabel: (n) => `${n} règlement${n > 1 ? 's' : ''} annulé${n > 1 ? 's' : ''}`,
+        failureTitle: 'Annulation impossible',
+      });
+      refetchReglements();
+      refetchInvoices();
+      setSelectedIds(new Set());
+      return;
+    }
     const reglement = singleSelected;
     setVoidDialogOpen(false);
     if (!reglement) return;
@@ -214,6 +257,15 @@ export default function RAPage() {
   };
 
   const handleDeleteRequest = () => {
+    if (isBulkRunning) return;
+    if (multiSelected) {
+      if (deletableCount === 0) {
+        showWarning('delete', "Les règlements sélectionnés sont des règlements d'acompte.", 'Suppression impossible');
+        return;
+      }
+      setDeleteDialogOpen(true);
+      return;
+    }
     const reglement = requireSingle('delete');
     if (!reglement) return;
     if (reglement.isAdvancePayment) {
@@ -224,6 +276,21 @@ export default function RAPage() {
   };
 
   const handleDeleteConfirm = async () => {
+    if (multiSelected) {
+      const items = sortedSelected;
+      setDeleteDialogOpen(false);
+      await runBulk({
+        items,
+        getName: (r) => r.reglementNumber,
+        action: (r) => api.deleteReglement(r.id),
+        successLabel: (n) => `${n} règlement${n > 1 ? 's' : ''} supprimé${n > 1 ? 's' : ''}`,
+        failureTitle: 'Suppression impossible',
+      });
+      refetchReglements();
+      refetchInvoices();
+      setSelectedIds(new Set());
+      return;
+    }
     const reglement = singleSelected;
     setDeleteDialogOpen(false);
     if (!reglement) return;
@@ -369,12 +436,18 @@ export default function RAPage() {
         />
       )}
 
-      <AlertDialog open={voidDialogOpen} onOpenChange={setVoidDialogOpen}>
+      <AlertDialog open={voidDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setVoidDialogOpen(open); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Annuler ce règlement ?</AlertDialogTitle>
+            <AlertDialogTitle>{multiSelected ? `Annuler ${selectedRows.length} règlements ?` : 'Annuler ce règlement ?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action marquera le règlement <strong>{singleSelected?.reglementNumber}</strong> comme annulé et rétablira le solde dû sur la facture correspondante.
+              {multiSelected ? (
+                bulkVoidDescription
+              ) : (
+                <>
+                  Cette action marquera le règlement <strong>{singleSelected?.reglementNumber}</strong> comme annulé et rétablira le solde dû sur la facture correspondante.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -386,13 +459,19 @@ export default function RAPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isBulkRunning) setDeleteDialogOpen(open); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce règlement ?</AlertDialogTitle>
+            <AlertDialogTitle>{multiSelected ? `Supprimer ${selectedRows.length} règlements ?` : 'Supprimer ce règlement ?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action supprimera définitivement le règlement <strong>{singleSelected?.reglementNumber}</strong>.
-              {singleSelected?.status === 'Actif' && ' Le solde dû sera rétabli sur la facture correspondante.'}
+              {multiSelected ? (
+                bulkDeleteDescription
+              ) : (
+                <>
+                  Cette action supprimera définitivement le règlement <strong>{singleSelected?.reglementNumber}</strong>.
+                  {singleSelected?.status === 'Actif' && ' Le solde dû sera rétabli sur la facture correspondante.'}
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
