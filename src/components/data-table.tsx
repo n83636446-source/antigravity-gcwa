@@ -39,6 +39,8 @@ export type TablePrefs = {
   setUserSort: (next: SortState | null) => void;
   columnOrder: string[] | null;
   setColumnOrder: (next: string[] | null) => void;
+  columnWidths: Record<string, number> | null;
+  setColumnWidths: (next: Record<string, number> | null) => void;
   resetPrefs: () => void;
   isCustomized: boolean;
 };
@@ -58,6 +60,8 @@ type DataTableProps<T> = {
 
 const isEmptyValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === '';
+
+const MIN_COLUMN_WIDTH = 60;
 
 export function ResetSortButton({ visible, onClick }: { visible: boolean; onClick: () => void }) {
   return (
@@ -112,12 +116,16 @@ export function useClearSelectionOnOutsideClick(
 function SortableHeadCell({
   id,
   className,
+  width,
   onClick,
+  onResizeStart,
   children,
 }: {
   id: string;
   className?: string;
+  width?: number;
   onClick: () => void;
+  onResizeStart: (e: React.PointerEvent<HTMLElement>) => void;
   children: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -128,13 +136,21 @@ function SortableHeadCell({
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        width,
       }}
-      className={className}
+      className={cn('relative', className)}
       onClick={onClick}
       {...attributes}
       {...listeners}
     >
       {children}
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize touch-none select-none hover:bg-sky-500/40"
+        onPointerDown={onResizeStart}
+        onClick={(e) => e.stopPropagation()}
+      />
     </TableHead>
   );
 }
@@ -151,12 +167,13 @@ export function DataTable<T>({
   defaultSort,
   emptyMessage,
 }: DataTableProps<T>) {
-  const { userSort, setUserSort, columnOrder, setColumnOrder } = prefs;
+  const { userSort, setUserSort, columnOrder, setColumnOrder, columnWidths, setColumnWidths } = prefs;
   const activeSortColumnId = userSort?.columnId ?? defaultSort?.columnId;
   const activeSortDirection = userSort?.direction ?? defaultSort?.direction ?? 'asc';
   const lastIndexRef = React.useRef<number | null>(null);
   const suppressClickRef = React.useRef(false);
   const dndId = React.useId();
+  const [liveWidths, setLiveWidths] = React.useState<Record<string, number> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -172,6 +189,46 @@ export function DataTable<T>({
   }, [columns, columnOrder]);
 
   const orderedIds = React.useMemo(() => orderedColumns.map((c) => c.id), [orderedColumns]);
+
+  const effectiveWidths = liveWidths ?? columnWidths;
+  const tableWidth = effectiveWidths ? orderedIds.reduce((sum, id) => sum + (effectiveWidths[id] ?? 0), 0) : undefined;
+
+  const startResize = (columnId: string, e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const headRow = e.currentTarget.closest('tr');
+    const cells = headRow ? Array.from(headRow.querySelectorAll('th')) : [];
+    const base: Record<string, number> = {};
+    orderedIds.forEach((id, i) => {
+      const measured = cells[i]?.getBoundingClientRect().width;
+      base[id] = Math.max(MIN_COLUMN_WIDTH, Math.round(effectiveWidths?.[id] ?? measured ?? 120));
+    });
+    const startX = e.clientX;
+    const startWidth = base[columnId];
+    let latest = base;
+    setLiveWidths(base);
+
+    const onMove = (ev: PointerEvent) => {
+      const next = Math.max(MIN_COLUMN_WIDTH, Math.round(startWidth + (ev.clientX - startX)));
+      latest = { ...base, [columnId]: next };
+      setLiveWidths(latest);
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+      suppressClickRef.current = true;
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
+      setColumnWidths(latest);
+      setLiveWidths(null);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.body.style.cursor = 'col-resize';
+  };
 
   React.useEffect(() => {
     if (selectedIds.size === 0) lastIndexRef.current = null;
@@ -355,7 +412,7 @@ export function DataTable<T>({
   return (
     <div>
       <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <Table>
+        <Table className={effectiveWidths ? 'table-fixed' : undefined} style={tableWidth ? { width: tableWidth } : undefined}>
           <TableHeader>
             <TableRow>
               <SortableContext items={orderedIds} strategy={horizontalListSortingStrategy}>
@@ -367,6 +424,8 @@ export function DataTable<T>({
                       key={column.id}
                       id={column.id}
                       className={cn(sortable && 'cursor-pointer', 'select-none', column.headClassName)}
+                      width={effectiveWidths?.[column.id]}
+                      onResizeStart={(e) => startResize(column.id, e)}
                       onClick={() => handleSortClick(column)}
                     >
                       <span className="inline-flex items-center gap-1">
