@@ -39,7 +39,7 @@ export default function RootLayout({
             <Sidebar collapsible="icon">
               <AppSidebar />
             </Sidebar>
-            <SidebarInset>
+            <SidebarInset className="min-w-0">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}

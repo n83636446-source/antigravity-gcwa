@@ -62,6 +62,10 @@ const isEmptyValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === '';
 
 const MIN_COLUMN_WIDTH = 60;
+const MAX_COLUMN_WIDTH = 1200;
+const RESIZE_CURSOR_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'><path d='M1 9L5.5 4.5V7.5H12.5V4.5L17 9L12.5 13.5V10.5H5.5V13.5Z' fill='black' stroke='white' stroke-width='1.2' stroke-linejoin='round'/></svg>";
+const RESIZE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(RESIZE_CURSOR_SVG)}") 9 9, col-resize`;
 
 export function ResetSortButton({ visible, onClick }: { visible: boolean; onClick: () => void }) {
   return (
@@ -119,6 +123,7 @@ function SortableHeadCell({
   width,
   onClick,
   onResizeStart,
+  onAutoFit,
   children,
 }: {
   id: string;
@@ -126,6 +131,7 @@ function SortableHeadCell({
   width?: number;
   onClick: () => void;
   onResizeStart: (e: React.PointerEvent<HTMLElement>) => void;
+  onAutoFit: (e: React.MouseEvent<HTMLElement>) => void;
   children: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -133,7 +139,7 @@ function SortableHeadCell({
     <TableHead
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform ? { ...transform, y: 0 } : null),
         transition,
         opacity: isDragging ? 0.5 : 1,
         width,
@@ -147,9 +153,11 @@ function SortableHeadCell({
       <span
         role="separator"
         aria-orientation="vertical"
-        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize touch-none select-none hover:bg-sky-500/40"
+        className="absolute right-0 top-0 z-10 h-full w-2 touch-none select-none border-r border-foreground/15 hover:bg-sky-500/40"
+        style={{ cursor: RESIZE_CURSOR }}
         onPointerDown={onResizeStart}
         onClick={(e) => e.stopPropagation()}
+        onDoubleClick={onAutoFit}
       />
     </TableHead>
   );
@@ -207,10 +215,12 @@ export function DataTable<T>({
     const startX = e.clientX;
     const startWidth = base[columnId];
     let latest = base;
+    let moved = false;
     setLiveWidths(base);
 
     const onMove = (ev: PointerEvent) => {
       const next = Math.max(MIN_COLUMN_WIDTH, Math.round(startWidth + (ev.clientX - startX)));
+      moved = true;
       latest = { ...base, [columnId]: next };
       setLiveWidths(latest);
     };
@@ -222,12 +232,47 @@ export function DataTable<T>({
       window.setTimeout(() => {
         suppressClickRef.current = false;
       }, 0);
-      setColumnWidths(latest);
+      if (moved) setColumnWidths(latest);
       setLiveWidths(null);
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
-    document.body.style.cursor = 'col-resize';
+    document.body.style.cursor = RESIZE_CURSOR;
+  };
+
+  const autoFitColumn = (columnId: string, e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const table = e.currentTarget.closest('table');
+    if (!table) return;
+    const headCells = Array.from(table.querySelectorAll('thead th')) as HTMLElement[];
+    const index = orderedIds.indexOf(columnId);
+    if (index < 0 || !headCells[index]) return;
+    const base: Record<string, number> = {};
+    orderedIds.forEach((id, i) => {
+      base[id] = Math.max(MIN_COLUMN_WIDTH, Math.round(effectiveWidths?.[id] ?? headCells[i]?.getBoundingClientRect().width ?? 120));
+    });
+    const saved = {
+      layout: table.style.tableLayout,
+      width: table.style.width,
+      space: table.style.whiteSpace,
+      heads: headCells.map((th) => th.style.width),
+    };
+    table.style.tableLayout = 'auto';
+    table.style.width = 'auto';
+    table.style.whiteSpace = 'nowrap';
+    headCells.forEach((th) => {
+      th.style.width = '';
+    });
+    const natural = headCells[index].getBoundingClientRect().width;
+    table.style.tableLayout = saved.layout;
+    table.style.width = saved.width;
+    table.style.whiteSpace = saved.space;
+    headCells.forEach((th, i) => {
+      th.style.width = saved.heads[i];
+    });
+    if (!natural) return;
+    setColumnWidths({ ...base, [columnId]: Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.ceil(natural) + 2)) });
   };
 
   React.useEffect(() => {
@@ -426,6 +471,7 @@ export function DataTable<T>({
                       className={cn(sortable && 'cursor-pointer', 'select-none', column.headClassName)}
                       width={effectiveWidths?.[column.id]}
                       onResizeStart={(e) => startResize(column.id, e)}
+                      onAutoFit={(e) => autoFitColumn(column.id, e)}
                       onClick={() => handleSortClick(column)}
                     >
                       <span className="inline-flex items-center gap-1">
