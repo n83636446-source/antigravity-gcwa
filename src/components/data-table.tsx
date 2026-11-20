@@ -153,12 +153,14 @@ function SortableHeadCell({
       <span
         role="separator"
         aria-orientation="vertical"
-        className="absolute right-0 top-0 z-10 h-full w-2 touch-none select-none border-r border-foreground/15 hover:bg-sky-500/40"
+        className="absolute right-0 top-0 z-10 h-full w-2 touch-none select-none hover:bg-sky-500/40"
         style={{ cursor: RESIZE_CURSOR }}
         onPointerDown={onResizeStart}
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={onAutoFit}
-      />
+      >
+        <span aria-hidden="true" className="pointer-events-none absolute right-0 top-[32%] h-[36%] w-px bg-foreground/20" />
+      </span>
     </TableHead>
   );
 }
