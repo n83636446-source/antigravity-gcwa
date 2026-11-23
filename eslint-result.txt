@@ -1,4 +1,5 @@
-ESLint run: 2026-11-23 07:33:24
+ESLint run: 2026-11-23 08:13:20
+
 
 > nextn@0.1.0 lint
 > next lint
@@ -17,11 +18,12 @@ ESLint run: 2026-11-23 07:33:24
 524:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/bca-dialog.tsx
-288:6  Warning: React Hook useEffect has a missing dependency: 'deliveryDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-319:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-468:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-490:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-505:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+254:6  Warning: React Hook useEffect has a missing dependency: 'setOpen'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+260:6  Warning: React Hook useEffect has a missing dependency: 'deliveryDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+291:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+440:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+462:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+477:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/bra-dialog.tsx
 306:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
