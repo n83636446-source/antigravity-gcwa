@@ -1,4 +1,4 @@
-ESLint run: 2026-11-24 08:29:14
+ESLint run: 2026-11-24 09:01:34
 
 
 > nextn@0.1.0 lint
@@ -25,12 +25,12 @@ ESLint run: 2026-11-24 08:29:14
 477:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/bra-dialog.tsx
-306:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-337:28  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-342:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-493:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-515:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-530:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+274:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+305:28  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+310:29  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+461:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+483:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+498:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/dashboard/estimate-stock-dialog.tsx
 29:48  Warning: 'supplier' is defined but never used.  @typescript-eslint/no-unused-vars

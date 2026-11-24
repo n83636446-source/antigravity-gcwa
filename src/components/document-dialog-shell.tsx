@@ -21,13 +21,18 @@ interface UseDocumentDialogShellOptions {
   isDirty: () => boolean
   /** Puts the form back to its blank state (called after the window has closed). */
   onReset: () => void
+  /** Set to false for pre-filled transfer dialogs: nothing is read from or written to the browser session. Default true. */
+  persistState?: boolean
+  /** Whether the window starts open when persistState is false. Default false. */
+  initialOpen?: boolean
 }
 
-export function useDocumentDialogShell({ storageKeyPrefix, isDirty, onReset }: UseDocumentDialogShellOptions) {
+export function useDocumentDialogShell({ storageKeyPrefix, isDirty, onReset, persistState = true, initialOpen = false }: UseDocumentDialogShellOptions) {
   const dialogKey = `${storageKeyPrefix}DialogState`
   const minimizedKey = `${storageKeyPrefix}MinimizedState`
 
   const [open, setOpen] = useState<boolean>((() => {
+    if (!persistState) return initialOpen;
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(dialogKey);
       return saved ? JSON.parse(saved) : false;
@@ -36,10 +41,12 @@ export function useDocumentDialogShell({ storageKeyPrefix, isDirty, onReset }: U
   })());
 
   useEffect(() => {
+    if (!persistState) return;
     sessionStorage.setItem(dialogKey, JSON.stringify(open));
-  }, [open, dialogKey]);
+  }, [open, dialogKey, persistState]);
 
   const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    if (!persistState) return false;
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(minimizedKey);
       return saved ? JSON.parse(saved) : false;
@@ -48,8 +55,9 @@ export function useDocumentDialogShell({ storageKeyPrefix, isDirty, onReset }: U
   });
 
   useEffect(() => {
+    if (!persistState) return;
     sessionStorage.setItem(minimizedKey, JSON.stringify(isMinimized));
-  }, [isMinimized, minimizedKey]);
+  }, [isMinimized, minimizedKey, persistState]);
 
   const { state, isMobile } = useSidebar();
   const dockOffset = isMobile ? 0 : (state === 'expanded' ? 256 : 48);
