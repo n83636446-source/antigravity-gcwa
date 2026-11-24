@@ -251,7 +251,7 @@ export function BcaDialog({ orderToEdit, onSaveSuccess, transferredReceiptNumber
       }
     }
     if (open) fetchData()
-  }, [open, isEditMode, orderToEdit])
+  }, [open, setOpen, isEditMode, orderToEdit])
 
   useEffect(() => {
     if (isBefore(deliveryDate, startOfDay(date))) {

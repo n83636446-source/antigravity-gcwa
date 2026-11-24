@@ -65,6 +65,7 @@ export function useDocumentDialogShell({ storageKeyPrefix, isDirty, onReset }: U
       if (isDirty()) {
         if (isMinimized) setIsMinimized(false)
         setShowCloseAlert(true)
+        triggerOverlayShake()
         return
       }
       setOpen(false)
