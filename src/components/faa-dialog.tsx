@@ -177,7 +177,7 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
       if (supplierId !== (isEditMode ? invoiceToEdit?.supplierId : "")) return true;
       if (remarks !== (isEditMode ? (invoiceToEdit?.remarks || "") : "")) return true;
       if (reference !== (isEditMode ? (invoiceToEdit?.reference || "") : "")) return true;
-      if (representativeId !== (isEditMode ? (representativeId === "" ? "" : invoiceToEdit?.representativeId) : "")) return true;
+      if (representativeId !== (isEditMode ? (invoiceToEdit?.representativeId || "") : "")) return true;
       if (paymentMethod !== (isEditMode ? (invoiceToEdit?.paymentMode || "cash") : "cash")) return true;
       if (isEditMode && invoiceToEdit?.dueDate && !isSameDay(dueDate, new Date(invoiceToEdit.dueDate))) return true;
 

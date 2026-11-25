@@ -209,7 +209,7 @@ export function AaaDialog({ creditNoteToEdit, invoiceToTransfer, isTransferInsta
       if (supplierId !== (isEditMode ? creditNoteToEdit?.supplierId : "")) return true;
       if (remarks !== (isEditMode ? (creditNoteToEdit?.remarks || "") : "")) return true;
       if (reference !== (isEditMode ? (creditNoteToEdit?.reference || "") : "")) return true;
-      if (representativeId !== (isEditMode ? (representativeId === "" ? "" : creditNoteToEdit?.representativeId) : "")) return true;
+      if (representativeId !== (isEditMode ? (creditNoteToEdit?.representativeId || "") : "")) return true;
       if (paymentMethod !== (isEditMode ? (creditNoteToEdit?.paymentMode || "cash") : "cash")) return true;
       if (isEditMode && creditNoteToEdit?.dueDate && !isSameDay(dueDate, new Date(creditNoteToEdit.dueDate))) return true;
 

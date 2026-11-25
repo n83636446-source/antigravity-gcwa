@@ -178,7 +178,7 @@ export function BcaDialog({ orderToEdit, onSaveSuccess, transferredReceiptNumber
       if (supplierOrderRef !== (isEditMode ? (orderToEdit?.supplierOrderRef || "") : "")) return true;
       if (remarks !== (isEditMode ? (orderToEdit?.remarks || "") : "")) return true;
       if (reference !== (isEditMode ? (orderToEdit?.reference || "") : "")) return true;
-      if (representativeId !== (isEditMode ? (representativeId === "" ? "" : orderToEdit?.representativeId) : "")) return true;
+      if (representativeId !== (isEditMode ? (orderToEdit?.representativeId || "") : "")) return true;
       if (paymentMethod !== (isEditMode ? (orderToEdit?.paymentMode || "cash") : "cash")) return true;
       if (isEditMode && orderToEdit?.deliveryDate && !isSameDay(deliveryDate, new Date(orderToEdit.deliveryDate))) return true;
 

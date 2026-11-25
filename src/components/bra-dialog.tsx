@@ -177,7 +177,7 @@ export function BraDialog({ receiptToEdit, orderToTransfer, isTransferInstance =
       if (supplierId !== (isEditMode ? receiptToEdit?.supplierId : "")) return true;
       if (remarks !== (isEditMode ? (receiptToEdit?.remarks || "") : "")) return true;
       if (reference !== (isEditMode ? (receiptToEdit?.reference || "") : "")) return true;
-      if (representativeId !== (isEditMode ? (representativeId === "" ? "" : receiptToEdit?.representativeId) : "")) return true;
+      if (representativeId !== (isEditMode ? (receiptToEdit?.representativeId || "") : "")) return true;
       if (paymentMethod !== (isEditMode ? (receiptToEdit?.paymentMode || "cash") : "cash")) return true;
       if (isEditMode && receiptToEdit?.dueDate && !isSameDay(dueDate, new Date(receiptToEdit.dueDate))) return true;
 
