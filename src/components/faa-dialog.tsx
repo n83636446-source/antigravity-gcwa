@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { Dialog, DialogTitle, DialogPortal } from "@/components/ui/dialog"
+import React, { useState, useEffect } from "react"
+import { DocumentDialogShell, useDocumentDialogShell } from "@/components/document-dialog-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, Minus, PlusCircle, Merge, Loader2, AlertTriangle, X } from "lucide-react"
+import { Trash2, PlusCircle, Merge, Loader2, AlertTriangle } from "lucide-react"
 import { isSameDay, isBefore, startOfDay } from "date-fns"
 import { cn, roundMoney, generateId, isDuplicateNumber } from "@/lib/utils"
 
@@ -93,42 +92,16 @@ interface FaaDialogProps {
 }
 
 export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance = false, onSaveSuccess }: FaaDialogProps) {
-  const storageKeyPrefix = isTransferInstance ? 'faTransferDialog' : 'faaDialog';
-
-  const [open, setOpen] = useState<boolean>((() => {
-    if (isTransferInstance) return !!receiptToTransfer;
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem(`${storageKeyPrefix}State`);
-      return saved ? JSON.parse(saved) : false;
-    }
-    return false;
-  })());
-
-  useEffect(() => {
-    if (isTransferInstance) return;
-    sessionStorage.setItem(`${storageKeyPrefix}State`, JSON.stringify(open));
-  }, [open, storageKeyPrefix]);
-
-  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
-    if (isTransferInstance) return false;
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem(`${storageKeyPrefix}MinimizedState`);
-      return saved ? JSON.parse(saved) : false;
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    if (isTransferInstance) return;
-    sessionStorage.setItem(`${storageKeyPrefix}MinimizedState`, JSON.stringify(isMinimized));
-  }, [isMinimized, storageKeyPrefix]);
-  
-  const { state, isMobile } = useSidebar();
-  const dockOffset = isMobile ? 0 : (state === 'expanded' ? 256 : 48);
-  const dialogRef = useRef<HTMLDivElement>(null)
-  
-  const [showCloseAlert, setShowCloseAlert] = useState(false)
-  const { shakeTick, overlayShakeTick, triggerFieldShake, triggerOverlayShake } = useShakeWarning();
+  const shell = useDocumentDialogShell({
+    storageKeyPrefix: 'faa',
+    isDirty: () => isFormDirty(),
+    onReset: () => resetForm(),
+    persistState: !isTransferInstance,
+    initialOpen: !!receiptToTransfer,
+  })
+  const { open, setOpen, handleOpenChange } = shell
+  const { isMobile } = useSidebar();
+  const { shakeTick, triggerFieldShake } = useShakeWarning();
   const [flashingRowId, setFlashingRowId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingInvoices, setExistingInvoices] = useState<PurchaseInvoice[]>([])
@@ -171,9 +144,6 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
   const [isCreateSupplierOpen, setIsCreateSupplierOpen] = useState(false)
   const [pendingRowId, setPendingRowId] = useState<string | null>(null)
 
-  const [isHoveringDock, setIsHoveringDock] = useState(false)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
   const isEditMode = !!invoiceToEdit;
   const isLocked = !!(invoiceToEdit && invoiceToEdit.status !== 'Brouillon');
 
@@ -196,10 +166,8 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
     setReference("")
     setRemarks("")
     setItems([{ id: generateId(), articleId: "", qty: 1, price: 0, tva: 20 }]); 
-    setShowCloseAlert(false); 
     setFormErrors({}); 
     setInvoiceNumber(calculateNextNumber(existingInvoices));
-    setIsHoveringDock(false);
   }
 
   const isFormDirty = () => {
@@ -302,7 +270,7 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
       }
     }
     if (open) fetchData()
-  }, [open, isEditMode, invoiceToEdit, receiptToTransfer])
+  }, [open, setOpen, isEditMode, invoiceToEdit, receiptToTransfer])
 
   useEffect(() => {
     if (isBefore(dueDate, startOfDay(date))) {
@@ -539,49 +507,6 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
 
 
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      if (isFormDirty()) {
-        if (isMinimized) setIsMinimized(false)
-        setShowCloseAlert(true)
-        return 
-      }
-      setOpen(false)
-      setTimeout(() => {
-        resetForm() 
-        setIsMinimized(false)
-      }, 300)
-    } else {
-      setOpen(true)
-    }
-  }
-
-  const confirmClose = () => {
-      setShowCloseAlert(false)
-      setOpen(false)
-      setTimeout(() => { resetForm(); setIsMinimized(false); }, 300)
-  }
-
-  const handleOverlayClick = () => {
-      triggerOverlayShake()
-  }
-
-  const toggleMinimize = () => {
-    setIsMinimized(!isMinimized)
-    if (isMinimized) { setIsHoveringDock(false); }
-  }
-
-  const handleMouseEnter = () => {
-    if (!isMinimized) return;
-    if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null; }
-    setIsHoveringDock(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isMinimized) return;
-    hoverTimeoutRef.current = setTimeout(() => { setIsHoveringDock(false); }, 250);
-  };
-
   const isMobileSize = isMobile;
 
   const formAndFooterJSX = (
@@ -746,126 +671,18 @@ export function FaaDialog({ invoiceToEdit, receiptToTransfer, isTransferInstance
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
-        <DialogPortal>
-          <div 
-            className="fixed inset-0 z-40 flex pointer-events-none transition-all duration-300 ease-in-out"
-          >
-             {!isMobile && (
-                <div 
-                    className="flex-none transition-all duration-300 ease-in-out" 
-                    style={{ width: dockOffset }} 
-                />
-             )}
-
-             <div className="flex-1 relative pointer-events-none h-full w-full">
-                {open && !isMinimized && (
-                    <div 
-                        className="absolute inset-0 z-40 bg-black/50 pointer-events-auto transition-all duration-300 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-                        onClick={(e) => { e.stopPropagation(); handleOverlayClick(); }}
-                    />
-                )}
-
-                <DialogPrimitive.Content 
-                    onInteractOutside={(e) => {
-                        e.preventDefault(); 
-                        if (!isMinimized && showCloseAlert) {
-                            handleOverlayClick();
-                        }
-                    }}
-                    className={cn(
-                        "p-0 overflow-visible bg-transparent border-none shadow-none max-w-none w-auto h-auto transition-all duration-300 ease-in-out [&>button]:!hidden pointer-events-none outline-none focus:outline-none",
-                        isMinimized 
-                        ? "absolute bottom-[10px] left-4 z-[9999] w-fit max-w-fit translate-x-0 translate-y-0"
-                        : "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-auto"
-                    )}
-                    style={
-                        isMinimized 
-                        ? { transition: "all 0.3s ease-in-out" } 
-                        : { 
-                            width: "96%", 
-                            height: "96%",
-                            transition: "all 0.3s ease-in-out"
-                            }
-                    }
-                >
-                    <div 
-                        ref={dialogRef}
-                        onClick={isMinimized ? toggleMinimize : undefined}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                        className={cn(
-                            "relative bg-white border rounded shadow-xl flex flex-col pointer-events-auto",
-                            isMinimized ? "shadow-md cursor-pointer overflow-visible px-0 h-10" : "rounded-lg h-full",
-                            "transition-all duration-300 ease-in-out"
-                        )}
-                        style={{ 
-                            width: "100%",
-                            height: isMinimized ? 40 : "100%",
-                            transformOrigin: isMinimized ? "bottom left" : "center", 
-                            transition: "all 0.3s ease-in-out" 
-                        }}
-                    >
-                        {showCloseAlert && (
-                            <div 
-                            className="absolute inset-0 z-[10000] flex items-center justify-center rounded-lg p-4 bg-black/5"
-                            onClick={handleOverlayClick}
-                            >
-                            <div 
-                                key={overlayShakeTick}
-                                className="bg-white border shadow-lg p-6 rounded-md max-w-sm text-center animate-shake"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <h3 className="font-semibold text-lg mb-2">Attention</h3>
-                                <p className="text-sm text-muted-foreground mb-6">
-                                  Voulez-vous enregistrer les modifications appliquées à la facture d'achat {invoiceNumber} ?
-                                </p>
-                                <div className="flex justify-center gap-2">
-                                    <Button className="bg-slate-900 text-white min-w-[70px]" size="sm" onClick={() => { setShowCloseAlert(false); handleCreateInvoice(); }}>Oui</Button>
-                                    <Button variant="destructive" size="sm" className="min-w-[70px]" onClick={confirmClose}>Non</Button>
-                                    <Button variant="outline" size="sm" className="min-w-[70px]" onClick={() => setShowCloseAlert(false)}>Annuler</Button>
-                                </div>
-                            </div>
-                            </div>
-                        )}
-
-                        {isMinimized && (
-                            <div className={cn("absolute bottom-full left-1/2 -translate-x-1/2 pb-3 z-[10000] origin-bottom transition-all duration-300 ease-out", isHoveringDock ? "scale-100 opacity-100 pointer-events-auto" : "scale-0 opacity-0 pointer-events-none")}>
-                            <div className="group bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden cursor-pointer relative" style={{ width: 1000 * 0.25, height: 800 * 0.25 }} onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}>
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenChange(false); setIsHoveringDock(false); }} className="absolute top-2 right-2 z-50 p-1.5 bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 rounded-md transition-opacity duration-200 shadow-sm pointer-events-auto opacity-0 group-hover:opacity-100" title="Fermer"><X className="h-4 w-4" /></button>
-                                <div className="pointer-events-none origin-top-left bg-white flex flex-col" style={{ width: 1000, height: 800, transform: 'scale(0.25)' }}>
-                                    <div className="flex-none p-4 flex items-center gap-2 font-semibold text-sm">{isEditMode ? "Modifier" : "Créer"} une facture d'achat</div>
-                                    <div className="px-6 pb-4 border-b text-muted-foreground text-sm">Remplissez les informations ci-dessous.</div>
-                                    <div className="flex-1 min-h-0 flex flex-col">{formAndFooterJSX}</div>
-                                </div>
-                            </div>
-                            </div>
-                        )}
-
-                        <div className="absolute right-3 top-3 z-50 flex gap-1">
-                            {!isMinimized && (
-                            <>
-                                <button onClick={(e) => { e.stopPropagation(); toggleMinimize(); }} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-slate-200 rounded transition-colors cursor-pointer" title="Réduire"><Minus className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => handleOpenChange(false)} onMouseDown={(e) => e.stopPropagation()} className="p-1.5 opacity-60 hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-colors cursor-pointer" title="Fermer"><X className="h-4 w-4" /></button>
-                            </>
-                            )}
-                        </div>
-
-                        <div className={cn("flex-none p-4 select-none flex items-center gap-2", !isMinimized && "cursor-default", isMinimized && "py-0 px-3 h-10")}>
-                            {isMinimized && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
-                            <div className={cn("font-semibold text-sm", isMinimized ? "whitespace-nowrap pr-2" : "truncate pr-12")}>{isMinimized ? `Facture d'achat - ${invoiceNumber}` : `${isEditMode ? "Modifier la" : "Créer une"} facture d'achat${isEditMode ? ` - ${invoiceNumber}` : ""}`}</div>
-                        </div>
-                        {!isMinimized && (<div className="px-6 pb-4 border-b text-muted-foreground text-sm text-left">Remplissez les informations ci-dessous.</div>)}
-                        <div className={cn("flex-col flex-1 min-h-0 transition-opacity duration-300", isMinimized ? "hidden" : "flex")}>
-                            <DialogTitle className="sr-only">{isEditMode ? "Modifier" : "Créer"} une facture d'achat</DialogTitle>
-                            {formAndFooterJSX}
-                        </div>
-                    </div>
-                </DialogPrimitive.Content>
-             </div>
-          </div>
-        </DialogPortal>
-      </Dialog>
+      <DocumentDialogShell
+        shell={shell}
+        title={`${isEditMode ? "Modifier la" : "Créer une"} facture d'achat${isEditMode ? ` - ${invoiceNumber}` : ""}`}
+        minimizedTitle={`Facture d'achat - ${invoiceNumber}`}
+        previewTitle={`${isEditMode ? "Modifier" : "Créer"} une facture d'achat`}
+        srTitle={`${isEditMode ? "Modifier" : "Créer"} une facture d'achat`}
+        subtitle="Remplissez les informations ci-dessous."
+        closeAlertMessage={`Voulez-vous enregistrer les modifications appliquées à la facture d'achat ${invoiceNumber} ?`}
+        onSaveFromAlert={handleCreateInvoice}
+      >
+        {formAndFooterJSX}
+      </DocumentDialogShell>
 
       <ArticleDialog isOpen={isCreateArticleOpen} onOpenChange={setIsCreateArticleOpen} onArticleCreated={handleArticleCreated} articles={availableArticles} isChild={true} />
       <RepresentativeDialog isOpen={isCreateRepOpen} onOpenChange={setIsCreateRepOpen} onRepresentativeCreated={handleRepresentativeCreated} representatives={availableRepresentatives} />
