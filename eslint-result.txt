@@ -1,4 +1,4 @@
-ESLint run: 2026-11-26 08:22:03
+ESLint run: 2026-11-26 08:45:35
 
 
 > nextn@0.1.0 lint
@@ -9,13 +9,11 @@ ESLint run: 2026-11-26 08:22:03
 29:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
 
 ./src/components/aaa-dialog.tsx
-110:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-124:6  Warning: React Hook useEffect has a missing dependency: 'isTransferInstance'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-307:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-338:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-487:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-509:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-524:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+275:6  Warning: React Hook useEffect has a missing dependency: 'dueDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+306:31  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+455:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+477:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+492:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/bca-dialog.tsx
 260:6  Warning: React Hook useEffect has a missing dependency: 'deliveryDate'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
