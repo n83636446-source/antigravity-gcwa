@@ -1,4 +1,4 @@
-ESLint run: 2026-11-25 08:02:59
+ESLint run: 2026-11-26 08:22:03
 
 
 > nextn@0.1.0 lint
@@ -43,7 +43,7 @@ ESLint run: 2026-11-25 08:02:59
 502:47  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/purchase-dialog-shared-ui.tsx
-984:140  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+985:140  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/ra-dialog.tsx
 69:35  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any

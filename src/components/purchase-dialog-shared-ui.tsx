@@ -82,6 +82,7 @@ export const RepresentativeSelector = ({
                         }}
                         onChange={(e) => {
                             setInputValue(e.target.value)
+                            if (e.target.value === "" && value) onChange("")
                             setOpen(true)
                         }}
                         className={cn("w-full pr-10", hasError && "border-red-500 focus-visible:ring-red-500")} 
