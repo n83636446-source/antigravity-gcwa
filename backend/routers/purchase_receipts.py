@@ -55,7 +55,7 @@ def update_purchase_receipt(receipt_id: str, data: PurchaseReceiptUpdate, db: Se
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Le statut ne peut être modifié que par la validation ou l'annulation de validation.",
         )
-    return crud.update(db, db_obj, payload)
+    return crud.update(db, db_obj, payload, nullable_fields={"representative_id", "reference", "remarks"})
 
 
 @router.delete("/{receipt_id}", status_code=status.HTTP_204_NO_CONTENT)

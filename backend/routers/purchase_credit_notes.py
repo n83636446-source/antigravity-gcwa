@@ -60,7 +60,7 @@ def update_purchase_credit_note(credit_note_id: str, data: PurchaseCreditNoteUpd
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Le statut ne peut être modifié que par la validation ou l'annulation de validation.",
         )
-    return crud.update(db, db_obj, payload)
+    return crud.update(db, db_obj, payload, nullable_fields={"representative_id", "reference", "remarks"})
 
 
 @router.delete("/{credit_note_id}", status_code=status.HTTP_204_NO_CONTENT)

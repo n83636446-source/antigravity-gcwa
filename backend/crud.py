@@ -22,9 +22,10 @@ def create(db: Session, model: Type[ModelType], obj_in: dict) -> ModelType:
     return db_obj
 
 
-def update(db: Session, db_obj: ModelType, obj_in: dict) -> ModelType:
+def update(db: Session, db_obj: ModelType, obj_in: dict, nullable_fields: Optional[set] = None) -> ModelType:
+    nullable = nullable_fields or set()
     for field, value in obj_in.items():
-        if value is not None:
+        if value is not None or field in nullable:
             setattr(db_obj, field, value)
     db.add(db_obj)
     db.commit()

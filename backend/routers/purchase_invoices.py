@@ -74,7 +74,7 @@ def update_purchase_invoice(invoice_id: str, data: PurchaseInvoiceUpdate, db: Se
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Le total de la facture ne peut pas être inférieur aux acomptes déjà saisis.",
         )
-    return _with_advance(db, crud.update(db, db_obj, payload))
+    return _with_advance(db, crud.update(db, db_obj, payload, nullable_fields={"representative_id", "reference", "remarks"}))
 
 
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)

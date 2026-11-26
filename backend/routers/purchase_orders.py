@@ -42,7 +42,7 @@ def update_purchase_order(order_id: str, data: PurchaseOrderUpdate, db: Session 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cette commande a déjà été transférée en bon de réception et ne peut pas être modifiée.",
         )
-    return crud.update(db, db_obj, data.model_dump(exclude_unset=True))
+    return crud.update(db, db_obj, data.model_dump(exclude_unset=True), nullable_fields={"representative_id", "reference", "remarks", "delivery_date", "supplier_order_ref"})
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
